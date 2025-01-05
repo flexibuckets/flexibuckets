@@ -11,6 +11,7 @@ const authSchema = z.object({
 });
 
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   pages: {
     signIn: '/auth/signin',
     error: '/auth/error',
