@@ -1,0 +1,23 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+  build:
+    commands:
+      - echo "Building Docker image..."
+      - docker build -t flexibuckets:$IMAGE_TAG .
+      - docker tag flexibuckets:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/flexibuckets:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo "Pushing Docker image..."
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/flexibuckets:$IMAGE_TAG
+
+env:
+  variables:
+    AWS_REGION: "us-east-1"  # Change this to your AWS region
+    IMAGE_REPO_NAME: "my-repo"  # Replace with your ECR repository name
+    IMAGE_TAG: "latest"  # Use "latest" or dynamically generated tags
+    AWS_ACCOUNT_ID: "123456789012"  # Replace with your AWS Account ID

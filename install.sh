@@ -177,7 +177,30 @@ main() {
     echo -e "🔒 HTTPS: https://${DOMAIN:-localhost}"
     
     echo -e "\n${YELLOW}Important Notes:${NC}"
-    echo "1. Configuration files are in: $INSTALL_DIR"
+    echo "1. Configuration files are in: $INSTALL_DIR"version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+  build:
+    commands:
+      - echo "Building Docker image..."
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo "Pushing Docker image..."
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+
+env:
+  variables:
+    AWS_REGION: "us-east-1"  # Change this to your AWS region
+    IMAGE_REPO_NAME: "my-repo"  # Replace with your ECR repository name
+    IMAGE_TAG: "latest"  # Use "latest" or dynamically generated tags
+    AWS_ACCOUNT_ID: "123456789012"  # Replace with your AWS Account ID
+
     echo "2. Environment file is at: $ENV_FILE"
     echo "3. Traefik configuration is in: $TRAEFIK_DIR"
 }
