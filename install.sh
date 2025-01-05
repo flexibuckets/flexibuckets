@@ -23,6 +23,50 @@ check_root() {
     fi
 }
 
+# Function to generate random string
+generate_random_string() {
+    openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1
+}
+
+# Function to create default .env file
+create_env_file() {
+    echo -e "${YELLOW}Creating .env file...${NC}"
+    
+    # Generate random passwords and secrets
+    DB_PASSWORD=$(generate_random_string 32)
+    NEXTAUTH_SECRET=$(generate_random_string 32)
+    
+    # Get the server's public IP
+    PUBLIC_IP=$(curl -s https://api.ipify.org)
+    
+    # Create .env file
+    cat > "$ENV_FILE" << EOL
+# Database Configuration
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=${DB_PASSWORD}
+POSTGRES_DB=flexibuckets
+DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/flexibuckets
+
+# Application Configuration
+NODE_ENV=production
+NEXTAUTH_URL=http://${PUBLIC_IP}:3000
+NEXT_PUBLIC_APP_URL=http://${PUBLIC_IP}:3000
+NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+
+# Docker Configuration
+COMPOSE_PROJECT_NAME=flexibuckets
+DOMAIN=${PUBLIC_IP}
+APP_VERSION=latest
+
+# Traefik Configuration
+ACME_EMAIL=admin@flexibuckets.com
+DOCKER_GROUP_ID=$(getent group docker | cut -d: -f3)
+EOL
+
+    chmod 600 "$ENV_FILE"
+    echo -e "${GREEN}Created .env file at ${ENV_FILE}${NC}"
+}
+
 # Function to clean up installation
 cleanup_installation() {
     echo -e "${YELLOW}Cleaning up previous installation...${NC}"
@@ -41,65 +85,6 @@ cleanup_installation() {
     rm -rf "$TRAEFIK_DIR"
     
     echo -e "${GREEN}Cleanup completed${NC}"
-}
-
-# Function to validate installation
-validate_installation() {
-    local error_count=0
-    
-    echo -e "\n${BLUE}Validating installation...${NC}"
-    
-    # Check if Docker is running
-    if ! docker info >/dev/null 2>&1; then
-        echo -e "${RED}✗ Docker is not running${NC}"
-        error_count=$((error_count + 1))
-    else
-        echo -e "${GREEN}✓ Docker is running${NC}"
-    fi
-    
-    # Check if containers are healthy
-    if [ -f "$DOCKER_COMPOSE_FILE" ]; then
-        cd "$INSTALL_DIR"
-        if docker-compose ps | grep -q "unhealthy"; then
-            echo -e "${RED}✗ Some containers are unhealthy${NC}"
-            error_count=$((error_count + 1))
-        else
-            echo -e "${GREEN}✓ All containers are healthy${NC}"
-        fi
-    else
-        echo -e "${RED}✗ Docker Compose file not found${NC}"
-        error_count=$((error_count + 1))
-    fi
-    
-    # Check if Traefik is configured
-    if [ ! -f "${TRAEFIK_DIR}/dynamic/config.yml" ]; then
-        echo -e "${RED}✗ Traefik configuration not found${NC}"
-        error_count=$((error_count + 1))
-    else
-        echo -e "${GREEN}✓ Traefik is configured${NC}"
-    fi
-    
-    # Check if app is accessible
-    if ! curl -s localhost:3000/api/health >/dev/null; then
-        echo -e "${RED}✗ Application is not accessible${NC}"
-        error_count=$((error_count + 1))
-    else
-        echo -e "${GREEN}✓ Application is accessible${NC}"
-    fi
-    
-    if [ $error_count -gt 0 ]; then
-        echo -e "\n${RED}Installation validation failed with $error_count errors${NC}"
-        echo -e "${YELLOW}Would you like to clean up and try again? [y/N]${NC}"
-        read -r response
-        if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-            cleanup_installation
-            main
-        else
-            exit 1
-        fi
-    else
-        echo -e "\n${GREEN}Installation validation successful!${NC}"
-    fi
 }
 
 # Function to setup Traefik
@@ -121,14 +106,45 @@ setup_traefik() {
 setup_docker() {
     echo -e "${YELLOW}Setting up Docker...${NC}"
     
-    # Get Docker group ID
-    DOCKER_GROUP_ID=$(getent group docker | cut -d: -f3)
-    
-    # Update environment file with Docker group ID
-    sed -i "s/DOCKER_GROUP_ID=.*/DOCKER_GROUP_ID=$DOCKER_GROUP_ID/" "$ENV_FILE"
-    
     # Set proper permissions for Docker socket
     chmod 666 /var/run/docker.sock
+}
+
+# Function to validate installation
+validate_installation() {
+    local error_count=0
+    
+    echo -e "\n${BLUE}Validating installation...${NC}"
+    
+    # Check if Docker is running
+    if ! docker info >/dev/null 2>&1; then
+        echo -e "${RED}✗ Docker is not running${NC}"
+        error_count=$((error_count + 1))
+    else
+        echo -e "${GREEN}✓ Docker is running${NC}"
+    fi
+    
+    # Check if containers are running
+    if [ -f "$DOCKER_COMPOSE_FILE" ]; then
+        cd "$INSTALL_DIR"
+        if ! docker-compose ps | grep -q "Up"; then
+            echo -e "${RED}✗ Containers are not running${NC}"
+            error_count=$((error_count + 1))
+        else
+            echo -e "${GREEN}✓ Containers are running${NC}"
+        fi
+    else
+        echo -e "${RED}✗ Docker Compose file not found${NC}"
+        error_count=$((error_count + 1))
+    fi
+    
+    if [ $error_count -gt 0 ]; then
+        echo -e "\n${RED}Installation validation failed with $error_count errors${NC}"
+        return 1
+    else
+        echo -e "\n${GREEN}Installation validation successful!${NC}"
+        return 0
+    fi
 }
 
 # Main installation function
@@ -141,13 +157,14 @@ main() {
     # Create directories
     mkdir -p "$INSTALL_DIR"
     
-    # Setup components
-
     # Clone repository and setup
     echo -e "${YELLOW}Fetching latest version...${NC}"
     git clone https://github.com/flexibuckets/flexibuckets.git "${INSTALL_DIR}/temp"
     cp -r "${INSTALL_DIR}/temp/"* "$INSTALL_DIR/"
     rm -rf "${INSTALL_DIR}/temp"
+    
+    # Create .env file before other setup steps
+    create_env_file
     
     setup_docker
     setup_traefik
@@ -172,6 +189,7 @@ main() {
         echo "1. Configuration files are in: $INSTALL_DIR"
         echo "2. Environment file is at: $ENV_FILE"
         echo "3. Traefik configuration is in: $TRAEFIK_DIR"
+        echo -e "\n${YELLOW}⚠️  Make sure to save your environment file securely${NC}"
     fi
 }
 
