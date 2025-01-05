@@ -142,14 +142,15 @@ main() {
     mkdir -p "$INSTALL_DIR"
     
     # Setup components
-    setup_docker
-    setup_traefik
-    
+
     # Clone repository and setup
     echo -e "${YELLOW}Fetching latest version...${NC}"
     git clone https://github.com/flexibuckets/flexibuckets.git "${INSTALL_DIR}/temp"
     cp -r "${INSTALL_DIR}/temp/"* "$INSTALL_DIR/"
     rm -rf "${INSTALL_DIR}/temp"
+    
+    setup_docker
+    setup_traefik
     
     # Start services
     echo -e "${YELLOW}Starting services...${NC}"
