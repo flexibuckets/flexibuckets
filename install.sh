@@ -166,7 +166,7 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=${DB_PASSWORD}
 POSTGRES_DB=flexibuckets
 DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/flexibuckets
-
+SERVER_IP=${PUBLIC_IP}
 # Application Configuration
 NODE_ENV=production
 NEXTAUTH_URL=http://${PUBLIC_IP}:3000
