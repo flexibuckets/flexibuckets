@@ -28,6 +28,53 @@ generate_random_string() {
     openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | fold -w ${1:-32} | head -n 1
 }
 
+# Function to install Docker
+install_docker() {
+    echo -e "${YELLOW}Checking Docker installation...${NC}"
+    
+    if ! command -v docker &> /dev/null; then
+        echo -e "${YELLOW}Installing Docker...${NC}"
+        # Install Docker using the official convenience script
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sh get-docker.sh
+        rm get-docker.sh
+        
+        # Start and enable Docker service
+        systemctl start docker
+        systemctl enable docker
+        
+        echo -e "${GREEN}Docker installed successfully${NC}"
+    else
+        echo -e "${GREEN}Docker is already installed${NC}"
+    fi
+    
+    # Install Docker Compose if not present
+    if ! command -v docker-compose &> /dev/null; then
+        echo -e "${YELLOW}Installing Docker Compose...${NC}"
+        mkdir -p ~/.docker/cli-plugins/
+        curl -SL https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+        chmod +x ~/.docker/cli-plugins/docker-compose
+        echo -e "${GREEN}Docker Compose installed successfully${NC}"
+    fi
+    
+    # Ensure Docker is running
+    if ! systemctl is-active --quiet docker; then
+        echo -e "${YELLOW}Starting Docker service...${NC}"
+        systemctl start docker
+    fi
+    
+    # Add current user to docker group
+    usermod -aG docker $SUDO_USER
+    
+    # Verify Docker is running
+    if docker info &> /dev/null; then
+        echo -e "${GREEN}Docker is running and ready${NC}"
+    else
+        echo -e "${RED}Failed to start Docker${NC}"
+        exit 1
+    fi
+}
+
 # Function to create default .env file
 create_env_file() {
     echo -e "${YELLOW}Creating .env file...${NC}"
@@ -38,6 +85,9 @@ create_env_file() {
     
     # Get the server's public IP
     PUBLIC_IP=$(curl -s https://api.ipify.org)
+    
+    # Get Docker group ID (now safe since Docker is installed)
+    DOCKER_GID=$(getent group docker | cut -d: -f3)
     
     # Create .env file
     cat > "$ENV_FILE" << EOL
@@ -60,7 +110,7 @@ APP_VERSION=latest
 
 # Traefik Configuration
 ACME_EMAIL=admin@flexibuckets.com
-DOCKER_GROUP_ID=$(getent group docker | cut -d: -f3)
+DOCKER_GROUP_ID=${DOCKER_GID}
 EOL
 
     chmod 600 "$ENV_FILE"
@@ -71,14 +121,16 @@ EOL
 cleanup_installation() {
     echo -e "${YELLOW}Cleaning up previous installation...${NC}"
     
-    # Stop and remove containers
-    if [ -f "$DOCKER_COMPOSE_FILE" ]; then
+    # Stop and remove containers if docker-compose exists
+    if command -v docker-compose &> /dev/null && [ -f "$DOCKER_COMPOSE_FILE" ]; then
         cd "$INSTALL_DIR" && docker-compose down -v --remove-orphans || true
     fi
     
     # Remove Docker resources
-    docker network rm flexibuckets_network 2>/dev/null || true
-    docker volume rm flexibuckets_postgres_data 2>/dev/null || true
+    if command -v docker &> /dev/null; then
+        docker network rm flexibuckets_network 2>/dev/null || true
+        docker volume rm flexibuckets_postgres_data 2>/dev/null || true
+    fi
     
     # Remove directories
     rm -rf "$INSTALL_DIR"
@@ -98,16 +150,21 @@ setup_traefik() {
     chmod 600 "${TRAEFIK_DIR}/acme/acme.json"
     
     # Set proper permissions
-    chown -R 1001:999 "$TRAEFIK_DIR"
+    chown -R 1001:$(getent group docker | cut -d: -f3) "$TRAEFIK_DIR"
     chmod -R 750 "$TRAEFIK_DIR"
 }
 
-# Function to setup Docker
-setup_docker() {
-    echo -e "${YELLOW}Setting up Docker...${NC}"
+# Function to setup Docker permissions
+setup_docker_permissions() {
+    echo -e "${YELLOW}Setting up Docker permissions...${NC}"
     
-    # Set proper permissions for Docker socket
-    chmod 666 /var/run/docker.sock
+    if [ -S "/var/run/docker.sock" ]; then
+        chmod 666 /var/run/docker.sock
+        echo -e "${GREEN}Docker socket permissions updated${NC}"
+    else
+        echo -e "${RED}Docker socket not found. Is Docker running?${NC}"
+        exit 1
+    fi
 }
 
 # Function to validate installation
@@ -154,6 +211,9 @@ main() {
     # Check root
     check_root
     
+    # Install and setup Docker first
+    install_docker
+    
     # Create directories
     mkdir -p "$INSTALL_DIR"
     
@@ -163,11 +223,14 @@ main() {
     cp -r "${INSTALL_DIR}/temp/"* "$INSTALL_DIR/"
     rm -rf "${INSTALL_DIR}/temp"
     
-    # Create .env file before other setup steps
+    # Create .env file
     create_env_file
     
-    setup_docker
+    # Setup Traefik
     setup_traefik
+    
+    # Setup Docker permissions
+    setup_docker_permissions
     
     # Start services
     echo -e "${YELLOW}Starting services...${NC}"
