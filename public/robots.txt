@@ -1,0 +1,11 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /api/*
+Disallow: /admin/*
+
+# Host
+Host: https://flexibuckets.com
+
+# Sitemaps
+Sitemap: https://flexibuckets.com/sitemap.xml

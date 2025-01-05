@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Root page -->
+  <url>
+    <loc>https://www.flexibuckets.com/</loc>
+  </url>
+
+  <!-- Static pages -->
+  <url>
+    <loc>https://www.flexibuckets.com/auth/signin</loc>
+  </url>
+  <url>
+    <loc>https://www.flexibuckets.com/auth/verify-request</loc>
+  </url>
+  <url>
+    <loc>https://www.flexibuckets.com/dashboard</loc>
+  </url>
+  <url>
+    <loc>https://www.flexibuckets.com/dashboard/shared</loc>
+  </url>
+  <url>
+    <loc>https://www.flexibuckets.com/docs/bucket-setup</loc>
+  </url>
+  <url>
+    <loc>https://www.flexibuckets.com/pricing</loc>
+  </url>
+  <url>
+    <loc>https://www.flexibuckets.com/privacy-policy</loc>
+  </url>
+
+  <!-- Dynamic pages -->
+  <url>
+    <loc>https://www.flexibuckets.com/dashboard/bucket/[bucketname]</loc>
+  </url>
+  <url>
+    <loc>https://www.flexibuckets.com/shared/[shorturl]</loc>
+  </url>
+  <url>
+    <loc>https://www.flexibuckets.com/shared/folder/[shorturl]</loc>
+  </url>
+
+  <!-- Not-found page -->
+  <url>
+    <loc>https://www.flexibuckets.com/_not-found</loc>
+  </url>
+
+</urlset>

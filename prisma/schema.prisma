@@ -1,0 +1,191 @@
+datasource db {
+  provider = "postgresql"
+  url      ="postgresql://flexibuckets_kgj5_user:xHk1otJWacMqZnzRlIGqHI1mdFLw6Eez@dpg-cts3i33qf0us73dol780-a.oregon-postgres.render.com/flexibuckets_kgj5"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+model User {
+  id                String    @id @default(cuid())
+  name              String?
+  email             String    @unique
+  emailVerified     DateTime?
+  password          String?
+  image             String?
+  totalUploadSize   String    @default("0")
+  totalFileShares   Int       @default(0)
+  totalSharedStorage String   @default("0")
+  totalDownloadedSize String  @default("0")
+  
+  // Auth Related
+  Account           Account[]
+  Session          Session[]
+  Authenticator    Authenticator[]
+  
+  // File Management Relations
+  files            File[]
+  folders          Folder[]
+  s3Credentials    S3Credential[]
+  sharedFiles      SharedFile[]    @relation("SharedByUser")
+  sharedFolders    SharedFolder[]  @relation("SharedByUser")
+  
+  // Timestamps
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+}
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  parent    Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
+  parentId  String?
+  s3Credential S3Credential  @relation(fields: [s3CredentialId], references: [id])
+  s3CredentialId String     
+  children  Folder[] @relation("FolderHierarchy")
+  files     File[]
+  size      String      @default("0")
+  isShared  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId, parentId])
+  sharedFolder SharedFolder?
+}
+
+model File {
+  id           String        @id @default(cuid())
+  name         String
+  type         String
+  size         String
+  s3Key        String        @unique
+  user         User          @relation(fields: [userId], references: [id])
+  userId       String
+  folder       Folder?       @relation(fields: [folderId], references: [id])
+  folderId     String?
+  s3Credential S3Credential  @relation(fields: [s3CredentialId], references: [id])
+  s3CredentialId String      @default("")
+  isShared     Boolean       @default(false)
+  shortUrl     String?       @unique
+  sharedFile   SharedFile?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId, folderId])
+}
+
+model SharedFile {
+  id           String   @id @default(cuid())
+  file         File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  fileId       String   @unique
+  sharedBy     User     @relation("SharedByUser", fields: [sharedById], references: [id], onDelete: Cascade)
+  sharedById   String
+  downloadUrl  String   @unique
+  expiresAt    DateTime?
+  isSharedInfinitely Boolean @default(false)
+  downloadedSize String @default("0")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Define the enum for S3 providers
+enum S3Provider {
+  CLOUDFLARE
+  MINIO
+  FLYTIGRIS
+  WASABI
+  TEBI
+  IDRIVE
+  BACKBLAZE
+  STORJ
+  HETZNER
+  VULTR
+}
+
+model S3Credential {
+  id           String      @id @default(cuid())
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  accessKey    String
+  secretKey    String
+  bucket       String   
+  region       String      @default("auto")
+  provider     S3Provider? // Change to use the enum
+  endpointUrl  String
+  files        File[]
+  folders      Folder[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  @@unique([bucket,accessKey,secretKey])
+  @@index([userId, bucket])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// Optional for WebAuthn support
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
+}
+
+model SharedFolder {
+  id           String   @id @default(cuid())
+  folderId     String   @unique
+  folder       Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  sharedBy     User     @relation("SharedByUser", fields: [sharedById], references: [id], onDelete: Cascade)
+  sharedById   String
+  downloadUrl  String   @unique
+  expiresAt    DateTime?
+  isSharedInfinitely Boolean  @default(false) 
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+

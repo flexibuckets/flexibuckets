@@ -1,0 +1,152 @@
+.mdx {
+    @apply text-foreground;
+  }
+  
+  .mdx > :first-child {
+    @apply mt-0;
+  }
+  
+  .mdx > * + * {
+    @apply mt-6;
+  }
+  
+  .mdx .anchor {
+    @apply invisible absolute -ml-8 cursor-pointer no-underline;
+    padding-right: 0.5rem;
+  }
+  
+  .mdx .anchor:hover {
+    @apply visible;
+  }
+  
+  .mdx :where(h1, h2, h3, h4, h5, h6) {
+    @apply scroll-m-20 font-heading font-bold tracking-tight;
+  }
+  
+  .mdx :where(h1, h2, h3, h4, h5, h6) .anchor {
+    @apply hover:visible;
+  }
+  
+  .mdx :where(h1, h2, h3, h4, h5, h6):hover .anchor {
+    @apply visible;
+  }
+  
+  .mdx h1 {
+    @apply text-4xl;
+  }
+  
+  .mdx h2 {
+    @apply border-b pb-2 text-3xl;
+  }
+  
+  .mdx h3 {
+    @apply text-2xl;
+  }
+  
+  .mdx h4 {
+    @apply text-xl;
+  }
+  
+  .mdx h5 {
+    @apply text-lg;
+  }
+  
+  .mdx h6 {
+    @apply text-base;
+  }
+  
+  .mdx code {
+    @apply relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm;
+  }
+  
+  .mdx pre {
+    @apply mb-4 mt-6 overflow-x-auto rounded-lg border bg-black p-4 dark:bg-zinc-900;
+  }
+  
+  .mdx pre code {
+    @apply relative block bg-transparent p-0;
+  }
+  .mdx table {
+    @apply w-full overflow-hidden rounded-lg border dark:border-zinc-800;
+    margin: 2rem 0;
+  }
+  
+  .mdx tr {
+    @apply border-b border-border;
+  }
+  
+  .mdx tr:nth-child(2n) {
+    @apply bg-muted;
+  }
+  
+  .mdx th {
+    @apply border-r border-border bg-muted px-4 py-2 text-left font-bold;
+  }
+  
+  .mdx td {
+    @apply border-r border-border px-4 py-2;
+  }
+  
+  .mdx th:last-child,
+  .mdx td:last-child {
+    @apply border-r-0;
+  }
+  
+  .mdx tr:last-child td {
+    @apply border-b-0;
+  }
+  
+  .mdx img {
+    @apply rounded-lg border dark:border-zinc-800;
+  }
+  
+  .mdx video {
+    @apply rounded-lg border dark:border-zinc-800;
+  }
+  
+  .mdx hr {
+    @apply my-8 border-none text-black dark:text-white;
+  }
+  
+  .mdx hr:after {
+    @apply block h-[1px] w-full bg-border content-[''];
+  }
+  
+  
+  .mdx table {
+    margin: 2rem 0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .mdx table code {
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  
+  .mdx th {
+    font-weight: 600;
+  }
+  
+  .mdx tr:first-child th {
+    border-top: none;
+  }
+  
+  .mdx tr:last-child td {
+    border-bottom: none;
+  }
+  
+  .mdx tr td:first-child,
+  .mdx tr th:first-child {
+    border-left: none;
+  }
+  
+  .mdx tr td:last-child,
+  .mdx tr th:last-child {
+    border-right: none;
+  }
+  
+  .mdx .table-wrapper {
+    @apply my-8 w-full overflow-x-auto rounded-lg border dark:border-zinc-800;
+  }
