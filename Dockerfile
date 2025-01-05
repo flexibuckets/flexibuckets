@@ -24,7 +24,7 @@ COPY prisma ./prisma/
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --frozen-lockfile
+    bun install 
 RUN bunx prisma generate
 
 # Builder with caching
