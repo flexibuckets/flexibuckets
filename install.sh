@@ -304,7 +304,6 @@ main() {
     # Setup repository
     setup_repository
 
-    setup_database
     
     # Create environment file if it doesn't exist
     if [ ! -f "$ENV_FILE" ]; then
@@ -317,6 +316,9 @@ main() {
     # Start services
     start_services
     
+    # Setup database
+    setup_database
+
     log "INFO" "Installation completed successfully!"
     echo -e "\nAccess your FlexiBuckets instance at:"
     echo -e "\U0001F310 HTTP:  http://${SERVER_IP:-localhost}:3000"
