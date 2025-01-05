@@ -163,9 +163,9 @@ create_env_file() {
     cat > "$ENV_FILE" << EOL
 # Database Configuration
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=${DB_PASSWORD}
+POSTGRES_PASSWORD=postgres
 POSTGRES_DB=flexibuckets
-DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/flexibuckets
+DATABASE_URL=postgresql://postgres:postgres@db:5432/flexibuckets
 SERVER_IP=${PUBLIC_IP}
 # Application Configuration
 NODE_ENV=production
