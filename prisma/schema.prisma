@@ -189,3 +189,11 @@ model SharedFolder {
   updatedAt    DateTime @updatedAt
 }
 
+model DomainSettings {
+  id        String   @id @default(cuid())
+  domain    String?
+  ssl       Json?    // Store SSL certificate info
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

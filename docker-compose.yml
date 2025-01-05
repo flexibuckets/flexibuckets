@@ -75,6 +75,8 @@ services:
       - "traefik.http.routers.app.tls.certresolver=letsencrypt"
       - "traefik.http.services.app.loadbalancer.server.port=3000"
       - "traefik.http.routers.app.middlewares=authheader@file"
+    volumes:
+      - ${TRAEFIK_DIR:-/etc/traefik}/dynamic:/etc/traefik/dynamic:rw
 
 
 networks:

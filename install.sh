@@ -195,6 +195,10 @@ setup_traefik() {
     
     touch "${TRAEFIK_DIR}/acme/acme.json"
     chmod 600 "${TRAEFIK_DIR}/acme/acme.json"
+    
+    # Ensure proper permissions for dynamic config directory
+    chown -R 1001:999 "${TRAEFIK_DIR}/dynamic"  # flexibuckets:docker
+    chmod 775 "${TRAEFIK_DIR}/dynamic"
 }
 
 # Function to start services

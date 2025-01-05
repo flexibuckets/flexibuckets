@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { promises as fs } from 'fs';
-import { z } from 'zod';
+import yaml from 'yaml';
+import fs from 'fs/promises';
 
 const execAsync = promisify(exec);
+const TRAEFIK_CONFIG_PATH = '/etc/traefik/dynamic/config.yml';
 
 const domainSchema = z.object({
   domain: z.string().regex(/^(?!:\/\/)([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}?$/)
@@ -12,30 +15,27 @@ const domainSchema = z.object({
 
 export async function GET() {
   try {
-    // Read current domain configuration
-    const config = await fs.readFile('/etc/traefik/dynamic/config.yml', 'utf8');
-    const domain = process.env.DOMAIN || '';
-    const serverIp = process.env.SERVER_IP || '';
+    const settings = await prisma.domainSettings.findFirst({
+      orderBy: { createdAt: 'desc' }
+    });
 
-    // Check SSL certificate status
     let ssl = null;
-    try {
-      const certInfo = await execAsync('certbot certificates');
-      const expiryMatch = certInfo.stdout.match(/Expiry Date: (.*?) /);
-      if (expiryMatch) {
-        ssl = {
-          expiresAt: new Date(expiryMatch[1]).toISOString(),
-        };
+    if (settings?.domain) {
+      try {
+        const certInfo = await execAsync('certbot certificates');
+        const expiryMatch = certInfo.stdout.match(/Expiry Date: (.*?) /);
+        if (expiryMatch) {
+          ssl = { expiresAt: new Date(expiryMatch[1]).toISOString() };
+        }
+      } catch (error) {
+        console.error('Error checking SSL certificate:', error);
       }
-    } catch (error) {
-      console.error('Error checking SSL certificate:', error);
     }
 
     return NextResponse.json({
-      domain,
-      serverIp,
+      domain: settings?.domain || '',
       ssl,
-      status: domain ? 'configured' : 'pending'
+      status: settings?.domain ? 'configured' : 'pending'
     });
   } catch (error) {
     console.error('Error getting domain settings:', error);
@@ -51,14 +51,53 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { domain } = domainSchema.parse(body);
 
+    // Update database
+    await prisma.domainSettings.upsert({
+      where: { id: 'current' },
+      update: { domain },
+      create: { id: 'current', domain }
+    });
+
     // Update Traefik configuration
-    await updateTraefikConfig(domain);
-    
-    // Update environment variables
-    await updateEnvFile(domain);
-    
-    // Restart Traefik to apply changes
-    await execAsync('docker-compose restart traefik');
+    const config = {
+      http: {
+        middlewares: {
+          authheader: {
+            headers: {
+              customRequestHeaders: {
+                'X-Forwarded-Proto': 'https'
+              }
+            }
+          }
+        },
+        routers: {
+          app: {
+            rule: `Host(\`${domain}\`)`,
+            service: 'app',
+            tls: {
+              certResolver: 'letsencrypt'
+            },
+            entryPoints: ['websecure'],
+            middlewares: ['authheader']
+          }
+        },
+        services: {
+          app: {
+            loadBalancer: {
+              servers: [{ url: 'http://app:3000' }]
+            }
+          }
+        }
+      }
+    };
+
+    try {
+      await fs.writeFile(TRAEFIK_CONFIG_PATH, yaml.stringify(config));
+      await execAsync('docker compose restart traefik');
+    } catch (error) {
+      console.error('Error updating Traefik configuration:', error);
+      // Continue even if Traefik update fails
+    }
 
     return NextResponse.json({
       success: true,
@@ -77,45 +116,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-}
-
-async function updateTraefikConfig(domain: string) {
-  const configPath = '/etc/traefik/dynamic/config.yml';
-  
-  const config = `
-http:
-  routers:
-    app:
-      rule: "Host(\`${domain}\`)"
-      service: app
-      tls:
-        certResolver: letsencrypt
-      entryPoints:
-        - websecure
-  services:
-    app:
-      loadBalancer:
-        servers:
-          - url: "http://app:3000"
-`;
-
-  await fs.writeFile(configPath, config);
-}
-
-async function updateEnvFile(domain: string) {
-  const envPath = '/opt/flexibuckets/.env';
-  let envContent = await fs.readFile(envPath, 'utf8');
-  
-  // Update domain-related variables
-  envContent = envContent.replace(/^DOMAIN=.*$/m, `DOMAIN=${domain}`);
-  envContent = envContent.replace(
-    /^NEXTAUTH_URL=.*$/m,
-    `NEXTAUTH_URL=https://${domain}`
-  );
-  envContent = envContent.replace(
-    /^NEXT_PUBLIC_APP_URL=.*$/m,
-    `NEXT_PUBLIC_APP_URL=https://${domain}`
-  );
-  
-  await fs.writeFile(envPath, envContent);
 }
