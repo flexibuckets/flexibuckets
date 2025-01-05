@@ -19,5 +19,5 @@ jobs:
       - name: Trigger AWS CodeBuild
         run: |
           aws codebuild start-build \
-            --project-name my-codebuild-project \
+            --project-name flexibuckets \
             --environment-variables-override name=IMAGE_TAG,value=$(date +%s),type=PLAINTEXT
