@@ -3,14 +3,12 @@ services:
     image: traefik:v2.10
     container_name: flexibuckets_traefik
     restart: always
-    security_opt:
-      - no-new-privileges:true
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /etc/traefik:/etc/traefik
+      - ${TRAEFIK_DIR:-/etc/traefik}:/etc/traefik
     networks:
       - flexibuckets_network
     command:
@@ -20,47 +18,10 @@ services:
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@flexibuckets.com}"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-    healthcheck:
-      test: ["CMD", "traefik", "healthcheck"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  app:
-    image: flexibuckets/flexibuckets:${APP_VERSION:-latest}
-    container_name: flexibuckets_app
-    restart: always
-    environment:
-      - DOCKER_HOST=unix:///var/run/docker.sock
-      - DOCKER_GROUP_ID=${DOCKER_GROUP_ID:-999}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/traefik:/etc/traefik:rw
-      - ./.env:/app/.env:ro
-      - ./docker-compose.yml:/app/docker-compose.yml:ro
-    depends_on:
-      db:
-        condition: service_healthy
-      traefik:
-        condition: service_healthy
-    networks:
-      - flexibuckets_network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.app.entrypoints=websecure"
-      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
-      - "traefik.http.services.app.loadbalancer.server.port=3000"
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
 
   db:
     image: postgres:16-alpine
@@ -72,18 +33,40 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-flexibuckets}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - flexibuckets_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-flexibuckets}"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  app:
+    image: flexibuckets/app:${APP_VERSION:-latest}
+    container_name: flexibuckets_app
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-flexibuckets}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+      traefik:
+        condition: service_started
     networks:
       - flexibuckets_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+      - "traefik.http.services.app.loadbalancer.server.port=3000"
 
 networks:
   flexibuckets_network:
     name: flexibuckets_network
-    driver: bridge
 
 volumes:
   postgres_data:
