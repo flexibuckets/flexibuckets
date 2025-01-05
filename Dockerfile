@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     docker.io \
     docker-compose \
     dnsutils \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Dependencies with layer caching
@@ -22,15 +23,17 @@ COPY package.json bun.lockb ./
 COPY prisma ./prisma/
 
 # Install dependencies
-RUN bun install --frozen-lockfile
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 RUN bunx prisma generate
 
-# Builder
+# Builder with caching
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
 COPY . .
-RUN bun run build
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun run build
 
 # Runner
 FROM base AS runner
