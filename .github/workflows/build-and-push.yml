@@ -14,7 +14,8 @@ jobs:
 
       - name: Get short SHA
         id: vars
-        run: echo "sha_short=$(git rev-parse --short=6 HEAD)" >> $GITHUB_ENV
+        run: |
+          echo "sha_short=$(git rev-parse --short=6 HEAD)" >> $GITHUB_ENV
 
       - name: Check for changes in Dockerfile or src
         id: changes_check
@@ -44,16 +45,17 @@ jobs:
           tags: |
             flexibuckets/flexibuckets:${{ env.sha_short }}
             flexibuckets/flexibuckets:latest
+          labels: |
+            org.opencontainers.image.version=${{ env.sha_short }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Update tag to latest if no changes detected
+      - name: Update only the `latest` tag if no changes detected
         if: env.changes == 'false'
         run: |
-          echo "No significant changes detected. Updating tag to 'latest'."
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: flexibuckets/flexibuckets:latest
+          docker pull flexibuckets/flexibuckets:${{ env.sha_short }} || true
+          docker tag flexibuckets/flexibuckets:${{ env.sha_short }} flexibuckets/flexibuckets:latest
+          docker push flexibuckets/flexibuckets:latest
