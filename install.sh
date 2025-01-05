@@ -41,7 +41,7 @@ check_system_requirements() {
     if [ "$EUID" -ne 0 ]; then
         log "ERROR" "Please run as root (use sudo)"
         exit 1
-    }
+    fi
 
     # Check minimum system requirements
     if [ "$(nproc)" -lt 2 ]; then
@@ -86,20 +86,22 @@ install_docker() {
 
     # Install Docker Compose v2
     log "INFO" "Installing Docker Compose..."
-    curl -SL https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-    ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -SL "https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
     # Start Docker service
     systemctl start docker
     systemctl enable docker
 
-    # Add current user to docker group
-    usermod -aG docker "$SUDO_USER"
+    # Add current user to docker group if SUDO_USER is set
+    if [ -n "$SUDO_USER" ]; then
+        usermod -aG docker "$SUDO_USER"
+    fi
 
     # Verify installation
     log "INFO" "Docker version: $(docker --version)"
-    log "INFO" "Docker Compose version: $(docker-compose --version)"
+    log "INFO" "Docker Compose version: $(docker compose version)"
 }
 
 # Function to verify Docker installation
@@ -108,11 +110,6 @@ verify_docker() {
     
     if ! command_exists docker; then
         log "INFO" "Docker not found, installing..."
-        install_docker
-    fi
-
-    if ! command_exists docker-compose; then
-        log "INFO" "Docker Compose not found, installing..."
         install_docker
     fi
 
@@ -200,20 +197,20 @@ start_services() {
     cd "$INSTALL_DIR"
     
     # Pull latest images
-    docker-compose pull
+    docker compose pull
 
     # Stop any running containers
-    docker-compose down --remove-orphans
+    docker compose down --remove-orphans
 
     # Start services
-    docker-compose up -d
+    docker compose up -d
 
     # Check if services are running
-    if docker-compose ps | grep -q "Up"; then
+    if docker compose ps | grep -q "Up"; then
         log "INFO" "Services started successfully"
     else
         log "ERROR" "Failed to start services"
-        docker-compose logs
+        docker compose logs
         exit 1
     fi
 }
