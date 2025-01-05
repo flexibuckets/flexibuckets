@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensure the full commit history is fetched
 
       - name: Get short SHA
         id: vars
@@ -20,7 +22,11 @@ jobs:
       - name: Check for changes in Dockerfile or src
         id: changes_check
         run: |
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          if git rev-parse HEAD^ >/dev/null 2>&1; then
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD)
+          fi
           echo "Changed files: $CHANGED_FILES"
           if echo "$CHANGED_FILES" | grep -q -E '(Dockerfile|^src/)'; then
             echo "changes=true" >> $GITHUB_ENV
