@@ -161,17 +161,17 @@ export default function DomainSettings() {
         {validationStatus === 'error' && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>DNS Configuration Required</AlertTitle>
+            <AlertTitle>Domain Configuration Required</AlertTitle>
             <AlertDescription>
-              Please add the following DNS records and validate again:
+              Please ensure your domain points to this server and has the following DNS records:
               <pre className="mt-2 p-2 bg-destructive/10 rounded-md">
                 {`Type: A
 Record: @
-Value: ${currentDomain.serverIp}
+Value: Your server IP
 
 Type: A
 Record: www
-Value: ${currentDomain.serverIp}`}
+Value: Your server IP`}
               </pre>
             </AlertDescription>
           </Alert>
