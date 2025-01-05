@@ -41,7 +41,7 @@ check_system_requirements() {
     if [ "$EUID" -ne 0 ]; then
         log "ERROR" "Please run as root (use sudo)"
         exit 1
-    fi
+    }
 
     # Check minimum system requirements
     if [ "$(nproc)" -lt 2 ]; then
@@ -86,30 +86,33 @@ install_docker() {
 
     # Install Docker Compose v2
     log "INFO" "Installing Docker Compose..."
-    mkdir -p /usr/local/lib/docker/cli-plugins
-    curl -SL "https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/lib/docker/cli-plugins/docker-compose
-    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+    curl -SL https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+    ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
 
     # Start Docker service
     systemctl start docker
     systemctl enable docker
 
-    # Add current user to docker group if SUDO_USER is set
-    if [ -n "$SUDO_USER" ]; then
-        usermod -aG docker "$SUDO_USER"
-    fi
+    # Add current user to docker group
+    usermod -aG docker "$SUDO_USER"
 
     # Verify installation
     log "INFO" "Docker version: $(docker --version)"
-    log "INFO" "Docker Compose version: $(docker compose version || echo 'not installed')"
+    log "INFO" "Docker Compose version: $(docker-compose --version)"
 }
 
-# Function to verify Docker and Docker Compose installation
+# Function to verify Docker installation
 verify_docker() {
     log "INFO" "Verifying Docker installation..."
     
     if ! command_exists docker; then
         log "INFO" "Docker not found, installing..."
+        install_docker
+    fi
+
+    if ! command_exists docker-compose; then
+        log "INFO" "Docker Compose not found, installing..."
         install_docker
     fi
 
@@ -124,13 +127,7 @@ verify_docker() {
         exit 1
     fi
 
-    log "INFO" "Verifying Docker Compose installation..."
-    if ! docker compose version >/dev/null 2>&1; then
-        log "INFO" "Docker Compose not found, installing..."
-        install_docker
-    fi
-
-    log "INFO" "Docker Compose is installed and functional"
+    log "INFO" "Docker is running properly"
 }
 
 # Function to handle repository
@@ -166,7 +163,7 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=${DB_PASSWORD}
 POSTGRES_DB=flexibuckets
 DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/flexibuckets
-SERVER_IP=${PUBLIC_IP}
+
 # Application Configuration
 NODE_ENV=production
 NEXTAUTH_URL=http://${PUBLIC_IP}:3000
@@ -203,64 +200,28 @@ start_services() {
     cd "$INSTALL_DIR"
     
     # Pull latest images
-    docker compose pull
+    docker-compose pull
 
     # Stop any running containers
-    docker compose down --remove-orphans
+    docker-compose down --remove-orphans
 
     # Start services
-    docker compose up -d
+    docker-compose up -d
 
     # Check if services are running
-    if docker compose ps | grep -q "Up"; then
+    if docker-compose ps | grep -q "Up"; then
         log "INFO" "Services started successfully"
     else
         log "ERROR" "Failed to start services"
-        docker compose logs
+        docker-compose logs
         exit 1
     fi
 }
-get_public_ip() {
-   local ip=""
-    
-    # Try AWS metadata (using IMDSv2)
-    if curl -s --connect-timeout 1 "http://169.254.169.254/latest/api/token" -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" >/dev/null 2>&1; then
-        local token=$(curl -s "http://169.254.169.254/latest/api/token" -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-        ip=$(curl -s -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/meta-data/public-ipv4)
-    fi
 
-    # Try Azure IMDS if AWS failed
-    if [ -z "$ip" ]; then
-        ip=$(curl -s -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance/network/interface/0/ipAddress/ipAddress?api-version=2021-02-01")
-    fi
-
-    # Try Google Cloud metadata if Azure failed
-    if [ -z "$ip" ]; then
-        ip=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip")
-    fi
-
-    # If all cloud providers failed, try external IP services
-    if [ -z "$ip" ] || [[ ! $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        for ip_service in "https://api.ipify.org" "https://ifconfig.me" "https://icanhazip.com"; do
-            ip=$(curl -s --max-time 5 "$ip_service")
-            if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                break
-            fi
-        done
-    fi
-
-    # Final validation
-    if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "$ip"
-    else
-        echo -e "${RED}Failed to detect public IP address${NC}"
-        exit 1
-    fi
-}
 # Main installation function
 main() {
     echo -e "\n${BOLD}FlexiBuckets Installer${NC}\n"
-    SERVER_IP=$(get_public_ip)
+    
     # Check system requirements
     check_system_requirements
     
@@ -283,8 +244,8 @@ main() {
     
     log "INFO" "Installation completed successfully!"
     echo -e "\nAccess your FlexiBuckets instance at:"
-    echo -e "\U0001F310 HTTP:  http://${SERVER_IP:-localhost}:3000"
-    echo -e "\U0001F512 HTTPS: https://${SERVER_IP:-localhost}"
+    echo -e "🌐 HTTP:  http://${DOMAIN:-localhost}:3000"
+    echo -e "🔒 HTTPS: https://${DOMAIN:-localhost}"
     
     echo -e "\n${YELLOW}Important Notes:${NC}"
     echo "1. Configuration files are in: $INSTALL_DIR"
