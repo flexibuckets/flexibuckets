@@ -42,8 +42,8 @@ jobs:
           context: .
           push: true
           tags: |
-          flexibuckets/flexibuckets:${{ env.sha_short }}
-          flexibuckets/flexibuckets:latest
+            flexibuckets/flexibuckets:${{ env.sha_short }}
+            flexibuckets/flexibuckets:latest
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
