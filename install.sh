@@ -101,10 +101,10 @@ install_docker() {
 
     # Verify installation
     log "INFO" "Docker version: $(docker --version)"
-    log "INFO" "Docker Compose version: $(docker compose version)"
+    log "INFO" "Docker Compose version: $(docker compose version || echo 'not installed')"
 }
 
-# Function to verify Docker installation
+# Function to verify Docker and Docker Compose installation
 verify_docker() {
     log "INFO" "Verifying Docker installation..."
     
@@ -124,7 +124,13 @@ verify_docker() {
         exit 1
     fi
 
-    log "INFO" "Docker is running properly"
+    log "INFO" "Verifying Docker Compose installation..."
+    if ! docker compose version >/dev/null 2>&1; then
+        log "INFO" "Docker Compose not found, installing..."
+        install_docker
+    fi
+
+    log "INFO" "Docker Compose is installed and functional"
 }
 
 # Function to handle repository
@@ -214,11 +220,47 @@ start_services() {
         exit 1
     fi
 }
+get_public_ip() {
+   local ip=""
+    
+    # Try AWS metadata (using IMDSv2)
+    if curl -s --connect-timeout 1 "http://169.254.169.254/latest/api/token" -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" >/dev/null 2>&1; then
+        local token=$(curl -s "http://169.254.169.254/latest/api/token" -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+        ip=$(curl -s -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/meta-data/public-ipv4)
+    fi
 
+    # Try Azure IMDS if AWS failed
+    if [ -z "$ip" ]; then
+        ip=$(curl -s -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance/network/interface/0/ipAddress/ipAddress?api-version=2021-02-01")
+    fi
+
+    # Try Google Cloud metadata if Azure failed
+    if [ -z "$ip" ]; then
+        ip=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip")
+    fi
+
+    # If all cloud providers failed, try external IP services
+    if [ -z "$ip" ] || [[ ! $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        for ip_service in "https://api.ipify.org" "https://ifconfig.me" "https://icanhazip.com"; do
+            ip=$(curl -s --max-time 5 "$ip_service")
+            if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                break
+            fi
+        done
+    fi
+
+    # Final validation
+    if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "$ip"
+    else
+        echo -e "${RED}Failed to detect public IP address${NC}"
+        exit 1
+    fi
+}
 # Main installation function
 main() {
     echo -e "\n${BOLD}FlexiBuckets Installer${NC}\n"
-    
+    SERVER_IP=$(get_public_ip)
     # Check system requirements
     check_system_requirements
     
@@ -241,8 +283,8 @@ main() {
     
     log "INFO" "Installation completed successfully!"
     echo -e "\nAccess your FlexiBuckets instance at:"
-    echo -e "🌐 HTTP:  http://${DOMAIN:-localhost}:3000"
-    echo -e "🔒 HTTPS: https://${DOMAIN:-localhost}"
+    echo -e "\U0001F310 HTTP:  http://${SERVER_IP:-localhost}:3000"
+    echo -e "\U0001F512 HTTPS: https://${SERVER_IP:-localhost}"
     
     echo -e "\n${YELLOW}Important Notes:${NC}"
     echo "1. Configuration files are in: $INSTALL_DIR"

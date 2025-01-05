@@ -3,9 +3,12 @@ services:
     image: traefik:v2.10
     container_name: flexibuckets_traefik
     restart: always
+    environment:
+      - SERVER_IP=${SERVER_IP}
     ports:
       - "80:80"
       - "443:443"
+      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${TRAEFIK_DIR:-/etc/traefik}:/etc/traefik
@@ -44,6 +47,8 @@ services:
   app:
     image: flexibuckets/flexibuckets:${APP_VERSION:-latest}
     container_name: flexibuckets_app
+    ports:
+      - "3000:3000"
     restart: always
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-flexibuckets}
