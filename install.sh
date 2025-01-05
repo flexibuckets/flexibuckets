@@ -12,6 +12,7 @@ BOLD='\033[1m'
 INSTALL_DIR="/opt/flexibuckets"
 TRAEFIK_DIR="/etc/traefik"
 ENV_FILE="${INSTALL_DIR}/.env"
+REPO_URL="https://github.com/flexibuckets/flexibuckets.git"
 
 # Function to install Docker and Docker Compose
 install_docker() {
@@ -27,7 +28,8 @@ install_docker() {
         ca-certificates \
         curl \
         gnupg \
-        lsb-release
+        lsb-release \
+        git
 
     # Add Docker's official GPG key
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
@@ -48,6 +50,23 @@ install_docker() {
     # Verify installation
     docker --version
     docker compose version
+}
+
+# Function to handle repository
+setup_repository() {
+    echo -e "${YELLOW}Setting up FlexiBuckets repository...${NC}"
+    
+    if [ -d "${INSTALL_DIR}/.git" ]; then
+        echo -e "${YELLOW}Repository exists, updating...${NC}"
+        cd "$INSTALL_DIR"
+        git fetch origin
+        git reset --hard origin/main
+    else
+        echo -e "${YELLOW}Cloning repository...${NC}"
+        # Ensure the directory is empty or doesn't exist
+        rm -rf "$INSTALL_DIR"
+        git clone "$REPO_URL" "$INSTALL_DIR"
+    fi
 }
 
 # Function to create environment file
@@ -87,6 +106,35 @@ EOL
     echo -e "${GREEN}Created .env file at ${ENV_FILE}${NC}"
 }
 
+# Function to setup Traefik
+setup_traefik() {
+    echo -e "${YELLOW}Setting up Traefik...${NC}"
+    
+    mkdir -p "${TRAEFIK_DIR}/dynamic"
+    mkdir -p "${TRAEFIK_DIR}/acme"
+    
+    touch "${TRAEFIK_DIR}/acme/acme.json"
+    chmod 600 "${TRAEFIK_DIR}/acme/acme.json"
+}
+
+# Function to verify Docker is running
+verify_docker() {
+    echo -e "${YELLOW}Verifying Docker installation...${NC}"
+    
+    if ! systemctl is-active --quiet docker; then
+        echo -e "${YELLOW}Starting Docker service...${NC}"
+        systemctl start docker
+    fi
+    
+    if ! docker info >/dev/null 2>&1; then
+        echo -e "${RED}Docker is not running properly${NC}"
+        return 1
+    fi
+    
+    echo -e "${GREEN}Docker is running${NC}"
+    return 0
+}
+
 # Main installation function
 main() {
     echo -e "${BOLD}FlexiBuckets Installer${NC}"
@@ -102,30 +150,36 @@ main() {
         install_docker
     fi
     
-    # Create installation directory
-    mkdir -p "$INSTALL_DIR"
+    # Verify Docker is running
+    verify_docker
     
-    # Create Traefik directories and files
-    mkdir -p "${TRAEFIK_DIR}/dynamic"
-    mkdir -p "${TRAEFIK_DIR}/acme"
-    touch "${TRAEFIK_DIR}/acme/acme.json"
-    chmod 600 "${TRAEFIK_DIR}/acme/acme.json"
+    # Setup or update repository
+    setup_repository
     
-    # Create environment file
-    create_env_file
+    # Create environment file if it doesn't exist
+    if [ ! -f "$ENV_FILE" ]; then
+        create_env_file
+    fi
     
-    # Copy docker-compose file
-    echo -e "${YELLOW}Setting up Docker Compose configuration...${NC}"
-    cp docker-compose.yml "$INSTALL_DIR/"
+    # Setup Traefik
+    setup_traefik
     
     # Start services
     echo -e "${YELLOW}Starting services...${NC}"
     cd "$INSTALL_DIR"
+    docker compose down
     docker compose pull
     docker compose up -d
     
     echo -e "${GREEN}Installation completed successfully!${NC}"
-    echo -e "Access your FlexiBuckets instance at: http://${PUBLIC_IP}:3000"
+    echo -e "\nAccess your FlexiBuckets instance at:"
+    echo -e "🌐 HTTP:  http://${DOMAIN:-localhost}:3000"
+    echo -e "🔒 HTTPS: https://${DOMAIN:-localhost}"
+    
+    echo -e "\n${YELLOW}Important Notes:${NC}"
+    echo "1. Configuration files are in: $INSTALL_DIR"
+    echo "2. Environment file is at: $ENV_FILE"
+    echo "3. Traefik configuration is in: $TRAEFIK_DIR"
 }
 
 # Run main installation
