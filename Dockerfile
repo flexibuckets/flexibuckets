@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y \
 FROM base AS deps
 COPY package.json bun.lockb ./
 COPY prisma ./prisma/
+COPY .env ./
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.bun/install/cache \
