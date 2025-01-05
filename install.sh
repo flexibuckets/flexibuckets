@@ -93,13 +93,13 @@ NEXTAUTH_URL=http://${PUBLIC_IP}:3000
 NEXT_PUBLIC_APP_URL=http://${PUBLIC_IP}:3000
 NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 
-# Docker Configuration
+# Docker Configuration  
 DOMAIN=${PUBLIC_IP}
 APP_VERSION=latest
 TRAEFIK_DIR=${TRAEFIK_DIR}
 
 # Traefik Configuration
-ACME_EMAIL=admin@flexibuckets.com
+ACME_EMAIL=admin@flexibuckets.com  
 EOL
 
     chmod 600 "$ENV_FILE"
@@ -117,18 +117,18 @@ setup_traefik() {
     chmod 600 "${TRAEFIK_DIR}/acme/acme.json"
 }
 
-# Function to verify Docker is running
+# Function to verify Docker is running 
 verify_docker() {
     echo -e "${YELLOW}Verifying Docker installation...${NC}"
     
     if ! systemctl is-active --quiet docker; then
-        echo -e "${YELLOW}Starting Docker service...${NC}"
+        echo -e "${YELLOW}Starting Docker service...${NC}" 
         systemctl start docker
     fi
     
     if ! docker info >/dev/null 2>&1; then
         echo -e "${RED}Docker is not running properly${NC}"
-        return 1
+        return 1  
     fi
     
     echo -e "${GREEN}Docker is running${NC}"
@@ -140,8 +140,8 @@ main() {
     echo -e "${BOLD}FlexiBuckets Installer${NC}"
     
     # Check if running as root
-    if [ "$EUID" -ne 0 ]; then 
-        echo -e "${RED}Please run as root (use sudo)${NC}"
+    if [ "$EUID" -ne 0 ]; then
+        echo -e "${RED}Please run as root (use sudo)${NC}"  
         exit 1
     fi
     
@@ -153,12 +153,12 @@ main() {
     # Verify Docker is running
     verify_docker
     
-    # Setup or update repository
+    # Setup or update repository  
     setup_repository
     
     # Create environment file if it doesn't exist
     if [ ! -f "$ENV_FILE" ]; then
-        create_env_file
+        create_env_file  
     fi
     
     # Setup Traefik
@@ -167,17 +167,17 @@ main() {
     # Start services
     echo -e "${YELLOW}Starting services...${NC}"
     cd "$INSTALL_DIR"
-    docker compose down
+    docker compose down  
     docker compose pull
     docker compose up -d
     
     echo -e "${GREEN}Installation completed successfully!${NC}"
-    echo -e "\nAccess your FlexiBuckets instance at:"
+    echo -e "\nAccess your FlexiBuckets instance at:"  
     echo -e "🌐 HTTP:  http://${DOMAIN:-localhost}:3000"
     echo -e "🔒 HTTPS: https://${DOMAIN:-localhost}"
     
     echo -e "\n${YELLOW}Important Notes:${NC}"
-    echo "1. Configuration files are in: $INSTALL_DIR"
+    echo "1. Configuration files are in: $INSTALL_DIR" 
     echo "2. Environment file is at: $ENV_FILE"
     echo "3. Traefik configuration is in: $TRAEFIK_DIR"
 }
