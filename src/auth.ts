@@ -11,7 +11,6 @@ const authSchema = z.object({
 });
 
 export const authConfig: NextAuthConfig = {
-  trustHost: true,
   pages: {
     signIn: '/auth/signin',
     error: '/auth/error',
@@ -88,6 +87,7 @@ export const authConfig: NextAuthConfig = {
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   ...authConfig,
