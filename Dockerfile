@@ -42,12 +42,21 @@ WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
 
-# Create docker group with dynamic GID
+# Create or modify docker group with fallback logic
 ARG DOCKER_GROUP_ID=999
-RUN groupadd -g $DOCKER_GROUP_ID docker
+RUN if getent group docker > /dev/null; then \
+        # If docker group exists but with different GID, try to modify it
+        if [ "$(getent group docker | cut -d: -f3)" -ne $DOCKER_GROUP_ID ]; then \
+            groupmod -g $DOCKER_GROUP_ID docker || true; \
+        fi \
+    else \
+        # If docker group doesn't exist, create it
+        groupadd -g $DOCKER_GROUP_ID docker; \
+    fi
 
-# Create app user
-RUN useradd -r -u 1001 -g docker flexibuckets
+# Create app user with fallback logic for user creation
+RUN useradd -r -u 1001 -g docker flexibuckets 2>/dev/null || \
+    useradd -r -u 1001 -g $(getent group docker | cut -d: -f3) flexibuckets
 
 # Copy necessary files
 COPY --from=builder /app/public ./public
@@ -61,11 +70,11 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY ./scripts/healthcheck.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/healthcheck.sh
 
-# Set up directories and permissions
-RUN mkdir -p /app/data /etc/traefik/dynamic \
-    && chown -R flexibuckets:docker /app /etc/traefik \
-    && chmod -R 755 /app \
-    && chmod -R 770 /etc/traefik/dynamic
+# Set up directories and permissions with error handling
+RUN mkdir -p /app/data /etc/traefik/dynamic && \
+    chown -R flexibuckets:docker /app /etc/traefik || true && \
+    chmod -R 755 /app || true && \
+    chmod -R 770 /etc/traefik/dynamic || true
 
 USER flexibuckets
 
