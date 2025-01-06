@@ -99,7 +99,9 @@ export const authConfig: NextAuthConfig = {
   useSecureCookies: process.env.NODE_ENV === "production",
   cookies: {
     sessionToken: {
-      name: `__Secure-next-auth.session-token`,
+      name: process.env.NODE_ENV === "production" 
+        ? `__Secure-next-auth.session-token`
+        : `next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax',
@@ -108,7 +110,9 @@ export const authConfig: NextAuthConfig = {
       }
     },
     csrfToken: {
-      name: `__Host-next-auth.csrf-token`,
+      name: process.env.NODE_ENV === "production"
+        ? `__Host-next-auth.csrf-token`
+        : `next-auth.csrf-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax',
