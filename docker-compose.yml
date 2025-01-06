@@ -60,7 +60,7 @@ services:
       - NEXTAUTH_URL=https://${DOMAIN}
       - NEXTAUTH_URL_INTERNAL=http://localhost:3000
       - NEXT_PUBLIC_APP_URL=https://${DOMAIN}
-      - NEXTAUTH_SECRET=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+      - NEXTAUTH_SECRET={NEXTAUTH_SECRET}
     env_file: .env
     ports:
       - "3000:3000"
