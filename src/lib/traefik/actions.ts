@@ -61,6 +61,29 @@ export async function configureDomain(input: DomainConfigInput) {
 
     const routeConfig = {
       http: {
+        middlewares: {
+          auth: {
+            forwardAuth: {
+              address: "http://app:3000/api/auth",
+              trustForwardHeader: true,
+              authResponseHeaders: [
+                "Set-Cookie",
+                "Authorization",
+                "X-Auth-Token"
+              ]
+            }
+          },
+          headers: {
+            headers: {
+              customRequestHeaders: {
+                "X-Forwarded-Proto": "https"
+              },
+              customResponseHeaders: {
+                "Set-Cookie": "Path=/; Secure; HttpOnly; SameSite=Lax"
+              }
+            }
+          }
+        },
         routers: {
           website: {
             rule: `Host(\`${validated.domain}\`)`,
@@ -68,7 +91,8 @@ export async function configureDomain(input: DomainConfigInput) {
             tls: {
               certResolver: "letsencrypt"
             },
-            entryPoints: ["websecure"]
+            entryPoints: ["websecure"],
+            middlewares: ["auth", "headers"]
           },
           "website-http": {
             rule: `Host(\`${validated.domain}\`)`,

@@ -66,7 +66,20 @@ export async function POST(req: Request) {
             headers: {
               customRequestHeaders: {
                 'X-Forwarded-Proto': 'https'
+              },
+              customResponseHeaders: {
+                'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+                'X-Frame-Options': 'DENY',
+                'X-Content-Type-Options': 'nosniff'
               }
+            }
+          },
+          secureHeaders: {
+            headers: {
+              sslRedirect: true,
+              forceSTSHeader: true,
+              stsSeconds: 31536000,
+              stsIncludeSubdomains: true
             }
           }
         },
@@ -78,13 +91,14 @@ export async function POST(req: Request) {
               certResolver: 'letsencrypt'
             },
             entryPoints: ['websecure'],
-            middlewares: ['authheader']
+            middlewares: ['authheader', 'secureHeaders']
           }
         },
         services: {
           app: {
             loadBalancer: {
-              servers: [{ url: 'http://app:3000' }]
+              servers: [{ url: 'http://app:3000' }],
+              passHostHeader: true
             }
           }
         }
