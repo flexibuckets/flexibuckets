@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { useState, useEffect } from 'react'
+import { signIn, getCsrfToken } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +16,16 @@ export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+  const [csrfToken, setCsrfToken] = useState<string>()
+
+  useEffect(() => {
+    const loadCsrfToken = async () => {
+      const token = await getCsrfToken()
+      setCsrfToken(token)
+    }
+    loadCsrfToken()
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -51,6 +61,7 @@ export default function AuthPage() {
           <p className="text-sm text-muted-foreground">Sign in to your account</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <input name="csrfToken" type="hidden" defaultValue={csrfToken} />
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
