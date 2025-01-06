@@ -97,7 +97,6 @@ export const authConfig: NextAuthConfig = {
   ],
   secret: process.env.NEXTAUTH_SECRET,
   useSecureCookies: false, // Allow non-HTTPS
-  trustHost: false, // Disable host checking
   cookies: {
     sessionToken: {
       name: 'next-auth.session-token',
@@ -121,6 +120,7 @@ export const authConfig: NextAuthConfig = {
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   ...authConfig,
