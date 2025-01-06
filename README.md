@@ -4,6 +4,8 @@
 [![Bun](https://img.shields.io/badge/Bun-%23000000.svg?style=flat&logo=bun&logoColor=white)](https://bun.sh)
 [![Next.js](https://img.shields.io/badge/Next.js-black?style=flat&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![Build](https://github.com/flexibuckets/flexibuckets/actions/workflows/build-and-push.yml/badge.svg)](https://github.com/flexibuckets/flexibuckets/actions/workflows/build-and-push.yml)
+
+
 FlexiBuckets is an open-source, self-hosted solution for managing multiple S3-compatible storage buckets in one unified interface. Perfect for developers and teams who work with various S3-compatible storage providers.
 
 ## ✨ Features

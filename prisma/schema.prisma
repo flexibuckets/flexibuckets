@@ -1,6 +1,6 @@
 datasource db {
   provider = "postgresql"
-  url      =env("DATABASE_URL")
+  url      ="postgresql://flexibuckets_kgj5_user:xHk1otJWacMqZnzRlIGqHI1mdFLw6Eez@dpg-cts3i33qf0us73dol780-a.oregon-postgres.render.com/flexibuckets_kgj5"
 }
 
 generator client {
