@@ -158,7 +158,7 @@ create_env_file() {
     NEXTAUTH_SECRET=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
     
     # Get public IP
-    PUBLIC_IP=$(curl -s https://api.ipify.org)
+    SERVER_IP=$(get_public_ip)
     
     cat > "$ENV_FILE" << EOL
 # Database Configuration
@@ -166,15 +166,15 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=flexibuckets
 DATABASE_URL=postgresql://postgres:postgres@db:5432/flexibuckets
-SERVER_IP=${PUBLIC_IP}
+SERVER_IP=${SERVER_IP}
 # Application Configuration
 NODE_ENV=production
-NEXTAUTH_URL=http://${PUBLIC_IP}:3000
-NEXT_PUBLIC_APP_URL=http://${PUBLIC_IP}:3000
+NEXTAUTH_URL=http://${SERVER_IP}:3000
+NEXT_PUBLIC_APP_URL=http://${SERVER_IP}:3000
 NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-AUTH_TRUST_HOST=http://${PUBLIC_IP}:3000
+AUTH_TRUST_HOST=http://${SERVER_IP}:3000
 # Docker Configuration  
-DOMAIN=${PUBLIC_IP}
+DOMAIN=${SERVER_IP}
 APP_VERSION=latest
 TRAEFIK_DIR=${TRAEFIK_DIR}
 
