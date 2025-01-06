@@ -96,35 +96,31 @@ export const authConfig: NextAuthConfig = {
     })
   ],
   secret: process.env.NEXTAUTH_SECRET,
-  useSecureCookies: process.env.NODE_ENV === "production",
+  useSecureCookies: false, // Allow non-HTTPS
+  trustHost: false, // Disable host checking
   cookies: {
     sessionToken: {
-      name: process.env.NODE_ENV === "production" 
-        ? `__Secure-next-auth.session-token`
-        : `next-auth.session-token`,
+      name: 'next-auth.session-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: process.env.NODE_ENV === "production"
+        secure: false
       }
     },
     csrfToken: {
-      name: process.env.NODE_ENV === "production"
-        ? `__Host-next-auth.csrf-token`
-        : `next-auth.csrf-token`,
+      name: 'next-auth.csrf-token', 
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: process.env.NODE_ENV === "production"
+        secure: false
       }
     }
-  }
+  },
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  trustHost: true,
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   ...authConfig,
