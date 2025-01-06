@@ -36,7 +36,7 @@ export const authConfig: NextAuthConfig = {
     session: async ({ session, token }) => {
       if (session.user && token) {                       
         session.user.id = token.id as string;
-
+                                         
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
           select: {
@@ -95,6 +95,28 @@ export const authConfig: NextAuthConfig = {
       }
     })
   ],
+  secret: process.env.NEXTAUTH_SECRET,
+  useSecureCookies: process.env.NODE_ENV === "production",
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === "production"
+      }
+    },
+    csrfToken: {
+      name: `__Host-next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === "production"
+      }
+    }
+  }
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
