@@ -11,17 +11,17 @@ services:
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${TRAEFIK_DIR:-/etc/traefik}:/etc/traefik
+      - /etc/traefik:/etc/traefik
     networks:
       - flexibuckets_network
     command:
-      - "--api.dashboard=true"
+      - "--log.level=DEBUG"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@example.com}"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
@@ -34,54 +34,65 @@ services:
     image: postgres:16-alpine
     container_name: flexibuckets_postgres
     restart: always
+    env_file: .env
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-flexibuckets}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - flexibuckets_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-flexibuckets}"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 20
+      start_period: 10s
+    networks:
+      - flexibuckets_network
 
   app:
-    image: flexibuckets/flexibuckets:${APP_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
     container_name: flexibuckets_app
-    ports:
-      - "3000:3000"
     restart: always
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-flexibuckets}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - SERVER_IP=${SERVER_IP}
       - DOMAIN=${DOMAIN}
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXTAUTH_URL=https://${DOMAIN}
+      - NEXTAUTH_URL_INTERNAL=http://localhost:3000
+      - NEXT_PUBLIC_APP_URL=https://${DOMAIN}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-
+    env_file: .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/traefik:/etc/traefik:rw
+    networks:
+      - flexibuckets_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app-domain.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.app-domain.entrypoints=web,websecure"
+      - "traefik.http.routers.app-domain.service=app-service"
+      - "traefik.http.routers.app-domain.tls=true"
+      - "traefik.http.routers.app-domain.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.app-ip.rule=Host(`${SERVER_IP}`)"
+      - "traefik.http.routers.app-ip.entrypoints=web"
+      - "traefik.http.routers.app-ip.service=app-service"
+      - "traefik.http.services.app-service.loadbalancer.server.port=3000"
+    user: "1000:1000"
     depends_on:
       db:
         condition: service_healthy
       traefik:
         condition: service_started
-    networks:
-      - flexibuckets_network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.app.entrypoints=websecure"
-      - "traefik.http.routers.app.tls.certresolver=letsencrypt"
-      - "traefik.http.services.app.loadbalancer.server.port=3000"
-      - "traefik.http.routers.app.middlewares=authheader@file"
-    volumes:
-      - ${TRAEFIK_DIR:-/etc/traefik}/dynamic:/etc/traefik/dynamic:rw
-
 
 networks:
   flexibuckets_network:
-    name: flexibuckets_network
+    driver: bridge
 
 volumes:
   postgres_data:

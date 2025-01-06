@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import AccessDenied from "@/components/dashboard/AccessDenied";
-import DomainSettings from "@/components/settings/DomainSettings";
+import { DomainSettings } from "@/components/settings/DomainSettings";
 
 import NameEdit from "@/components/settings/NameEdit";
 import React from "react";
@@ -19,7 +19,7 @@ const Page = async () => {
           </div>
         </div>
         <NameEdit session={session} />
-        <DomainSettings />
+        <DomainSettings session={session} />
       </div>
     </div>
   );

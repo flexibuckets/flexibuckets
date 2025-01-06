@@ -13,5 +13,5 @@ export default function DashboardPage() {
   if (status === "unauthenticated" || !session) {
     return <AccessDenied />;
   }
-  return <BucketDashboard userId={session.user.id} />;
+  return <BucketDashboard userId={session.user.id ?? ''} />;
 }

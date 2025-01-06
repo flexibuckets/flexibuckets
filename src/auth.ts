@@ -4,6 +4,16 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { DefaultSession } from "next-auth"
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      isAdmin: boolean
+      totalUploadSize: number
+    } & DefaultSession["user"]
+  }
+}
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -24,19 +34,20 @@ export const authConfig: NextAuthConfig = {
       return token;
     },
     session: async ({ session, token }) => {
-      if (session.user && token) {
+      if (session.user && token) {                       
         session.user.id = token.id as string;
 
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
           select: {
             totalUploadSize: true,
+            isAdmin: true,
           },
         });
 
         if (dbUser) {
           session.user.totalUploadSize = Number(dbUser.totalUploadSize);
-  
+          session.user.isAdmin = dbUser.isAdmin;
         }
       }
       return session;

@@ -15,7 +15,7 @@ const domainSchema = z.object({
 
 export async function GET() {
   try {
-    const settings = await prisma.domainSettings.findFirst({
+    const settings = await prisma.settings.findFirst({
       orderBy: { createdAt: 'desc' }
     });
 
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     const { domain } = domainSchema.parse(body);
 
     // Update database
-    await prisma.domainSettings.upsert({
+    await prisma.settings.upsert({            
       where: { id: 'current' },
       update: { domain },
       create: { id: 'current', domain }

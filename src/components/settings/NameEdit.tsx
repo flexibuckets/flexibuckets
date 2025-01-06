@@ -77,7 +77,7 @@ const NameEdit = ({ session }: { session: Session }) => {
 
   // Handle form submission
   const onSubmit = (values: { name: string }) => {
-    mutation.mutate({ userId, name: values.name });
+    mutation.mutate({ userId: userId ?? '', name: values.name });
   };
   return (
     <Card>

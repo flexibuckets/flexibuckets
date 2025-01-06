@@ -11,7 +11,6 @@ const registerSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    
     const body = await req.json()
     const { name, email, password } = registerSchema.parse(body)
 
@@ -27,15 +26,20 @@ export async function POST(req: Request) {
       )
     }
 
+    // Check if this is the first user
+    const userCount = await prisma.user.count()
+    const isFirstUser = userCount === 0
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // Create user
+    // Create user with isAdmin set to true if first user
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
+        isAdmin: isFirstUser, // Set isAdmin true only for first user
       },
     })
 
