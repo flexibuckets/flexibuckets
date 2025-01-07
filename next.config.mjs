@@ -5,6 +5,7 @@ import { withContentlayer } from "next-contentlayer2";
 const nextConfig = withContentlayer({
   output: 'standalone',
   reactStrictMode: true,
+  
   headers() {
     return [
       {

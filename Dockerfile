@@ -72,10 +72,11 @@ COPY ./scripts/healthcheck.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/healthcheck.sh
 
 # Set up directories and permissions with error handling
-RUN mkdir -p /app/data /etc/traefik/dynamic && \
-    chown -R flexibuckets:docker /app /etc/traefik || true && \
-    chmod -R 755 /app || true && \
-    chmod -R 770 /etc/traefik/dynamic || true
+
+RUN mkdir -p /app/data /app/.next/cache/images && \
+    chown -R flexibuckets:docker /app && \
+    chmod -R 755 /app && \
+    chmod -R 777 /app/.next/cache/images
 
 USER flexibuckets
 

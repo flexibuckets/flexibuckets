@@ -11,7 +11,8 @@ services:
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /etc/traefik:/etc/traefik
+      - traefik_config:/etc/traefik
+      - ./traefik/dynamic:/etc/traefik/dynamic:rw
     networks:
       - flexibuckets_network
     command:
@@ -65,8 +66,10 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/traefik:/etc/traefik:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:rw
+      - app_data:/app/data
+      - next_cache:/app/.next/cache
     networks:
       - flexibuckets_network
     labels:
@@ -94,3 +97,6 @@ networks:
 volumes:
   postgres_data:
     name: flexibuckets_postgres_data
+  traefik_config:
+  app_data:
+  next_cache:

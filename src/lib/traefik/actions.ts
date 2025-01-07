@@ -48,6 +48,15 @@ export async function configureDomain(input: DomainConfigInput) {
   }
 
   try {
+    // Ensure the Traefik config directory exists and has proper permissions
+    const configDir = '/etc/traefik/dynamic';
+    try {
+      await fs.access(configDir);
+    } catch {
+      await fs.mkdir(configDir, { recursive: true });
+      await fs.chmod(configDir, 0o770);
+    }
+
     const validated = DomainConfigSchema.parse(input);
     
     // Updated domain validation regex to handle subdomains
@@ -143,6 +152,9 @@ export async function configureDomain(input: DomainConfigInput) {
     return { success: true, domain: validated.domain };
   } catch (error: any) {
     console.error('Failed to configure domain:', error);
+    if (error.code === 'EACCES') {
+      throw new Error(`Permission denied: Cannot write to configuration file. Please check container permissions.`);
+    }
     throw error;
   }
 }

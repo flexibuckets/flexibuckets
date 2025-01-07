@@ -190,15 +190,15 @@ EOL
 setup_traefik() {
     log "INFO" "Setting up Traefik..."
     
-    mkdir -p "${TRAEFIK_DIR}/dynamic"
-    mkdir -p "${TRAEFIK_DIR}/acme"
+    # Run the Traefik setup script
+    ./scripts/setup-traefik.sh
     
-    touch "${TRAEFIK_DIR}/acme/acme.json"
-    chmod 600 "${TRAEFIK_DIR}/acme/acme.json"
+    if [ $? -ne 0 ]; then
+        log "ERROR" "Failed to setup Traefik configuration"
+        exit 1
+    fi
     
-    # Ensure proper permissions for dynamic config directory
-    chown -R 1001:999 "${TRAEFIK_DIR}/dynamic"  # flexibuckets:docker
-    chmod 775 "${TRAEFIK_DIR}/dynamic"
+    log "INFO" "Traefik setup completed successfully"
 }
 
 # Function to start services

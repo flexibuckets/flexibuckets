@@ -92,6 +92,7 @@
     "react-syntax-highlighter": "^15.6.1",
     "readable-stream": "^4.5.2",
     "resend": "^4.0.1-alpha.0",
+    "sharp": "^0.33.5",
     "sonner": "^1.7.0",
     "standardwebhooks": "^1.0.0",
     "stripe": "^17.3.1",
