@@ -239,6 +239,17 @@ setup_traefik_directories() {
     chmod g+s "${TRAEFIK_DIR}"
     chmod g+s "${TRAEFIK_DYNAMIC_DIR}"
     
+    # Create ACME directory structure
+    ACME_DIR="${TRAEFIK_DIR}/acme"
+    mkdir -p "${ACME_DIR}"
+
+    # Create acme.json file
+    touch "${ACME_DIR}/acme.json"
+
+    # Set proper permissions
+    chmod 750 "${ACME_DIR}"
+    chmod 600 "${ACME_DIR}/acme.json"
+    chown -R "${APP_UID}:${DOCKER_GID}" "${ACME_DIR}"
     echo -e "${GREEN}Traefik directories configured${NC}"
 }
 
@@ -387,6 +398,8 @@ main() {
     
     # Setup database
     setup_database
+
+
 
     log "INFO" "Installation completed successfully!"
     echo -e "\nAccess your FlexiBuckets instance at:"
