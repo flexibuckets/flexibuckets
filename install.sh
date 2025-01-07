@@ -147,6 +147,13 @@ setup_repository() {
         mkdir -p "$INSTALL_DIR"
         git clone "$REPO_URL" "$INSTALL_DIR"
     fi
+
+    # Set proper permissions for scripts directory
+    log "INFO" "Setting script permissions..."
+    chmod -R +x "${INSTALL_DIR}/scripts"
+    
+    # Ensure proper ownership
+    chown -R root:root "${INSTALL_DIR}/scripts"
 }
 
 # Function to create environment file
