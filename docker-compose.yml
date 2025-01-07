@@ -5,6 +5,8 @@ services:
     restart: always
     environment:
       - SERVER_IP=${SERVER_IP}
+      - APP_UID=${APP_UID}
+      - DOCKER_GID=${DOCKER_GID}
     ports:
       - "80:80"
       - "443:443"
@@ -64,6 +66,8 @@ services:
       - NEXT_PUBLIC_APP_URL=https://${DOMAIN}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - TRAEFIK_DYNAMIC_DIR=/etc/traefik/dynamic
+      - APP_UID=${APP_UID}
+      - DOCKER_GID=${DOCKER_GID}
       
     env_file: .env
     ports:

@@ -1,379 +1,289 @@
 #!/bin/bash
-set -e
+set -euo pipefail  # Enable strict error handling
 
-# Colors and formatting
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-BOLD='\033[1m'
+# Version and configuration information
+readonly VERSION="1.0.0"
+readonly SCRIPT_NAME=$(basename "$0")
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Configuration
-INSTALL_DIR="/opt/flexibuckets"
-TRAEFIK_DIR="/etc/traefik"
-ENV_FILE="${INSTALL_DIR}/.env"
-REPO_URL="https://github.com/flexibuckets/flexibuckets.git"
-TRAEFIK_DIR="/etc/traefik"
-TRAEFIK_DYNAMIC_DIR="/etc/traefik/dynamic"
-APP_USER="flexibuckets"
-DOCKER_GROUP="docker"
+# Standard paths and configuration
+declare -A CONFIG=(
+    [INSTALL_DIR]="/opt/flexibuckets"
+    [TRAEFIK_DIR]="/etc/traefik"
+    [TRAEFIK_DYNAMIC_DIR]="/etc/traefik/dynamic"
+    [REPO_URL]="https://github.com/flexibuckets/flexibuckets.git"
+    [APP_USER]="flexibuckets"
+    [DOCKER_GROUP]="docker"
+    [MIN_RAM_GB]=4
+    [MIN_CPU_CORES]=2
+)
 
-# Function to log messages
+# Color and formatting definitions
+declare -A COLORS=(
+    [RED]='\033[0;31m'
+    [GREEN]='\033[0;32m'
+    [YELLOW]='\033[1;33m'
+    [BLUE]='\033[0;34m'
+    [NC]='\033[0m'
+    [BOLD]='\033[1m'
+)
+
+# Initialize logging
+declare -A LOG_LEVELS=([DEBUG]=0 [INFO]=1 [WARN]=2 [ERROR]=3)
+CURRENT_LOG_LEVEL=${LOG_LEVEL:-1}  # Default to INFO
+
+# Helper Functions
 log() {
     local level=$1
     shift
-    local color
-    case "$level" in
-        "INFO") color="$GREEN" ;;
-        "WARN") color="$YELLOW" ;;
-        "ERROR") color="$RED" ;;
-        *) color="$NC" ;;
-    esac
-    echo -e "${color}[$level] $*${NC}"
+    local color_code="${COLORS[${level}]:-${COLORS[NC]}}"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    if [[ ${LOG_LEVELS[$level]:-0} -ge $CURRENT_LOG_LEVEL ]]; then
+        echo -e "${color_code}${timestamp} [${level}] $*${COLORS[NC]}" >&2
+    fi
 }
 
-# Function to check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
+die() {
+    log "ERROR" "$*"
+    exit 1
 }
 
-# Function to verify system requirements
-check_system_requirements() {
-    log "INFO" "Checking system requirements..."
-    
-    # Check if running as root
-    if [ "$EUID" -ne 0 ]; then
-        log "ERROR" "Please run as root (use sudo)"
-        exit 1
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        die "This script must be run as root. Please use sudo."
     fi
+}
 
-    # Check minimum system requirements
-    if [ "$(nproc)" -lt 2 ]; then
-        log "WARN" "Recommended minimum: 2 CPU cores"
+create_directories() {
+    local dirs=("${CONFIG[INSTALL_DIR]}" "${CONFIG[TRAEFIK_DIR]}" "${CONFIG[TRAEFIK_DYNAMIC_DIR]}")
+    
+    for dir in "${dirs[@]}"; do
+        if ! mkdir -p "$dir" 2>/dev/null; then
+            die "Failed to create directory: $dir"
+        fi
+    done
+}
+
+validate_system_requirements() {
+    log "INFO" "Validating system requirements..."
+    
+    # Check CPU cores
+    local cpu_cores=$(nproc)
+    if [[ $cpu_cores -lt ${CONFIG[MIN_CPU_CORES]} ]]; then
+        log "WARN" "System has fewer than recommended CPU cores (${CONFIG[MIN_CPU_CORES]})"
     fi
     
+    # Check RAM
     local mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
     local mem_gb=$((mem_kb / 1024 / 1024))
-    if [ "$mem_gb" -lt 4 ]; then
-        log "WARN" "Recommended minimum: 4GB RAM (found: ${mem_gb}GB)"
+    if [[ $mem_gb -lt ${CONFIG[MIN_RAM_GB]} ]]; then
+        log "WARN" "System has less than recommended RAM (${CONFIG[MIN_RAM_GB]}GB)"
+    
+    
+    # Check disk space
+    local available_space=$(df -BG "${CONFIG[INSTALL_DIR]}" | awk 'NR==2 {print $4}' | tr -d 'G')
+    if [[ $available_space -lt 10 ]]; then
+        log "WARN" "Less than 10GB available disk space"
     fi
 }
 
-# Function to install Docker and Docker Compose
-install_docker() {
-    log "INFO" "Installing Docker and Docker Compose..."
+setup_system_user() {
+    log "INFO" "Setting up system user and groups..."
     
-    # Remove any old versions
-    apt-get remove -y docker docker.io containerd runc || true
+    # Create system user if it doesn't exist
+    if ! id "${CONFIG[APP_USER]}" &>/dev/null; then
+        useradd -r -s /bin/false "${CONFIG[APP_USER]}" || 
+            die "Failed to create system user"
+    fi
     
-    # Install prerequisites
-    apt-get update
-    apt-get install -y \
-        apt-transport-https \
-        ca-certificates \
-        curl \
-        gnupg \
-        lsb-release \
+    # Ensure Docker group exists
+    if ! getent group docker >/dev/null; then
+        groupadd docker || die "Failed to create docker group"
+    fi
+    
+    # Add user to docker group
+    usermod -aG docker "${CONFIG[APP_USER]}" || 
+        die "Failed to add user to docker group"
+        
+    export APP_UID=$(id -u "${CONFIG[APP_USER]}")
+    export DOCKER_GID=$(getent group docker | cut -d: -f3)
+}
+
+install_dependencies() {
+    log "INFO" "Installing system dependencies..."
+    
+    apt-get update || die "Failed to update package lists"
+    
+    local deps=(
+        apt-transport-https
+        ca-certificates
+        curl
+        gnupg
+        lsb-release
         git
-
-    # Add Docker's official GPG key
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-
-    # Set up the stable repository
-    echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-    $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-    # Install Docker Engine
-    apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io
-
-    # Install Docker Compose v2
-    log "INFO" "Installing Docker Compose..."
-    mkdir -p /usr/local/lib/docker/cli-plugins
-    curl -SL "https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/lib/docker/cli-plugins/docker-compose
-    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-
-    # Start Docker service
-    systemctl start docker
-    systemctl enable docker
-
-    # Add current user to docker group if SUDO_USER is set
-    if [ -n "$SUDO_USER" ]; then
-        usermod -aG docker "$SUDO_USER"
-    fi
-
-    # Verify installation
-    log "INFO" "Docker version: $(docker --version)"
-    log "INFO" "Docker Compose version: $(docker compose version || echo 'not installed')"
+        jq
+        wget
+    )
+    
+    apt-get install -y "${deps[@]}" || 
+        die "Failed to install dependencies"
 }
 
-# Function to verify Docker and Docker Compose installation
-verify_docker() {
-    log "INFO" "Verifying Docker installation..."
+configure_docker() {
+    log "INFO" "Configuring Docker..."
     
-    if ! command_exists docker; then
-        log "INFO" "Docker not found, installing..."
-        install_docker
+    # Install Docker if not present
+    if ! command -v docker &>/dev/null; then
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sh get-docker.sh
+        rm get-docker.sh
     fi
+    
+    # Configure Docker daemon
+    cat > /etc/docker/daemon.json <<EOF
+{
+    "log-driver": "json-file",
+    "log-opts": {
+        "max-size": "100m",
+        "max-file": "3"
+    },
+    "default-ulimits": {
+        "nofile": {
+            "Name": "nofile",
+            "Hard": 64000,
+            "Soft": 64000
+        }
+    }
+}
+EOF
 
-    if ! systemctl is-active --quiet docker; then
-        log "INFO" "Starting Docker service..."
-        systemctl start docker
-    fi
-
-    # Verify Docker is running
-    if ! docker info >/dev/null 2>&1; then
-        log "ERROR" "Docker is not running properly"
-        exit 1
-    fi
-
-    log "INFO" "Verifying Docker Compose installation..."
-    if ! docker compose version >/dev/null 2>&1; then
-        log "INFO" "Docker Compose not found, installing..."
-        install_docker
-    fi
-
-    log "INFO" "Docker Compose is installed and functional"
+    # Restart Docker to apply changes
+    systemctl restart docker || die "Failed to restart Docker"
 }
 
-# Function to handle repository
-setup_repository() {
-    log "INFO" "Setting up FlexiBuckets repository..."
+generate_configs() {
+    log "INFO" "Generating configuration files..."
     
-    if [ -d "${INSTALL_DIR}/.git" ]; then
-        log "INFO" "Repository exists, updating..."
-        cd "$INSTALL_DIR"
-        git fetch origin
-        git reset --hard origin/main
-    else
-        log "INFO" "Cloning repository..."
-        mkdir -p "$INSTALL_DIR"
-        git clone "$REPO_URL" "$INSTALL_DIR"
-    fi
-
-    # Set proper permissions for scripts directory
-    log "INFO" "Setting script permissions..."
-    chmod -R +x "${INSTALL_DIR}/scripts"
-    
-    # Ensure proper ownership
-    chown -R root:root "${INSTALL_DIR}/scripts"
-}
-
-# Function to create environment file
-create_env_file() {
-    log "INFO" "Creating .env file..."
+    local env_file="${CONFIG[INSTALL_DIR]}/.env"
+    local server_ip=$(curl -s ifconfig.me)
     
     # Generate secure passwords
-    DB_PASSWORD=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-    NEXTAUTH_SECRET=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+    local db_password=$(openssl rand -base64 32)
+    local auth_secret=$(openssl rand -base64 32)
     
-    # Get public IP
-    SERVER_IP=$(get_public_ip)
-    
-    cat > "$ENV_FILE" << EOL
+    # Create comprehensive .env file
+    cat > "$env_file" <<EOF
+# System Configuration
+APP_UID=${APP_UID}
+DOCKER_GID=${DOCKER_GID}
+SERVER_IP=${server_ip}
+
 # Database Configuration
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
+POSTGRES_PASSWORD=${db_password}
 POSTGRES_DB=flexibuckets
-DATABASE_URL=postgresql://postgres:postgres@db:5432/flexibuckets
-SERVER_IP=${SERVER_IP}
+DATABASE_URL=postgresql://postgres:${db_password}@db:5432/flexibuckets
+
 # Application Configuration
 NODE_ENV=production
-NEXTAUTH_URL=http://${SERVER_IP}:3000
-NEXT_PUBLIC_APP_URL=http://${SERVER_IP}:3000
-NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-AUTH_TRUST_HOST=http://${SERVER_IP}:3000
-# Docker Configuration  
-DOMAIN=${SERVER_IP}
-APP_VERSION=latest
-TRAEFIK_DIR=${TRAEFIK_DIR}
+NEXTAUTH_URL=https://${server_ip}
+NEXT_PUBLIC_APP_URL=https://${server_ip}
+NEXTAUTH_SECRET=${auth_secret}
 
-# Traefik Configuration
-ACME_EMAIL=admin@flexibuckets.com  
-EOL
+# Docker & Traefik Configuration
+DOMAIN=${server_ip}
+TRAEFIK_DIR=${CONFIG[TRAEFIK_DIR]}
+ACME_EMAIL=admin@flexibuckets.com
+EOF
 
-    chmod 600 "$ENV_FILE"
-    log "INFO" "Created .env file at ${ENV_FILE}"
+    chmod 600 "$env_file"
 }
 
-setup_traefik_directories() {
-    echo "Setting up Traefik directories..."
+setup_services() {
+    log "INFO" "Setting up services..."
     
-    # Create directories if they don't exist
-    sudo mkdir -p "${TRAEFIK_DYNAMIC_DIR}"
+    cd "${CONFIG[INSTALL_DIR]}"
     
-    # Create flexibuckets user if it doesn't exist
-    if ! id "${APP_USER}" &>/dev/null; then
-        sudo useradd -r -s /bin/false "${APP_USER}"
-    fi
-    
-    # Get the UID of the flexibuckets user
-    APP_UID=$(id -u "${APP_USER}")
-    
-    # Get the GID of the docker group
-    DOCKER_GID=$(getent group docker | cut -d: -f3)
-    
-    # Set ownership and permissions
-    sudo chown -R "${APP_UID}:${DOCKER_GID}" "${TRAEFIK_DIR}"
-    sudo chmod -R 775 "${TRAEFIK_DIR}"
-    
-    # Set sticky bit to maintain permissions
-    sudo chmod g+s "${TRAEFIK_DIR}"
-    sudo chmod g+s "${TRAEFIK_DYNAMIC_DIR}"
-    
-    echo "Traefik directories set up with correct permissions"
-}
-
-# Function to start services
-start_services() {
-    log "INFO" "Starting services..."
-    cd "$INSTALL_DIR"
-    
-    # Pull latest images
+    # Pull and start services
     docker compose pull
-
-    # Stop any running containers
     docker compose down --remove-orphans
-
-    # Start services
     docker compose up -d
-
-    # Check if services are running
-    if docker compose ps | grep -q "Up"; then
-        log "INFO" "Services started successfully"
-    else
-        log "ERROR" "Failed to start services"
-        docker compose logs
-        exit 1
-    fi
-}
-get_public_ip() {
-   local ip=""
     
-    # Try AWS metadata (using IMDSv2)
-    if curl -s --connect-timeout 1 "http://169.254.169.254/latest/api/token" -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" >/dev/null 2>&1; then
-        local token=$(curl -s "http://169.254.169.254/latest/api/token" -X PUT -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-        ip=$(curl -s -H "X-aws-ec2-metadata-token: $token" http://169.254.169.254/latest/meta-data/public-ipv4)
-    fi
-
-    # Try Azure IMDS if AWS failed
-    if [ -z "$ip" ]; then
-        ip=$(curl -s -H Metadata:true --noproxy "*" "http://169.254.169.254/metadata/instance/network/interface/0/ipAddress/ipAddress?api-version=2021-02-01")
-    fi
-
-    # Try Google Cloud metadata if Azure failed
-    if [ -z "$ip" ]; then
-        ip=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip")
-    fi
-
-    # If all cloud providers failed, try external IP services
-    if [ -z "$ip" ] || [[ ! $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        for ip_service in "https://api.ipify.org" "https://ifconfig.me" "https://icanhazip.com"; do
-            ip=$(curl -s --max-time 5 "$ip_service")
-            if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                break
-            fi
-        done
-    fi
-
-    # Final validation
-    if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "$ip"
-    else
-        echo -e "${RED}Failed to detect public IP address${NC}"
-        exit 1
-    fi
-}
-
-setup_database() {
-  echo -e "${YELLOW}Setting up database schema...${NC}"
-  cd "$INSTALL_DIR"
-
-  # Wait for database to be ready
-  echo -e "${YELLOW}Waiting for database to be ready...${NC}"
-  timeout=30
-  while [ $timeout -gt 0 ]; do
-    if docker compose exec -T db pg_isready -h localhost -U postgres > /dev/null 2>&1; then
-      echo -e "${GREEN}Database is ready!${NC}"
-      break
-    fi
-    echo -e "${YELLOW}Waiting for database... ($timeout seconds remaining)${NC}"
-    sleep 1
-    ((timeout--))
-  done
-
-  if [ $timeout -eq 0 ]; then
-    echo -e "${RED}Database failed to become ready within timeout${NC}"
-    exit 1
-  fi
-
-  # Run Prisma migrations with -T flag
-  echo -e "${YELLOW}Running database migrations...${NC}"
-  docker compose exec -T app sh -c 'cd /app && bunx prisma migrate deploy'
-  
-  if [ $? -eq 0 ]; then
-    echo -e "${GREEN}Database schema setup complete${NC}"
-  else
-    echo -e "${RED}Failed to setup database schema${NC}"
-    exit 1
-  fi
-}
-
-# Function to update .env file
-update_env_file() {
-    APP_UID=$(id -u "${APP_USER}")
-    DOCKER_GID=$(getent group docker | cut -d: -f3)
+    # Wait for services to be healthy
+    local timeout=60
+    while [[ $timeout -gt 0 ]]; do
+        if docker compose ps | grep -q "(healthy)"; then
+            log "INFO" "Services are healthy"
+            return 0
+        fi
+        sleep 1
+        ((timeout--))
+    done
     
-    # Add or update UID/GID in .env file
-    if [ -f ".env" ]; then
-        sed -i "/^APP_UID=/c\APP_UID=${APP_UID}" .env
-        sed -i "/^DOCKER_GID=/c\DOCKER_GID=${DOCKER_GID}" .env
-    else
-        echo "APP_UID=${APP_UID}" >> .env
-        echo "DOCKER_GID=${DOCKER_GID}" >> .env
-    fi
+    die "Services failed to become healthy within timeout"
 }
-# Main installation function
+
+cleanup() {
+    local exit_code=$?
+    if [[ $exit_code -ne 0 ]]; then
+        log "ERROR" "Installation failed with exit code $exit_code"
+        log "ERROR" "Check logs for details: ${CONFIG[INSTALL_DIR]}/install.log"
+    fi
+    exit $exit_code
+}
+
+show_help() {
+    cat <<EOF
+FlexiBuckets Installer v${VERSION}
+
+Usage: $SCRIPT_NAME [OPTIONS]
+
+Options:
+    -h, --help          Show this help message
+    -v, --verbose       Enable verbose output
+    --no-color          Disable colored output
+    --skip-deps         Skip dependency installation
+    
+Example:
+    sudo $SCRIPT_NAME --verbose
+EOF
+    exit 0
+}
+
 main() {
-    echo -e "\n${BOLD}FlexiBuckets Installer${NC}\n"
-    SERVER_IP=$(get_public_ip)
-    # Check system requirements
-    check_system_requirements
+    # Parse command line arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help) show_help ;;
+            -v|--verbose) CURRENT_LOG_LEVEL=${LOG_LEVELS[DEBUG]} ;;
+            --no-color) unset COLORS ;;
+            --skip-deps) SKIP_DEPS=1 ;;
+            *) die "Unknown option: $1" ;;
+        esac
+        shift
+    done
     
-    # Verify/Install Docker and Docker Compose
-    verify_docker
+    # Setup error handling
+    trap cleanup EXIT
     
-    # Setup repository
-    setup_repository
-
+    # Begin installation
+    log "INFO" "Starting FlexiBuckets installation..."
     
-    # Create environment file if it doesn't exist
-    if [ ! -f "$ENV_FILE" ]; then
-        create_env_file
-    fi
+    check_root
+    validate_system_requirements
+    create_directories
+    setup_system_user
     
-    # Setup Traefik
-    setup_traefik_directories
-    update_env_file
+    [[ ${SKIP_DEPS:-0} -eq 0 ]] && install_dependencies
     
-    # Start services
-    start_services
+    configure_docker
+    generate_configs
+    setup_services
     
-    # Setup database
-    setup_database
-
     log "INFO" "Installation completed successfully!"
-    echo -e "\nAccess your FlexiBuckets instance at:"
-    echo -e "\U0001F310 HTTP:  http://${SERVER_IP:-localhost}:3000"
-    echo -e "\U0001F512 HTTPS: https://${SERVER_IP:-localhost}"
-    
-    echo -e "\n${YELLOW}Important Notes:${NC}"
-    echo "1. Configuration files are in: $INSTALL_DIR"
-    echo "2. Environment file is at: $ENV_FILE"
-    echo "3. Traefik configuration is in: $TRAEFIK_DIR"
-    echo -e "\n${YELLOW}For support, visit: https://github.com/flexibuckets/flexibuckets${NC}\n"
+    log "INFO" "Access FlexiBuckets at: https://${server_ip}"
 }
 
-# Run main installation
-main
+# Execute main function
+main "$@"
