@@ -13,6 +13,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_config:/etc/traefik
       - ./traefik/dynamic:/etc/traefik/dynamic:rw
+    user: "${APP_UID}:${DOCKER_GID}" 
     networks:
       - flexibuckets_network
     command:
@@ -62,14 +63,18 @@ services:
       - NEXTAUTH_URL_INTERNAL=http://localhost:3000
       - NEXT_PUBLIC_APP_URL=https://${DOMAIN}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - TRAEFIK_DYNAMIC_DIR=/etc/traefik/dynamic
+      
     env_file: .env
     ports:
       - "3000:3000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/dynamic:/etc/traefik/dynamic:rw
+      - /etc/traefik/dynamic:/etc/traefik/dynamic:rw
       - app_data:/app/data
       - next_cache:/app/.next/cache
+    
+      
     networks:
       - flexibuckets_network
     labels:
@@ -83,7 +88,7 @@ services:
       - "traefik.http.routers.app-ip.entrypoints=web"
       - "traefik.http.routers.app-ip.service=app-service"
       - "traefik.http.services.app-service.loadbalancer.server.port=3000"
-    user: "1000:1000"
+    user: "${APP_UID}:${DOCKER_GID}"
     depends_on:
       db:
         condition: service_healthy

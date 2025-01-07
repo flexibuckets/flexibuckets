@@ -4,8 +4,8 @@ import { DockerClient } from '@/lib/docker/client';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import fs from 'fs/promises';
-import path from 'path';
+import fs, { mkdir, writeFile } from 'fs/promises';
+import path, { join } from 'path';
 import { prisma } from '@/lib/prisma';
 import yaml from 'js-yaml';
 
@@ -20,6 +20,37 @@ const DomainConfigSchema = z.object({
 export type DomainConfigInput = z.infer<typeof DomainConfigSchema>;
 
 const TRAEFIK_CONFIG_DIR = process.env.TRAEFIK_CONFIG_DIR || '/etc/traefik';
+
+
+async function writeTraefikConfig(filename: string, content: string) {
+  // Get the dynamic configuration directory from environment
+  const dynamicDir = process.env.TRAEFIK_DYNAMIC_DIR || '/etc/traefik/dynamic';
+  const configPath = join(dynamicDir, filename);
+  try {
+    // Use node:fs/promises writeFile
+    await writeFile(configPath, content, {
+        mode: 0o664,  // rw-rw-r--
+        flag: 'w'
+    });
+    
+    return true;
+} catch (error: any) {
+    // Detailed error logging
+    console.error('Failed to write Traefik config:', {
+        path: configPath,
+        error: error.message,
+        code: error.code,
+        uid: process.getuid?.(),
+        gid: process.getgid?.()
+    });
+    
+    throw new Error(
+        `Failed to write Traefik configuration: ${error.message}. ` +
+        `Please check system permissions and logs.`
+    );
+}
+}
+
 
 async function ensureDirectoryExists(dirPath: string) {
   try {
@@ -122,14 +153,8 @@ export async function configureDomain(input: DomainConfigInput) {
     };
 
     const yamlStr = yaml.dump(routeConfig);
-    try {
-      await fs.writeFile(configPath, yamlStr);
-    } catch (error: any) {
-      if (error.code === 'EACCES') {
-        throw new Error(`Permission denied: Cannot write to ${configPath}. Please ensure proper permissions are set in the container.`);
-      }
-      throw error;
-    }
+    await writeTraefikConfig('website.yml', yamlStr);
+
 
     // Update database settings
     await prisma.settings.upsert({

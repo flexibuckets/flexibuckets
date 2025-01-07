@@ -8,6 +8,7 @@ DYNAMIC_DIR="${TRAEFIK_DIR}/dynamic"
 mkdir -p "${DYNAMIC_DIR}"
 
 # Set proper permissions
+
 chmod 775 "${DYNAMIC_DIR}"
 chown -R 1001:999 "${DYNAMIC_DIR}"  # flexibuckets:docker
 

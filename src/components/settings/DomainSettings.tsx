@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { useConfigureDomain, useCurrentDomain } from "@/hooks/use-traefik"
 import { Session } from "next-auth"
+import { toast } from "@/hooks/use-toast"
 
 interface DnsStatus {
   isValid: boolean
@@ -43,28 +44,36 @@ export function DomainSettings({ session }: { session: Session }) {
     }
   }
 
-  const handleUpdate = async () => {
-    if (!domain) return
+  // DomainSettings.tsx
+const handleUpdate = async () => {
+  if (!domain) return;
 
-    const dnsValid = await checkDns(domain)
-    if (!dnsValid) {
-      // DNS is not valid, but we've already set the status
-      return
-    }
+  const dnsValid = await checkDns(domain);
+  if (!dnsValid) return;
 
-    configureDomain(
+  try {
+    await configureDomain(
       { domain, enableSsl: true },
       {
         onSuccess: () => {
-          // Optionally show success message
+          toast({
+            title: "Success",
+            description: "Domain configured successfully. Changes will take effect in a few minutes."
+          });
         },
         onError: (error) => {
-          console.error('Failed to configure domain:', error)
+          toast({
+            title: "Error",
+            description: error.message || "Failed to configure domain. Please check server logs.",
+            variant: "destructive"
+          });
         }
       }
-    )
+    );
+  } catch (error) {
+    console.error('Failed to configure domain:', error);
   }
-
+};
   return (
     <Card>
       <CardHeader>

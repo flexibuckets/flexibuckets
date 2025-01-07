@@ -13,6 +13,10 @@ INSTALL_DIR="/opt/flexibuckets"
 TRAEFIK_DIR="/etc/traefik"
 ENV_FILE="${INSTALL_DIR}/.env"
 REPO_URL="https://github.com/flexibuckets/flexibuckets.git"
+TRAEFIK_DIR="/etc/traefik"
+TRAEFIK_DYNAMIC_DIR="/etc/traefik/dynamic"
+APP_USER="flexibuckets"
+DOCKER_GROUP="docker"
 
 # Function to log messages
 log() {
@@ -193,19 +197,32 @@ EOL
     log "INFO" "Created .env file at ${ENV_FILE}"
 }
 
-# Function to setup Traefik
-setup_traefik() {
-    log "INFO" "Setting up Traefik..."
+setup_traefik_directories() {
+    echo "Setting up Traefik directories..."
     
-    # Run the Traefik setup script
-    ./scripts/setup-traefik.sh
+    # Create directories if they don't exist
+    sudo mkdir -p "${TRAEFIK_DYNAMIC_DIR}"
     
-    if [ $? -ne 0 ]; then
-        log "ERROR" "Failed to setup Traefik configuration"
-        exit 1
+    # Create flexibuckets user if it doesn't exist
+    if ! id "${APP_USER}" &>/dev/null; then
+        sudo useradd -r -s /bin/false "${APP_USER}"
     fi
     
-    log "INFO" "Traefik setup completed successfully"
+    # Get the UID of the flexibuckets user
+    APP_UID=$(id -u "${APP_USER}")
+    
+    # Get the GID of the docker group
+    DOCKER_GID=$(getent group docker | cut -d: -f3)
+    
+    # Set ownership and permissions
+    sudo chown -R "${APP_UID}:${DOCKER_GID}" "${TRAEFIK_DIR}"
+    sudo chmod -R 775 "${TRAEFIK_DIR}"
+    
+    # Set sticky bit to maintain permissions
+    sudo chmod g+s "${TRAEFIK_DIR}"
+    sudo chmod g+s "${TRAEFIK_DYNAMIC_DIR}"
+    
+    echo "Traefik directories set up with correct permissions"
 }
 
 # Function to start services
@@ -302,6 +319,21 @@ setup_database() {
     exit 1
   fi
 }
+
+# Function to update .env file
+update_env_file() {
+    APP_UID=$(id -u "${APP_USER}")
+    DOCKER_GID=$(getent group docker | cut -d: -f3)
+    
+    # Add or update UID/GID in .env file
+    if [ -f ".env" ]; then
+        sed -i "/^APP_UID=/c\APP_UID=${APP_UID}" .env
+        sed -i "/^DOCKER_GID=/c\DOCKER_GID=${DOCKER_GID}" .env
+    else
+        echo "APP_UID=${APP_UID}" >> .env
+        echo "DOCKER_GID=${DOCKER_GID}" >> .env
+    fi
+}
 # Main installation function
 main() {
     echo -e "\n${BOLD}FlexiBuckets Installer${NC}\n"
@@ -322,7 +354,8 @@ main() {
     fi
     
     # Setup Traefik
-    setup_traefik
+    setup_traefik_directories
+    update_env_file
     
     # Start services
     start_services
