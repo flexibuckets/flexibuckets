@@ -35,7 +35,7 @@ export function DomainSettings({ session }: { session: Session }) {
     try {
       const response = await fetch(`/api/dns/check?domain=${domain}`)
       const data = await response.json()
-      setDnsStatus(data)
+      setDnsStatus(data)                   
       return data.isValid
     } catch (error) {
       console.error('Failed to check DNS:', error)
