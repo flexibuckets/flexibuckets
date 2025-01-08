@@ -1,4 +1,6 @@
 import Docker from 'dockerode';
+import fs from 'fs/promises';
+import path from 'path';
 import { platform } from 'os';
 
 export interface TraefikConfig {
@@ -12,7 +14,8 @@ export interface TraefikConfig {
 
 export class DockerTraefikManager {
   private static instance: DockerTraefikManager;
-  public docker: Docker;
+  private docker: Docker;
+  private traefikConfigPath: string;
 
   private constructor() {
     if (typeof window !== 'undefined') {
@@ -21,6 +24,7 @@ export class DockerTraefikManager {
 
     const isWindows = platform() === 'win32';
     this.docker = new Docker(isWindows ? { socketPath: '//./pipe/docker_engine' } : { socketPath: '/var/run/docker.sock' });
+    this.traefikConfigPath = process.env.TRAEFIK_CONFIG_PATH || '/etc/traefik/dynamic';
   }
 
   public static getInstance(): DockerTraefikManager {
@@ -30,163 +34,107 @@ export class DockerTraefikManager {
     return DockerTraefikManager.instance;
   }
 
-  private generateLabels(config: TraefikConfig): Record<string, string> {
-    const baseLabels = {
-      'traefik.enable': 'true',
-      [`traefik.http.routers.${config.service}.rule`]: `Host(\`${config.domain}\`)`,
-      [`traefik.http.services.${config.service}.loadbalancer.server.port`]: config.port.toString(),
+  private generateTraefikConfig(config: TraefikConfig): object {
+    const traefikConfig: any = {
+      http: {
+        routers: {
+          [config.service]: {
+            rule: `Host(\`${config.domain}\`)`,
+            service: config.service,
+            entrypoints: config.enableSsl ? ['websecure'] : ['web'],
+          }
+        },
+        services: {
+          [config.service]: {
+            loadBalancer: {
+              servers: [{ url: `http://localhost:${config.port}` }]
+            }
+          }
+        },
+        middlewares: {}
+      }
     };
 
-    // Add SSL configuration if enabled
     if (config.enableSsl) {
-      Object.assign(baseLabels, {
-        [`traefik.http.routers.${config.service}.entrypoints`]: 'websecure',
-        [`traefik.http.routers.${config.service}.tls`]: 'true',
-        [`traefik.http.routers.${config.service}.tls.certresolver`]: 'letsencrypt',
-        // HTTP to HTTPS redirect
-        [`traefik.http.routers.${config.service}-http.rule`]: `Host(\`${config.domain}\`)`,
-        [`traefik.http.routers.${config.service}-http.entrypoints`]: 'web',
-        [`traefik.http.middlewares.${config.service}-https-redirect.redirectscheme.scheme`]: 'https',
-        [`traefik.http.routers.${config.service}-http.middlewares`]: `${config.service}-https-redirect`,
-      });
+      traefikConfig.http.routers[config.service].tls = {
+        certResolver: 'letsencrypt'
+      };
     }
 
-    // Add middlewares if specified
-    if (config.middlewares?.length) {
-      baseLabels[`traefik.http.routers.${config.service}.middlewares`] = 
-        config.middlewares.join(',');
+    if (config.middlewares && config.middlewares.length > 0) {
+      traefikConfig.http.routers[config.service].middlewares = config.middlewares;
     }
 
-    // Add custom headers if specified
     if (config.customHeaders) {
-      Object.entries(config.customHeaders).forEach(([key, value]) => {
-        baseLabels[`traefik.http.middlewares.${config.service}-headers.headers.customresponseheaders.${key}`] = value;
-      });
-      // Add headers middleware to the chain
-      const existingMiddlewares = baseLabels[`traefik.http.routers.${config.service}.middlewares`];
-      baseLabels[`traefik.http.routers.${config.service}.middlewares`] = 
-        existingMiddlewares ? `${existingMiddlewares},${config.service}-headers` : `${config.service}-headers`;
+      const headerMiddlewareName = `${config.service}-headers`;
+      traefikConfig.http.middlewares[headerMiddlewareName] = {
+        headers: {
+          customResponseHeaders: config.customHeaders
+        }
+      };
+      traefikConfig.http.routers[config.service].middlewares = 
+        traefikConfig.http.routers[config.service].middlewares 
+          ? [...traefikConfig.http.routers[config.service].middlewares, headerMiddlewareName]
+          : [headerMiddlewareName];
     }
 
-    return baseLabels;
+    return traefikConfig;
   }
 
-  public async updateContainerTraefikConfig(
-    containerId: string, 
-    config: TraefikConfig
-  ): Promise<void> {
+  public async updateContainerTraefikConfig(containerId: string, config: TraefikConfig): Promise<void> {
     try {
       const container = this.docker.getContainer(containerId);
+      const traefikConfig = this.generateTraefikConfig(config);
+
+      // Write Traefik configuration to file
+      const configFilePath = path.join(this.traefikConfigPath, `${config.service}.yml`);
+      await fs.writeFile(configFilePath, JSON.stringify(traefikConfig, null, 2));
+
+      // Update container labels
       const containerInfo = await container.inspect();
-
-      // Generate new labels
-      const newLabels = this.generateLabels(config);
-
-      // Merge with existing config to preserve other settings
-      const existingConfig = containerInfo.Config || {};
-      const existingLabels = existingConfig.Labels || {};
-      const mergedLabels = { ...existingLabels, ...newLabels };
-
-      // Create new container config
-      const newConfig = {
-        ...existingConfig,
-        Labels: mergedLabels,
+      const existingLabels = containerInfo.Config.Labels || {};
+      const newLabels = {
+        ...existingLabels,
+        'traefik.enable': 'true',
+        [`traefik.http.routers.${config.service}.rule`]: `Host(\`${config.domain}\`)`,
+        [`traefik.http.services.${config.service}.loadbalancer.server.port`]: config.port.toString(),
       };
 
-      // Stop the container
-      await container.stop();
+      await container.update({ Labels: newLabels });
 
-      // Create new container with updated config
-      await container.update({ Labels: mergedLabels });
+      // Restart the container to apply changes
+      await container.restart();
 
-      // Start the container
-      await container.start();
-
-      // Verify Traefik picked up the new config
-      await this.verifyTraefikConfig(config.domain);
-
-    } catch (error) {
+      console.log(`Updated Traefik configuration for container ${containerId}`);
+    } catch (error: any) {
       console.error('Failed to update Traefik configuration:', error);
-      throw new Error(`Failed to update Traefik configuration`);
-    }
-  }
-
-  private async verifyTraefikConfig(domain: string): Promise<void> {
-    // Get Traefik container
-    const traefikContainer = await this.docker.getContainer('flexibuckets_traefik');
-    
-    // Check Traefik logs for configuration reload
-    const logs = await traefikContainer.logs({
-      tail: 50,
-      stdout: true,
-      stderr: true,
-    });
-
-    const logsString = logs.toString();
-    if (!logsString.includes(`Host(\`${domain}\`)`)) {
-      throw new Error('Traefik configuration verification failed');
+      throw new Error(`Failed to update Traefik configuration: ${error.message}`);
     }
   }
 
   public async getContainerTraefikConfig(containerId: string): Promise<TraefikConfig | null> {
     try {
       const container = this.docker.getContainer(containerId);
-      const info = await container.inspect();
-      const labels = info.Config.Labels || {};
+      const containerInfo = await container.inspect();
+      const labels = containerInfo.Config.Labels || {};
 
-      // Extract domain from router rule
-      const routerRule = Object.entries(labels).find(([key, value]) => 
-        key.includes('.rule') && value.includes('Host')
-      );
+      const domain = labels[`traefik.http.routers.${containerId}.rule`]?.match(/Host$$`(.+)`$$/)?.[1];
+      const port = parseInt(labels[`traefik.http.services.${containerId}.loadbalancer.server.port`] || '80');
 
-      if (!routerRule) return null;
-
-      const domain = routerRule[1].match(/Host\(`(.+)`\)/)?.[1];
-      if (!domain) return null;
+      if (!domain) {
+        return null;
+      }
 
       return {
         domain,
-        service: this.extractServiceName(labels),
-        port: parseInt(this.extractPort(labels)),
-        enableSsl: this.hasSSLEnabled(labels),
-        middlewares: this.extractMiddlewares(labels),
-        customHeaders: this.extractCustomHeaders(labels),
+        service: containerId,
+        port,
+        enableSsl: labels[`traefik.http.routers.${containerId}.tls`] === 'true',
       };
-    } catch (error) {
-      console.error('Failed to get Traefik configuration:', error);
+    } catch (error: any) {
+      console.error('Failed to get container Traefik configuration:', error);
       return null;
     }
   }
-
-  private extractServiceName(labels: Record<string, string>): string {
-    // Implementation for extracting service name from labels
-    const serviceKey = Object.keys(labels).find(key => key.includes('.services.') && key.includes('.loadbalancer'));
-    return serviceKey ? serviceKey.split('.')[3] : 'default';
-  }
-
-  private extractPort(labels: Record<string, string>): string {
-    // Implementation for extracting port from labels
-    const portLabel = Object.entries(labels).find(([key]) => key.includes('.server.port'));
-    return portLabel ? portLabel[1] : '80';
-  }
-
-  private hasSSLEnabled(labels: Record<string, string>): boolean {
-    return Object.keys(labels).some(key => key.includes('.tls.certresolver'));
-  }
-
-  private extractMiddlewares(labels: Record<string, string>): string[] {
-    const middlewaresLabel = Object.entries(labels).find(([key]) => key.includes('.middlewares') && !key.includes('.middleware.'));
-    return middlewaresLabel ? middlewaresLabel[1].split(',') : [];
-  }
-
-  private extractCustomHeaders(labels: Record<string, string>): Record<string, string> {
-    const headers: Record<string, string> = {};
-    Object.entries(labels).forEach(([key, value]) => {
-      if (key.includes('.customresponseheaders.')) {
-        const headerName = key.split('.customresponseheaders.')[1];
-        headers[headerName] = value;
-      }
-    });
-    return headers;
-  }
 }
+

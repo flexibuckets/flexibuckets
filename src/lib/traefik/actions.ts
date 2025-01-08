@@ -6,9 +6,11 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { DockerTraefikManager } from '@/lib/docker/client';
 
-// Simplified schema for domain configuration
 const DomainConfigSchema = z.object({
-  domain: z.string().min(1),
+  domain: z.string().min(1).refine(
+    (domain) => /^(?!-)[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/.test(domain),
+    { message: "Invalid domain format" }
+  ),
   enableSsl: z.boolean().default(true),
 });
 
@@ -23,16 +25,8 @@ export async function configureDomain(input: DomainConfigInput) {
   try {
     const validated = DomainConfigSchema.parse(input);
     
-    // Domain validation
-    const domainRegex = /^(?!-)[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
-    if (!domainRegex.test(validated.domain)) {
-      throw new Error('Invalid domain format');
-    }
+    const dockerTraefikManager = DockerTraefikManager.getInstance();
 
-    // Get Docker Traefik manager instance
-    const traefikManager = DockerTraefikManager.getInstance();
-
-    // Configure app container with Traefik
     const config = {
       domain: validated.domain,
       service: 'flexibuckets-app',
@@ -46,10 +40,8 @@ export async function configureDomain(input: DomainConfigInput) {
       },
     };
 
-    // Update container configuration
-    await traefikManager.updateContainerTraefikConfig('flexibuckets_app', config);
+    await dockerTraefikManager.updateContainerTraefikConfig('flexibuckets_app', config);
 
-    // Update database settings
     await prisma.settings.upsert({
       where: { id: "default" },
       create: {
@@ -77,8 +69,8 @@ export async function getCurrentDomain() {
   }
 
   try {
-    const traefikManager = DockerTraefikManager.getInstance();
-    const config = await traefikManager.getContainerTraefikConfig('flexibuckets_app');
+    const dockerTraefikManager = DockerTraefikManager.getInstance();
+    const config = await dockerTraefikManager.getContainerTraefikConfig('flexibuckets_app');
     
     if (!config) {
       const settings = await prisma.settings.findFirst({

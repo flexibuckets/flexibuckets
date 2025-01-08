@@ -174,29 +174,35 @@ create_env_file() {
     cat > "$ENV_FILE" << EOL
 # Database Configuration
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
+POSTGRES_PASSWORD=${DB_PASSWORD}
 POSTGRES_DB=flexibuckets
-DATABASE_URL=postgresql://postgres:postgres@db:5432/flexibuckets
+DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/flexibuckets
 SERVER_IP=${SERVER_IP}
+
 # Application Configuration
 NODE_ENV=production
-NEXTAUTH_URL=http://${SERVER_IP}:3000
-NEXT_PUBLIC_APP_URL=http://${SERVER_IP}:3000
+NEXTAUTH_URL=https://${SERVER_IP}
+NEXT_PUBLIC_APP_URL=https://${SERVER_IP}
 NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-AUTH_TRUST_HOST=http://${SERVER_IP}:3000
+AUTH_TRUST_HOST=true
+
 # Docker Configuration  
 DOMAIN=${SERVER_IP}
 APP_VERSION=latest
 TRAEFIK_DIR=${TRAEFIK_DIR}
+TRAEFIK_DYNAMIC_DIR=${TRAEFIK_DYNAMIC_DIR}
 
 # Traefik Configuration
-ACME_EMAIL=admin@flexibuckets.com  
+ACME_EMAIL=selfhosted@flexibuckets.com
+
+# System User Configuration
+APP_UID=${APP_UID}
+DOCKER_GID=${DOCKER_GID}
 EOL
 
     chmod 600 "$ENV_FILE"
     log "INFO" "Created .env file at ${ENV_FILE}"
 }
-
 
 setup_system_user() {
     echo -e "${YELLOW}Setting up system user and permissions...${NC}"
@@ -229,6 +235,7 @@ setup_traefik_directories() {
     echo -e "${YELLOW}Setting up Traefik directories...${NC}"
     
     # Create directories
+    mkdir -p "${TRAEFIK_DIR}"
     mkdir -p "${TRAEFIK_DYNAMIC_DIR}"
     
     # Set ownership and permissions
@@ -252,6 +259,7 @@ setup_traefik_directories() {
     chown -R "${APP_UID}:${DOCKER_GID}" "${ACME_DIR}"
     echo -e "${GREEN}Traefik directories configured${NC}"
 }
+
 
 # Function to start services
 start_services() {
