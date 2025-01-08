@@ -99,6 +99,8 @@ services:
       - "traefik.http.routers.app-ip.rule=Host(`${SERVER_IP}`)"
       - "traefik.http.routers.app-ip.entrypoints=web"
       - "traefik.http.routers.app-ip.service=app-service"
+      - "traefik.http.middlewares.compress.compress=true"
+      - "traefik.http.routers.app-domain.middlewares=compress@docker"
       - "traefik.http.services.app-service.loadbalancer.server.port=3000"
     user: "${APP_UID}:${DOCKER_GID}"
     depends_on:

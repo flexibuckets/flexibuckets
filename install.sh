@@ -260,6 +260,31 @@ setup_traefik_directories() {
     echo -e "${GREEN}Traefik directories configured${NC}"
 }
 
+write_traefik_middleware() {
+    local middleware_file="${TRAEFIK_DYNAMIC_DIR}/middleware.yml"
+    
+    cat > "$middleware_file" << 'EOL'
+http:
+  middlewares:
+    compress:
+      compress: {}
+    headers:
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+EOL
+
+    # Set proper permissions
+    chmod 644 "$middleware_file"
+    chown "${APP_UID}:${DOCKER_GID}" "$middleware_file"
+    echo -e "${GREEN}Traefik middleware configuration written${NC}"
+}
 
 # Function to start services
 start_services() {
@@ -399,6 +424,7 @@ main() {
     setup_system_user
     # Setup Traefik
     setup_traefik_directories
+    write_traefik_middleware
     update_env_file
     
     # Start services
