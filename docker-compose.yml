@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   traefik:
     image: traefik:v2.10
@@ -77,7 +79,6 @@ services:
       - TRAEFIK_DYNAMIC_DIR=/etc/traefik/dynamic
       - APP_UID=${APP_UID}
       - DOCKER_GID=${DOCKER_GID}
-      
     env_file: .env
     ports:
       - "3000:3000"
@@ -86,8 +87,6 @@ services:
       - /etc/traefik/dynamic:/etc/traefik/dynamic:rw
       - app_data:/app/data
       - next_cache:/app/.next/cache
-    
-      
     networks:
       - flexibuckets_network
     labels:
@@ -115,6 +114,6 @@ networks:
 volumes:
   postgres_data:
     name: flexibuckets_postgres_data
-  traefik_config:
   app_data:
   next_cache:
+
