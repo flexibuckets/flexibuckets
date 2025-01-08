@@ -13,16 +13,13 @@ services:
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik_config:/etc/traefik
-      - ./traefik/dynamic:/etc/traefik/dynamic:rw
-      - ./traefik/acme:/etc/traefik/acme:rw
-    user: "${APP_UID}:${DOCKER_GID}" 
+      - /etc/traefik:/etc/traefik:rw
     networks:
       - flexibuckets_network
     command:
       - "--log.level=DEBUG"
       - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=true"
+      - "--providers.docker.exposedbydefault=false"
       - "--providers.file.watch=true"
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--entrypoints.web.address=:80"
