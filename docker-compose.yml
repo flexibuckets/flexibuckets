@@ -40,6 +40,7 @@ services:
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
       - "traefik.http.routers.app-http.middlewares=https-redirect"
+      - "traefik.docker.network=flexibuckets_network"
 
   db:
     image: postgres:16-alpine
