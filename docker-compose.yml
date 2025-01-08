@@ -32,6 +32,14 @@ services:
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--api.dashboard=true"
       - "--api.insecure=true"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.app-http.middlewares=https-redirect"
 
   db:
     image: postgres:16-alpine
