@@ -48,19 +48,6 @@ The installation script will:
 
 Visit `http://your-server-ip:3000` to access your FlexiBuckets instance.
 
-## Incase Installation fails use
-Clean and reinstall:
-
-```bash
-sudo ./install.sh --clean && sudo ./install.sh
-```
-
-## To Validate existing installation:
-
-```bash
-sudo ./install.sh --validate
-```
-
 ## 🛠 Manual Installation
 
 If you prefer to set up manually:

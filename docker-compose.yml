@@ -54,7 +54,7 @@ services:
       - flexibuckets_network
 
   app:
-    image: flexibuckets/flexibuckets:${APP_VERSION}
+    image: flexibuckets/flexibuckets:${APP_SHA_SHORT}
     container_name: flexibuckets_app
     restart: always
     environment:
