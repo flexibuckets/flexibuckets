@@ -41,9 +41,9 @@ export default function UpdateNotification() {
   
       return response.json()
     },
-    // refetchInterval: 1000 * 60 * 60, // Check every hour
-    // retry: 3,
-    // staleTime: 1000 * 60 * 30, // Consider data stale after 30 minutes
+    refetchInterval: 1000 * 60 * 60, // Check every hour
+    retry: 3,
+    staleTime: 1000 * 60 * 30, // Consider data stale after 30 minutes
   })
 
   const updateMutation = useMutation({
