@@ -23,7 +23,6 @@
       }
     ],
     "paths": {
-      "contentlayer/generated": ["./.contentlayer/generated"],
       "@/*": ["./src/*"]
     },
     "target": "ES2017"

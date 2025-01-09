@@ -41,7 +41,3 @@ yarn.lock
 
 .VSCodeCounter
 ./src/lib/paddle.ts
-
-# Contentlayer
-.contentlayer
-GithubSecrets.ps1

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "contentlayer2 build && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
@@ -62,8 +62,6 @@
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.3",
-    "contentlayer2": "^0.5.3",
-    "date-fns": "^4.1.0",
     "dockerode": "^4.0.3",
     "express": "^4.21.1",
     "file-saver": "^2.0.5",

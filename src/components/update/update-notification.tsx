@@ -64,9 +64,7 @@ export default function UpdateNotification() {
         description: "The application will restart momentarily.",
         duration: 4000,
       })
-      // Close the dialog
       setOpen(false)
-      // Force reload after a short delay
       setTimeout(() => window.location.reload(), 5000)
     },
     onError: (error) => {
@@ -79,7 +77,6 @@ export default function UpdateNotification() {
     },
   })
 
-  // Don't show anything if there's no update or we're still checking
   if (isLoading || !updateInfo || error) return null
 
   return (

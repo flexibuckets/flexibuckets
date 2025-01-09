@@ -54,7 +54,7 @@ services:
       - flexibuckets_network
 
   app:
-    image: flexibuckets/flexibuckets:latest
+    image: flexibuckets/flexibuckets:${APP_VERSION}
     container_name: flexibuckets_app
     restart: always
     environment:
@@ -67,6 +67,8 @@ services:
       - TRAEFIK_DYNAMIC_DIR=/etc/traefik/dynamic
       - APP_UID=${APP_UID}
       - DOCKER_GID=${DOCKER_GID}
+      - APP_VERSION=${APP_VERSION}
+      - APP_SHA_SHORT=${APP_SHA_SHORT}
     env_file: .env
     ports:
       - "3000:3000"

@@ -1,13 +1,16 @@
 import { prisma } from "./prisma";
+import { DockerClient } from "@/lib/docker/client";
+import fs from 'fs/promises';
+import path from 'path';
 
 interface Version {
   version: string;
+  shaShort: string;
   requiredMigrations: boolean;
   changeLog: string;
   dockerImage: string;
 }
 
-// Cache the version check results
 let versionCache: {
   timestamp: number;
   data: Version | null;
@@ -17,12 +20,10 @@ const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
 
 export async function checkForUpdates(): Promise<Version | null> {
   try {
-    // Check cache first
     if (versionCache && Date.now() - versionCache.timestamp < CACHE_DURATION) {
       return versionCache.data;
     }
 
-    // Fetch the latest version from GitHub API (public endpoint)
     const response = await fetch(
       'https://api.github.com/repos/flexibuckets/flexibuckets/commits/main',
       {
@@ -34,7 +35,6 @@ export async function checkForUpdates(): Promise<Version | null> {
     );
     
     if (!response.ok) {
-      // Handle rate limiting
       if (response.status === 403) {
         console.warn('GitHub API rate limit reached. Using cached data if available.');
         return versionCache?.data || null;
@@ -43,20 +43,21 @@ export async function checkForUpdates(): Promise<Version | null> {
     }
 
     const data = await response.json();
-    const latestVersion = data.sha.substring(0, 6);
+    const latestShaShort = data.sha.substring(0, 6);
     
-    // Get current version from .env or similar config
-    const currentVersion = process.env.APP_VERSION || '000000';
+    const versionResponse = await fetch(
+      'https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/version.txt'
+    );
+    const latestVersion = await versionResponse.text();
 
-    if (latestVersion === currentVersion) {
-      versionCache = {
-        timestamp: Date.now(),
-        data: null
-      };
+    const currentShaShort = process.env.APP_SHA_SHORT || '000000';
+    const currentVersion = process.env.APP_VERSION || '0.0.0';
+
+    if (latestShaShort === currentShaShort && latestVersion === currentVersion) {
+      versionCache = { timestamp: Date.now(), data: null };
       return null;
     }
 
-    // Check for migrations using the raw GitHub content URL (no auth needed)
     const migrationsResponse = await fetch(
       `https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/prisma/migrations/migration_manifest.json`
     );
@@ -66,105 +67,93 @@ export async function checkForUpdates(): Promise<Version | null> {
       migration.version > currentVersion
     );
 
-    // Fetch changelog from raw GitHub content
     const changelogResponse = await fetch(
       `https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/CHANGELOG.md`
     );
     const changeLog = await changelogResponse.text();
 
-    const versionInfo = {
+    const versionInfo: Version = {
       version: latestVersion,
+      shaShort: latestShaShort,
       requiredMigrations,
       changeLog,
-      dockerImage: `flexibuckets/flexibuckets:${latestVersion}`
+      dockerImage: `flexibuckets/flexibuckets:${latestShaShort}`
     };
 
-    // Update cache
-    versionCache = {
-      timestamp: Date.now(),
-      data: versionInfo
-    };
-
+    versionCache = { timestamp: Date.now(), data: versionInfo };
     return versionInfo;
   } catch (error) {
     console.error('Error checking for updates:', error);
-    // Return cached data if available when there's an error
     return versionCache?.data || null;
   }
 }
 
-// Function to execute update
-export async function executeUpdate(newVersion: string): Promise<boolean> {
-    try {
-      // Update version in .env file first
-      await updateEnvFile('APP_VERSION', newVersion);
-      
-      // Use docker-compose commands
-      const commands = [
-        // Pull new images
-        'docker-compose pull',
-        
-        // Run migrations if needed
-        ...(await checkMigrationsNeeded() ? [
-          'docker-compose run --rm app npx prisma generate',
-          'docker-compose run --rm app npx prisma migrate deploy'
-        ] : []),
-        
-        // Recreate containers with new version
-        'docker-compose up -d --force-recreate app'
-      ];
-  
-      for (const command of commands) {
-        await executeCommand(command);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Update failed:', error);
-      return false;
-    }
-  }
-  
-  async function executeCommand(command: string): Promise<void> {
-    const { exec } = require('child_process');
-    return new Promise((resolve, reject) => {
-      exec(command, {
-        env: {
-          ...process.env,
-          PATH: process.env.PATH,
-          DOCKER_HOST: 'unix:///var/run/docker.sock'
-        }
-      }, (error: Error | null, stdout: string, stderr: string) => {
-        if (error) {
-          console.error(`Command failed: ${command}`);
-          console.error(`stdout: ${stdout}`);
-          console.error(`stderr: ${stderr}`);
-          reject(error);
-          return;
-        }
-        resolve();
-      });
+export async function executeUpdate(newVersion: string, newShaShort: string): Promise<boolean> {
+  try {
+    await updateEnvFile('APP_VERSION', newVersion);
+    await updateEnvFile('APP_SHA_SHORT', newShaShort);
+    
+    const dockerClient = DockerClient.getInstance();
+    const appContainer = await dockerClient.docker.getContainer('flexibuckets_app');
+
+    // Pull the new image
+    await dockerClient.docker.pull(`flexibuckets/flexibuckets:${newShaShort}`);
+
+    // Stop the current container
+    await appContainer.stop();
+
+    // Remove the old container
+    await appContainer.remove();
+
+    // Create and start a new container with the updated image
+    const container = await dockerClient.docker.createContainer({
+      Image: `flexibuckets/flexibuckets:${newShaShort}`,
+      name: 'flexibuckets_app',
+      // Add other necessary container options here
     });
+
+    await container.start();
+
+    // Run migrations if needed
+    if (await checkMigrationsNeeded()) {
+      await runMigrations(container);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Update failed:', error);
+    return false;
+  }
+}
+
+async function updateEnvFile(key: string, value: string): Promise<void> {
+  const envPath = path.join(process.cwd(), '.env');
+  let envContent = await fs.readFile(envPath, 'utf8');
+  
+  const regex = new RegExp(`^${key}=.*$`, 'm');
+  if (regex.test(envContent)) {
+    envContent = envContent.replace(regex, `${key}=${value}`);
+  } else {
+    envContent += `\n${key}=${value}`;
   }
   
-async function updateEnvFile(key: string, value: string): Promise<void> {
-  const fs = require('fs');
-  const envPath = '.env';
-  
-  const envContent = fs.readFileSync(envPath, 'utf8');
-  const updatedContent = envContent.replace(
-    new RegExp(`${key}=.*`),
-    `${key}=${value}`
-  );
-  
-  fs.writeFileSync(envPath, updatedContent);
+  await fs.writeFile(envPath, envContent);
 }
 
 async function checkMigrationsNeeded(): Promise<boolean> {
   try {
-    const status = await prisma.$executeRaw`SELECT 1`;
+    await prisma.$executeRaw`SELECT 1`;
     return false;
   } catch (error) {
     return true;
   }
 }
+
+async function runMigrations(container: any): Promise<void> {
+  await container.exec({
+    Cmd: ['npx', 'prisma', 'migrate', 'deploy'],
+    AttachStdout: true,
+    AttachStderr: true
+  });
+}
+

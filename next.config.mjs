@@ -1,8 +1,7 @@
 /** @type {import('next').NextConfig} */
 import BundleAnalyzer from '@next/bundle-analyzer';
-import { withContentlayer } from "next-contentlayer2";
 
-const nextConfig = withContentlayer({
+const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   
@@ -18,10 +17,9 @@ const nextConfig = withContentlayer({
         ]
       }
     ]
-  }
-  ,
+  },
   pageExtensions: ['ts', 'tsx', 'mdx'],
-});
+};
 const withBundleAnalyzer = BundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 });

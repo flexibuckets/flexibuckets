@@ -167,7 +167,8 @@ create_env_file() {
     # Generate secure passwords
     DB_PASSWORD=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
     NEXTAUTH_SECRET=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-    
+    LATEST_VERSION=$(curl -s https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/version.txt)
+    LATEST_SHA_SHORT=$(curl -s https://api.github.com/repos/flexibuckets/flexibuckets/commits/main | jq -r '.sha[0:6]')
     # Get public IP
     SERVER_IP=$(get_public_ip)
     
@@ -198,6 +199,10 @@ ACME_EMAIL=selfhosted@flexibuckets.com
 # System User Configuration
 APP_UID=${APP_UID}
 DOCKER_GID=${DOCKER_GID}
+
+# Version Information
+APP_VERSION=${LATEST_VERSION}
+APP_SHA_SHORT=${LATEST_SHA_SHORT}
 EOL
 
     chmod 600 "$ENV_FILE"

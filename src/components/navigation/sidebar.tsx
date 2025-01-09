@@ -18,7 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-
+import UpdateNotification from '@/components/update/update-notification';
 import { sidebarLinks } from '@/lib/routes';
 import UserBox from './UserBox';
 
@@ -104,8 +104,10 @@ export function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
+
       <SidebarFooter>
         <UserBox />
+        <UpdateNotification />
       </SidebarFooter>
     </Sidebar>
   );

@@ -19,9 +19,6 @@ export const PUBLIC_ROUTES = [
   "/shared",
   "/googlec349a50cd94e1137.html",
   "/sitemap.xml",
-  "/tos",
-  "/refund-policy",
-  "/privacy-policy",
 ];
 export const DEFAULT_REDIRECT = "/auth/signin";
 export const DASHBOARD_ROUTE = "/dashboard";
@@ -29,8 +26,7 @@ export const DASHBOARD_ROUTE = "/dashboard";
 // Keep existing nav links
 export const navLinks: NavLink[] = [
   { label: "Features", href: "#" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "Docs", href: "/docs/" },
+  { label: "Docs", href: "docs.flexibuckets.com" },
   { label: "About", href: "#" },
 ];
 
