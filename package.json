@@ -12,7 +12,8 @@
     "studio": "bunx prisma studio",
     "migrate": "bunx prisma migrate dev",
     "pull:main": "git pull origin main",
-    "push:main": "node push.js"
+    "push:main": "node ./scripts/push.js",
+    "bump:version": "node ./scripts/bump-version.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",
