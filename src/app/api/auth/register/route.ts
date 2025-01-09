@@ -11,6 +11,15 @@ const registerSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    // Check if signups are allowed
+    const settings = await prisma.settings.findFirst();
+    if (settings && !settings.allowSignups) {
+      return NextResponse.json(
+        { error: 'Signups are currently disabled. Please contact the administrator.' },
+        { status: 403 }
+      )
+    }
+
     const body = await req.json()
     const { name, email, password } = registerSchema.parse(body)
 
