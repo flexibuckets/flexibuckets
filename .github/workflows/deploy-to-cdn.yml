@@ -21,7 +21,7 @@ jobs:
           aws-access-key-id: ${{ secrets.CF_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.CF_SECRET_ACCESS_KEY }}
           aws-region: auto
-          endpoint-url: https://<account-id>.r2.cloudflarestorage.com
+          endpoint-url: https://182ef4f2f26e109928afe9e4a3bf7cc9.r2.cloudflarestorage.com
 
       - name: Upload to R2
         run: |
