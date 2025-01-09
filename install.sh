@@ -399,7 +399,7 @@ main() {
     setup_system_user
     # Setup Traefik
     setup_traefik_directories
-    write_traefik_middleware
+    
     update_env_file
     
     # Start services
