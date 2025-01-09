@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   traefik:
     image: traefik:v2.10
@@ -23,7 +21,6 @@ services:
       - "--log.level=DEBUG"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.file.watch=true"
       - "--providers.file.directory=/etc/traefik/dynamic"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
@@ -35,15 +32,6 @@ services:
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--api.dashboard=true"
       - "--api.insecure=true"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.entrypoints=websecure"
-      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
-      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.routers.app-http.middlewares=https-redirect"
-      - "traefik.docker.network=flexibuckets_network"
 
   db:
     image: postgres:16-alpine
@@ -85,8 +73,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/traefik/dynamic:/etc/traefik/dynamic:rw
-      - app_data:/app/data
-      - next_cache:/app/.next/cache
+      - /app/data:/app/data
+      - /app/.next/cache:/app/.next/cache
     networks:
       - flexibuckets_network
     labels:
@@ -99,8 +87,6 @@ services:
       - "traefik.http.routers.app-ip.rule=Host(`${SERVER_IP}`)"
       - "traefik.http.routers.app-ip.entrypoints=web"
       - "traefik.http.routers.app-ip.service=app-service"
-      - "traefik.http.middlewares.compress.compress=true"
-      - "traefik.http.routers.app-domain.middlewares=compress@docker"
       - "traefik.http.services.app-service.loadbalancer.server.port=3000"
     user: "${APP_UID}:${DOCKER_GID}"
     depends_on:
@@ -118,4 +104,5 @@ volumes:
     name: flexibuckets_postgres_data
   app_data:
   next_cache:
+    driver: local
 

@@ -10,7 +10,7 @@ BOLD='\033[1m'
 
 # Configuration
 INSTALL_DIR="/opt/flexibuckets"
-TRAEFIK_DIR="/etc/traefik"
+TRAEFIK_CONFIG_DIR="/etc/traefik"
 ENV_FILE="${INSTALL_DIR}/.env"
 REPO_URL="https://github.com/flexibuckets/flexibuckets.git"
 TRAEFIK_DIR="/etc/traefik"
@@ -189,7 +189,7 @@ AUTH_TRUST_HOST=true
 # Docker Configuration  
 DOMAIN=${SERVER_IP}
 APP_VERSION=latest
-TRAEFIK_DIR=${TRAEFIK_DIR}
+TRAEFIK_CONFIG_DIR=${TRAEFIK_CONFIG_DIR}
 TRAEFIK_DYNAMIC_DIR=${TRAEFIK_DYNAMIC_DIR}
 
 # Traefik Configuration
@@ -260,31 +260,6 @@ setup_traefik_directories() {
     echo -e "${GREEN}Traefik directories configured${NC}"
 }
 
-write_traefik_middleware() {
-    local middleware_file="${TRAEFIK_DYNAMIC_DIR}/middleware.yml"
-    
-    cat > "$middleware_file" << 'EOL'
-http:
-  middlewares:
-    compress:
-      compress: {}
-    headers:
-      headers:
-        frameDeny: true
-        sslRedirect: true
-        browserXssFilter: true
-        contentTypeNosniff: true
-        forceSTSHeader: true
-        stsIncludeSubdomains: true
-        stsPreload: true
-        stsSeconds: 31536000
-EOL
-
-    # Set proper permissions
-    chmod 644 "$middleware_file"
-    chown "${APP_UID}:${DOCKER_GID}" "$middleware_file"
-    echo -e "${GREEN}Traefik middleware configuration written${NC}"
-}
 
 # Function to start services
 start_services() {
