@@ -35,7 +35,7 @@ To use the improved installation:
 Basic installation:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/install.sh | sudo bash
+curl -fsSL https://cdn.flexibuckets.com/install.sh | sudo bash
 
 ```
 
@@ -45,6 +45,7 @@ The installation script will:
 2. Set up the database
 3. Configure environment variables
 4. Start FlexiBuckets
+
 
 Visit `http://your-server-ip:3000` to access your FlexiBuckets instance.
 
