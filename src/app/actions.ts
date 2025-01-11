@@ -35,7 +35,8 @@ import {
   isAllowedToShare,
   updateUserName,
   verifyBucketUser,
-  getUserUsage
+  getUserUsage,
+  deleteBucket
 } from "@/lib/dboperations";
 import { checkForUpdates,executeUpdate } from "@/lib/version-checker";
 
@@ -75,4 +76,5 @@ export {
   isAllowedToShare,
   updateUserName,
   verifyBucketUser,
+  deleteBucket
 };

@@ -7,6 +7,7 @@ import { useDropzone } from "react-dropzone";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import * as mime from 'mime-types';
 
 const FolderDropzone = () => {
   const { folders, addFolders, isUploading, updateSelectedFolder } =
@@ -83,11 +84,13 @@ const FolderDropzone = () => {
             );
           }
         }
-
         // Now we're at the correct folder, so we add the file
+        const fileType = mime.lookup(fileName || '') || file.type;
+        const fileWithMime = new File([file], fileName || '', { type: fileType });
+
         currentFolder.files.push({
           id: uuidv4(),
-          file,
+          file: fileWithMime,
           status: null,
           path: `${fileName}`,
         });

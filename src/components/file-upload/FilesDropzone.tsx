@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { dropzoneContext } from "@/context/DropzoneContext";
 import { FileWithId } from "@/lib/types";
 import { Loader2 } from "lucide-react";
+import mime from "mime-types";
 
 
 const FilesDropzone: React.FC = () => {
@@ -25,9 +26,14 @@ const FilesDropzone: React.FC = () => {
             description: `File with the name "${file.name}" is already added.`,
           });
         } else {
+          const mimeType = mime.lookup(file.name) || file.type;
+          const fileWithMime = new File([file], file.name, {
+            type: mimeType,
+          });
+
           newFiles.push({
             id: uuidv4(),
-            file,
+            file: fileWithMime,
             status: null,
             path: file.webkitRelativePath || file.name,
           });

@@ -152,28 +152,6 @@ export const DropzoneContextProvider = ({
     setIsUploading(true);
 
     try {
-      const response = await fetch(`/api/user/subscription?userId=${userId}`);
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
-      const { maxFileUpload, maxFileUploadSize } = await response.json();
-
-      if (totalFileCount > maxFileUpload) {
-        throw new Error(
-          `You can only upload up to ${maxFileUpload} files at once.`
-        );
-      }
-
-      const maxSizeInBytes = maxFileUploadSize * 1024 * 1024 * 1024;
-      if (totalUploadSize > maxSizeInBytes) {
-        throw new Error(
-          `Total upload size cannot exceed ${formatBytes(
-            maxSizeInBytes.toString()
-          )}.`
-        );
-      }
-
       const batchSize = 5;
 
       if (folders.length > 0) {

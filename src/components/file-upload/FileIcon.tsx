@@ -17,7 +17,6 @@ const FileIcon: React.FC<FileIconProps> = ({
   height = "h-4",
   width = "w-4",
 }) => {
-  const extension = fileType.toLowerCase();
   const sizeClasses = `${width} ${height}`;
 
   // Function to get icon based on file extension
@@ -139,6 +138,17 @@ const FileIcon: React.FC<FileIconProps> = ({
   if (fileType.includes('/')) {
     // Handle MIME types
     const [type, subtype] = fileType.split('/');
+    
+    // Special handling for TypeScript files
+    if (subtype === 'typescript' || subtype === 'tsx' || subtype === 'ts') {
+      return <Code className={`text-blue-500 ${sizeClasses}`} />;
+    }
+    
+    // Special handling for JavaScript files
+    if (subtype === 'javascript' || subtype === 'jsx' || subtype === 'js') {
+      return <Code className={`text-yellow-500 ${sizeClasses}`} />;
+    }
+
     switch (type) {
       case 'image':
         return <Image className={`text-blue-500 ${sizeClasses}`} />;
@@ -147,11 +157,37 @@ const FileIcon: React.FC<FileIconProps> = ({
       case 'audio':
         return <FileAudio className={`text-purple-500 ${sizeClasses}`} />;
       case 'text':
-        return getIconByExtension(subtype);
+        // Handle text files based on subtype
+        switch (subtype) {
+          case 'x-typescript':
+          case 'typescript':
+            return <Code className={`text-blue-500 ${sizeClasses}`} />;
+          case 'javascript':
+            return <Code className={`text-yellow-500 ${sizeClasses}`} />;
+          case 'html':
+            return <Code className={`text-orange-500 ${sizeClasses}`} />;
+          case 'css':
+            return <Code className={`text-blue-400 ${sizeClasses}`} />;
+          case 'plain':
+            return <FileText className={`text-gray-500 ${sizeClasses}`} />;
+          default:
+            return getIconByExtension(subtype);
+        }
       case 'application':
-        return getIconByExtension(subtype);
+        // Handle application types
+        switch (subtype) {
+          case 'x-typescript':
+          case 'typescript':
+            return <Code className={`text-blue-500 ${sizeClasses}`} />;
+          case 'javascript':
+            return <Code className={`text-yellow-500 ${sizeClasses}`} />;
+          case 'json':
+            return <FileJson className={`text-yellow-500 ${sizeClasses}`} />;
+          default:
+            return getIconByExtension(subtype);
+        }
       default:
-        return <File className={`text-gray-500 ${sizeClasses}`} />;
+        return getIconByExtension(subtype);
     }
   } else {
     // Handle file extensions

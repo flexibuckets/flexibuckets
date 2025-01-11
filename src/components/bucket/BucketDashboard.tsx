@@ -37,6 +37,7 @@ export function BucketDashboard({ userId }: { userId: string }) {
             <BucketCard
               key={bucket.id}
               bucket={{ ...bucket, size: bucket.size.toString() }}
+              userId={userId}
             />
           ))
         ) : (
