@@ -13,15 +13,17 @@ import {
 import type { Bucket } from "@/lib/types"; // Ensure Bucket type is updated
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
+import { DeleteBucket } from "./delete-bucket";
 
 interface BucketCardProps {
   bucket: Bucket & {
     isAccessible?: boolean;
     errorMessage?: string;
   };
+  userId: string;
 }
 
-export function BucketCard({ bucket }: BucketCardProps) {
+export function BucketCard({ bucket, userId }: BucketCardProps) {
   const usedStorage = parseInt(bucket.size.replace(/[^\d]/g, "")); // Ensure bucket.size is correctly formatted
   const totalStorage = 100000; // Assuming 10GB total storage for this example
   const storagePercentage = (usedStorage / totalStorage) * 100;
@@ -50,6 +52,7 @@ export function BucketCard({ bucket }: BucketCardProps) {
               {bucket.endpointUrl || "/"}
             </p>
           </div>
+          <DeleteBucket bucketId={bucket.id} bucketName={bucket.name}  userId={userId}/>
         </div>
         <div className="flex items-center space-x-4 mb-4">
           <div className="flex items-center">

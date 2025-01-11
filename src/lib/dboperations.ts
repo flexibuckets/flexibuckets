@@ -1056,3 +1056,54 @@ export async function isAllowedToAddBucket(userId: string): Promise<boolean> {
 
   return user.s3Credentials.length < plan.buckets;
 }
+
+export async function deleteBucket({ bucketId }: { bucketId: string }) {
+  try {
+    // Use a transaction to ensure all operations complete or none do
+    return await prisma.$transaction(async (tx) => {
+      // 1. First delete all shared files associated with this bucket's files
+      await tx.sharedFile.deleteMany({
+        where: {
+          file: {
+            s3CredentialId: bucketId
+          }
+        }
+      });
+
+      // 2. Delete all shared folders associated with this bucket's folders
+      await tx.sharedFolder.deleteMany({
+        where: {
+          folder: {
+            s3CredentialId: bucketId
+          }
+        }
+      });
+
+      // 3. Delete all files in the bucket
+      await tx.file.deleteMany({
+        where: {
+          s3CredentialId: bucketId
+        }
+      });
+
+      // 4. Delete all folders in the bucket
+      await tx.folder.deleteMany({
+        where: {
+          s3CredentialId: bucketId
+        }
+      });
+
+      // 5. Finally delete the bucket (s3Credential) itself
+      const deletedBucket = await tx.s3Credential.delete({
+        where: {
+          id: bucketId
+        }
+      });
+
+      return deletedBucket;
+    });
+  } catch (error) {
+    console.error("Error deleting bucket:", error);
+    throw new Error("Failed to delete bucket and its contents");
+  }
+}

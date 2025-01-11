@@ -2,7 +2,7 @@
 
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAllBuckets, addS3Credentials, verifyS3Credentials } from "@/app/actions";
+import { getAllBuckets, addS3Credentials, verifyS3Credentials, deleteBucket } from "@/app/actions";
 import { addBucketFormSchema as formSchema } from "@/lib/schemas";
 import { z } from "zod";
 import { Bucket } from "@/lib/types";
@@ -82,6 +82,23 @@ export function useBuckets(userId: string) {
     },
   });
 
+  const deleteBucketMutation = useMutation({
+    mutationFn: async ({ bucketId }: { bucketId: string }) => {
+      return await deleteBucket({ bucketId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["buckets", userId] });
+      toast({ title: "Bucket deleted successfully" });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Error deleting bucket",
+        description: error instanceof Error ? error.message : "An error occurred",
+      });
+    },
+  });
+
   return {
     buckets,
     isLoading,
@@ -90,5 +107,7 @@ export function useBuckets(userId: string) {
     isVerifying: verifyMutation.isPending,
     addBucket: addBucketMutation.mutate,
     isAddingCreds: addBucketMutation.isPending,
+    deleteBucket: deleteBucketMutation.mutate,
+    isDeleting: deleteBucketMutation.isPending,
   };
 }
