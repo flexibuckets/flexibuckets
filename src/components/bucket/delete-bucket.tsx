@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash } from "lucide-react";
+import { Trash, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,9 +34,18 @@ export function DeleteBucket({ bucketId, bucketName, userId }: DeleteBucketProps
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="destructive" size="sm">
-          <Trash className="h-4 w-4 mr-2" />
-          Delete
+        <Button variant="destructive" size="sm" disabled={isDeleting}>
+          {isDeleting ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Deleting...
+            </>
+          ) : (
+            <>
+              <Trash className="h-4 w-4 mr-2" />
+              Delete
+            </>
+          )}
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -72,7 +81,14 @@ export function DeleteBucket({ bucketId, bucketName, userId }: DeleteBucketProps
             onClick={handleDelete}
             disabled={confirmName !== bucketName || isDeleting}
           >
-            Delete Bucket
+            {isDeleting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              "Delete Bucket"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

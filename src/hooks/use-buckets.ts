@@ -56,7 +56,12 @@ export function useBuckets(userId: string) {
   const verifyMutation = useMutation({
     mutationFn: verifyBucketCreds,
     onSuccess: async (formattedValues) => {
-      await addBucketMutation.mutateAsync({ userId, values: formattedValues });
+      try {
+        await addBucketMutation.mutateAsync({ userId, values: formattedValues });
+      } catch (error) {
+        // If adding to DB fails, we don't want to swallow the error
+        throw error;
+      }
     },
     onError: (error) => {
       toast({
@@ -64,6 +69,8 @@ export function useBuckets(userId: string) {
         title: "Verification failed",
         description: error instanceof Error ? error.message : "Failed to verify bucket credentials",
       });
+      // Ensure we don't proceed with adding credentials by throwing the error
+      throw error;
     },
   });
 
@@ -84,19 +91,15 @@ export function useBuckets(userId: string) {
 
   const deleteBucketMutation = useMutation({
     mutationFn: async ({ bucketId }: { bucketId: string }) => {
-      return await deleteBucket({ bucketId });
+      const response = await fetch(`/api/buckets/${bucketId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete bucket');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["buckets", userId] });
-      toast({ title: "Bucket deleted successfully" });
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Error deleting bucket",
-        description: error instanceof Error ? error.message : "An error occurred",
-      });
-    },
+    }
   });
 
   return {
@@ -111,3 +114,4 @@ export function useBuckets(userId: string) {
     isDeleting: deleteBucketMutation.isPending,
   };
 }
+

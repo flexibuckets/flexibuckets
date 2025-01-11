@@ -291,11 +291,18 @@ export async function addS3Credentials({
   userId: string;
   values: z.infer<typeof formSchema>;
 }) {
+  // Clean the endpoint URL before saving to database
+  const cleanedValues = {
+    ...values,
+    endpointUrl: values.endpointUrl
+      .replace(/^https?:\/\//, '')  // Remove http:// or https://
+      .replace(/\/$/, '')           // Remove trailing slash
+  };
   
   return await prisma.s3Credential.create({
     data: {
       userId,
-      ...values,
+      ...cleanedValues,
     },
   });
 }
@@ -319,13 +326,6 @@ export async function verifyS3Credentials(values: z.infer<typeof formSchema>) {
   }
 
   try {
-    /* Temporarily removed AWS provider support
-    if (provider === 'AWS') {
-      // AWS specific handling code removed
-    }
-    */
-
-    // For non-AWS providers, use the existing verification logic
     const minioClient = new Client({
       endPoint: endpointUrl,
       port: 443,
@@ -333,32 +333,24 @@ export async function verifyS3Credentials(values: z.infer<typeof formSchema>) {
       accessKey,
       secretKey,
       region: region || "auto",
+      pathStyle: true
     });
 
-    // Verify credentials by listing buckets
+    // First verify bucket exists
     const buckets = await minioClient.listBuckets();
     const bucketExists = buckets.some((b) => b.name === bucket);
+    
     if (!bucketExists) {
       return {
         isVerified: false,
         ...values,
         endpointUrl,
-        error: `Bucket "${bucket}" not found. Please check the bucket name.`,
+        error: `Bucket "${bucket}" not found.`
       };
     }
 
-    // Verify bucket access by trying to list objects
-    try {
-      await minioClient.listObjects(bucket, "", true);
-    } catch (bucketError) {
-      console.error("Error accessing bucket:", bucketError);
-      return {
-        isVerified: false,
-        ...values,
-        endpointUrl,
-        error: "Unable to access bucket. Please check your permissions.",
-      };
-    }
+    // Then verify bucket access by listing objects
+    await minioClient.listObjects(bucket, "", true);
 
     return {
       isVerified: true,
@@ -368,6 +360,7 @@ export async function verifyS3Credentials(values: z.infer<typeof formSchema>) {
   } catch (error) {
     console.error("Error verifying S3 credentials:", error);
     let errorMessage = "Failed to verify credentials";
+    
     if (error instanceof Error) {
       if (error.message.includes('wrong; expecting')) {
         const match = error.message.match(/expecting '([^']+)'/);
@@ -377,6 +370,8 @@ export async function verifyS3Credentials(values: z.infer<typeof formSchema>) {
         errorMessage = "Invalid access key. Please check your credentials.";
       } else if (error.message.includes('SignatureDoesNotMatch')) {
         errorMessage = "Invalid secret key. Please check your credentials.";
+      } else if (error.message.includes('NoSuchBucket')) {
+        errorMessage = "Bucket not found. Please verify the bucket name.";
       }
     }
 
@@ -417,37 +412,49 @@ export async function getBucketDetails({
       useSSL: true,
       accessKey,
       secretKey,
-      region,
+      region: region || "auto",
+      pathStyle: true
     });
 
+    // Test bucket access
+    await minioClient.listObjects(bucketName, "", true);
+    
+    // Get bucket stats
     let totalFiles = 0;
-    let totalSize = 0;
+    let totalSizeInBytes = 0;
 
-    const objectsStream = minioClient.listObjects(bucketName, "", true);
-
+    const objectsStream = minioClient.listObjects(bucketName, '', true);
+    
     for await (const obj of objectsStream) {
-      if (obj.size !== undefined) {
-        totalFiles++;
-        totalSize += obj.size;
-      }
+      totalFiles++;
+      totalSizeInBytes += obj.size || 0;
     }
 
     return {
       totalFiles,
-      totalSizeInMB: Math.round(totalSize / (1024 * 1024)),
+      totalSizeInMB: Math.ceil(totalSizeInBytes / (1024 * 1024)),
       isAccessible: true,
+      errorMessage: null
     };
   } catch (error) {
-    // Don't throw here, just return the status
+    console.error("Error getting bucket details:", error);
+    let errorMessage = "Unable to access bucket";
+    
+    if (error instanceof Error) {
+      if (error.message.includes('InvalidAccessKeyId')) {
+        errorMessage = "Invalid access key";
+      } else if (error.message.includes('SignatureDoesNotMatch')) {
+        errorMessage = "Invalid secret key";
+      } else if (error.message.includes('NoSuchBucket')) {
+        errorMessage = "Bucket not found";
+      }
+    }
+
     return {
       totalFiles: 0,
       totalSizeInMB: 0,
       isAccessible: false,
-      errorMessage: error instanceof Error 
-        ? error.message.includes('ECONNREFUSED')
-          ? "Cannot connect to storage endpoint"
-          : "Unable to access bucket"
-        : "Unable to access bucket",
+      errorMessage
     };
   }
 }
@@ -474,8 +481,8 @@ export async function getAllBuckets({ userId }: { userId: string }) {
       isShared: false,
       permissions: "READ_WRITE",
       isAccessible: bucketdetails.isAccessible,
-      errorMessage: bucketdetails.errorMessage,
-    } as const;
+      errorMessage: bucketdetails.errorMessage || undefined,
+    };
 
     bucketData.push(formattedBucket);
   }
