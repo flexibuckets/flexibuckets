@@ -107,7 +107,7 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <UserBox />
-        <UpdateNotification />
+        {/* <UpdateNotification /> */}
       </SidebarFooter>
     </Sidebar>
   );

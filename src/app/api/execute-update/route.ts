@@ -1,10 +1,10 @@
-import { executeUpdate } from '@/lib/version-checker';
+import { executeUpdate } from '@/app/actions';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { version, shaShort } = await req.json();
-    const success = await executeUpdate(version, shaShort);
+    const { version } = await req.json();
+    const success = await executeUpdate(version);
     
     if (success) {
       return NextResponse.json({ success: true });

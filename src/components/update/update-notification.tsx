@@ -37,10 +37,16 @@ export default function UpdateNotification() {
     queryKey: ["version-check"],
     queryFn: async () => {
       const response = await fetch("/api/check-updates")
-      if (!response.ok) throw new Error("Failed to check for updates")
-  
-      return response.json()
+      console.log('Update check response:', response);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to check for updates");
+      }
+      const data = await response.json();
+      console.log('Update info:', data);
+      return data;
     },
+
   })
 
   const updateMutation = useMutation({
@@ -50,6 +56,7 @@ export default function UpdateNotification() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ version }),
       })
+      console.log('Update execution response:', response);
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.message || "Update failed")
@@ -75,7 +82,8 @@ export default function UpdateNotification() {
     },
   })
 
-  if (isLoading || !updateInfo || error) return null
+  if (isLoading) return null;
+  if (error || !updateInfo) return null;
 
   return (
     <div className="fixed bottom-4 right-4 z-50">

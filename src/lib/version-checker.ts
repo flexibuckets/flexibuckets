@@ -1,7 +1,9 @@
+'use server'
 import { prisma } from "./prisma";
 import { DockerClient } from "@/lib/docker/client";
 import fs from 'fs/promises';
 import path from 'path';
+import semver from 'semver';
 
 interface Version {
   version: string;
@@ -39,10 +41,20 @@ export async function checkForUpdates(): Promise<Version | null> {
         console.warn('GitHub API rate limit reached. Using cached data if available.');
         return versionCache?.data || null;
       }
-      throw new Error('Failed to fetch version info');
+      throw new Error(`Failed to fetch version info: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const responseText = await response.text();
+    console.log('GitHub API Response:', responseText);
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Error parsing GitHub API response:', parseError);
+      throw new Error(`Failed to parse GitHub API response`);
+    }
+
     const latestShaShort = data.sha.substring(0, 6);
     
     const versionResponse = await fetch(
@@ -53,7 +65,15 @@ export async function checkForUpdates(): Promise<Version | null> {
     const currentShaShort = process.env.APP_SHA_SHORT || '000000';
     const currentVersion = process.env.APP_VERSION || '0.0.0';
 
-    if (latestShaShort === currentShaShort && latestVersion === currentVersion) {
+    console.log('Current version:', currentVersion);
+    console.log('Latest version:', latestVersion);
+    console.log('Current SHA:', currentShaShort);
+    console.log('Latest SHA:', latestShaShort);
+
+    // Compare versions using semver
+    const isNewer = semver.gt(latestVersion.trim(), currentVersion.trim());
+
+    if (!isNewer && latestShaShort === currentShaShort) {
       versionCache = { timestamp: Date.now(), data: null };
       return null;
     }
@@ -64,7 +84,7 @@ export async function checkForUpdates(): Promise<Version | null> {
     
     const migrations = await migrationsResponse.json();
     const requiredMigrations = migrations.some((migration: any) => 
-      migration.version > currentVersion
+      semver.gt(migration.version, currentVersion)
     );
 
     const changelogResponse = await fetch(
@@ -73,7 +93,7 @@ export async function checkForUpdates(): Promise<Version | null> {
     const changeLog = await changelogResponse.text();
 
     const versionInfo: Version = {
-      version: latestVersion,
+      version: latestVersion.trim(),
       shaShort: latestShaShort,
       requiredMigrations,
       changeLog,
@@ -88,16 +108,15 @@ export async function checkForUpdates(): Promise<Version | null> {
   }
 }
 
-export async function executeUpdate(newVersion: string, newShaShort: string): Promise<boolean> {
+export async function executeUpdate(newVersion: string): Promise<boolean> {
   try {
     await updateEnvFile('APP_VERSION', newVersion);
-    await updateEnvFile('APP_SHA_SHORT', newShaShort);
     
     const dockerClient = DockerClient.getInstance();
     const appContainer = await dockerClient.docker.getContainer('flexibuckets_app');
 
     // Pull the new image
-    await dockerClient.docker.pull(`flexibuckets/flexibuckets:${newShaShort}`);
+    await dockerClient.docker.pull(`flexibuckets/flexibuckets:${newVersion}`);
 
     // Stop the current container
     await appContainer.stop();
@@ -107,7 +126,7 @@ export async function executeUpdate(newVersion: string, newShaShort: string): Pr
 
     // Create and start a new container with the updated image
     const container = await dockerClient.docker.createContainer({
-      Image: `flexibuckets/flexibuckets:${newShaShort}`,
+      Image: `flexibuckets/flexibuckets:${newVersion}`,
       name: 'flexibuckets_app',
       // Add other necessary container options here
     });

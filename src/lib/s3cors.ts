@@ -28,7 +28,7 @@ export async function setS3CompatibleCors(
 
 
     if (['STORJ', 'IDRIVE', 'BACKBLAZE',null].includes(credentials.provider)) {
-      console.log(`Skipping CORS configuration for ${credentials.provider} provider - CORS should be configured through their console`);
+     
       return;
     }
 

@@ -218,7 +218,7 @@ export default function LandingPage() {
                       href="/signup"
                       className="flex items-center justify-center"
                     >
-                      Dip Your Toes In 💦
+                      Get Started 💦
                       <ArrowRight
                         className={`ml-2 h-5 w-5 ${
                           theme === 'dark' ? 'text-zinc-100' : 'text-zinc-100'
@@ -232,96 +232,6 @@ export default function LandingPage() {
             </div>
           </section>
         </HeroHighlight>
-
-        <section
-          className={`w-full py-12 md:py-24 lg:py-32 ${
-            theme === 'dark' ? 'bg-black' : 'bg-white'
-          }`}
-        >
-          <div className="container px-4 md:px-6 mx-auto">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-center mb-8 sm:mb-12">
-              <AnimatedText>
-                Features That&apos;ll Make You Flip Your Lid 🙃
-              </AnimatedText>
-            </h2>
-            <CardHoverEffectDemo />
-          </div>
-        </section>
-
-        {/* <section className={`w-full py-12 md:py-24 lg:py-32 ${
-          theme === 'dark' 
-            ? 'bg-black'
-            : 'bg-white'
-        }`}>
-          <div className="container px-4 md:px-6 mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="flex flex-col items-center justify-center space-y-4 text-center mb-16"
-            >
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                <AnimatedText>
-                  Choose Your Perfect Bucket Size 🪣
-                </AnimatedText>
-              </h2>
-              <p className={`max-w-[600px] text-xl ${
-                theme === 'dark' 
-                  ? 'text-zinc-300' 
-                  : 'text-zinc-600'
-              }`}>
-                <AnimatedText>
-                  From personal puddles to enterprise oceans, we&apos;ve got the right size for you! 🌊
-                </AnimatedText>
-              </p>
-            </motion.div>
-            <PricingCards />
-          </div>
-        </section> */}
-
-        <section
-          className={`w-full py-12 md:py-24 lg:py-32 ${
-            theme === 'dark' ? 'bg-black' : 'bg-white'
-          }`}
-        >
-          <div className="container px-4 md:px-6 mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="flex flex-col items-center justify-center space-y-4 text-center"
-            >
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                <AnimatedText>
-                  Ready to Make a Splash in File Management? 💦
-                </AnimatedText>
-              </h2>
-              <p
-                className={`max-w-[600px] text-xl ${
-                  theme === 'dark' ? 'text-zinc-300' : 'text-zinc-600'
-                }`}
-              >
-                <AnimatedText>
-                  Don&apos;t let your data stream away. Join the bucket brigade
-                  and keep your files in check! 🚒
-                </AnimatedText>
-              </p>
-              <Button
-                asChild
-                size="lg"
-                className={`mt-4 ${
-                  theme === 'dark'
-                    ? 'bg-zinc-50 text-zinc-900 hover:bg-zinc-200'
-                    : 'bg-zinc-900 text-zinc-50 hover:bg-zinc-800'
-                }`}
-              >
-                <Link href="/signup">
-                  Get Started 🏊‍♂️ <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-            </motion.div>
-          </div>
-        </section>
         <Footer />
       </main>
     </div>

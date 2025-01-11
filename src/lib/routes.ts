@@ -25,9 +25,9 @@ export const DASHBOARD_ROUTE = "/dashboard";
 
 // Keep existing nav links
 export const navLinks: NavLink[] = [
-  { label: "Features", href: "#" },
-  { label: "Docs", href: "docs.flexibuckets.com" },
-  { label: "About", href: "#" },
+  { label: "Features", href: "https://docs.flexibuckets.com/features" },
+  { label: "Docs", href: "https://docs.flexibuckets.com" },
+  { label: "About", href: "https://flexibuckets.com/about" },
 ];
 
 // Define reusable link structures for sidebar groups

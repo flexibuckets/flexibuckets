@@ -37,8 +37,11 @@ import {
   verifyBucketUser,
   getUserUsage
 } from "@/lib/dboperations";
+import { checkForUpdates,executeUpdate } from "@/lib/version-checker";
 
 export {
+  checkForUpdates,
+  executeUpdate,
   getUserUsage,
   getS3Credentials,
   verifyS3Credentials,
