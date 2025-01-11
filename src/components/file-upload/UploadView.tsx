@@ -12,6 +12,7 @@ import {
 import React, { useContext} from "react";
 import FileIcon from "./FileIcon";
 import FolderSheet from "./FolderSheet";
+import * as mime from 'mime-types';
 
 const UploadView = ({ isTeams }: { isTeams: boolean }) => {
   const {
@@ -26,41 +27,45 @@ const UploadView = ({ isTeams }: { isTeams: boolean }) => {
     updateSelectedFolder,
   } = useContext( dropzoneContext);
 
-  const fileList = files.map(({ id, file, status }: FileWithId) => (
-    <div
-      key={id}
-      className={cn(
-        "flex items-center justify-between space-x-2 p-2 bg-secondary/80 hover:bg-secondary rounded-md mb-2 max-w-lg",
-        { "animate-pulse": status === "uploading" }
-      )}>
-      <div className="flex items-center space-x-2 ">
-        <FileIcon fileType={file.type} />
-        <span className="text-sm max-w-[20ch] overflow-hidden truncate">
-          {file.name}
-        </span>
-      </div>
-      <button
-        disabled={status !== null}
+  const fileList = files.map(({ id, file, status }: FileWithId) => {
+    const mimeType = mime.lookup(file.name) || file.type;
+    
+    return (
+      <div
+        key={id}
         className={cn(
-          "focus:outline-none p-2",
-          status === "uploading" && "text-blue-500",
-          status === "uploaded" && "text-green-500",
-          status === "inQueue" && "text-yellow-500",
-          status === null && "text-red-500 hover:text-red-700"
-        )}
-        onClick={() => removeFile(id)}>
-        {status === "uploading" ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : status === "uploaded" ? (
-          <FileCheck className="h-4 w-4" />
-        ) : status === "inQueue" ? (
-          <Clock className="h-4 w-4 animate-spin" />
-        ) : (
-          <Trash className="h-4 w-4" />
-        )}
-      </button>
-    </div>
-  ));
+          "flex items-center justify-between space-x-2 p-2 bg-secondary/80 hover:bg-secondary rounded-md mb-2 max-w-lg",
+          { "animate-pulse": status === "uploading" }
+        )}>
+        <div className="flex items-center space-x-2 ">
+          <FileIcon fileType={mimeType} />
+          <span className="text-sm max-w-[20ch] overflow-hidden truncate">
+            {file.name}
+          </span>
+        </div>
+        <button
+          disabled={status !== null}
+          className={cn(
+            "focus:outline-none p-2",
+            status === "uploading" && "text-blue-500",
+            status === "uploaded" && "text-green-500",
+            status === "inQueue" && "text-yellow-500",
+            status === null && "text-red-500 hover:text-red-700"
+          )}
+          onClick={() => removeFile(id)}>
+          {status === "uploading" ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : status === "uploaded" ? (
+            <FileCheck className="h-4 w-4" />
+          ) : status === "inQueue" ? (
+            <Clock className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+    );
+  });
 
   const folderList = folders.map((folder: Folder) => {
     const { id, name, status } = folder;

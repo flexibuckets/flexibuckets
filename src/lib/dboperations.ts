@@ -976,10 +976,12 @@ export async function verifyBucketUser({
   userId: string;
   bucketId: string;
 }) {
-  const bucket = await prisma.s3Credential.findUnique({
+  const bucket = await prisma.s3Credential.findFirst({
     where: { 
-      id: bucketId,
-      userId: userId // Only check direct ownership
+      AND: [
+        { id: bucketId },
+        { userId: userId }
+      ]
     },
   });
 
