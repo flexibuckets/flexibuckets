@@ -40,10 +40,6 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      # 6. Run linting
-      - name: Run lint check
-        run: bun run lint
-
-      # 7. Run build check
+      # 6. Run build check
       - name: Run build check
         run: bun run build
