@@ -986,7 +986,7 @@ export async function verifyBucketUser({
   });
 
   if (!bucket) {
-    throw new Error('Unauthorized access to bucket');
+   return false
   }
 
   return bucket;

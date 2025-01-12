@@ -1,6 +1,10 @@
-// app/api/health/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from "@/lib/prisma"
+import { getContainerStats } from '@/lib/docker/stats'
+import { exec } from 'child_process'
+import { promisify } from 'util'
+
+const execAsync = promisify(exec)
 
 interface HealthStatus {
   status: string;
@@ -10,11 +14,38 @@ interface HealthStatus {
     database: {
       status: string;
       latency: number;
+      metrics: {
+        memory: number;
+        cpu: number;
+      } | null;
+    };
+    traefik: {
+      status: string;
+      metrics: {
+        memory: number;
+        cpu: number;
+      } | null;
+    };
+    app: {
+      status: string;
+      metrics: {
+        memory: {
+          total: number;
+          used: number;
+          free: number;
+        };
+        uptime: number;
+      };
     };
   };
   system: {
     uptime: number;
     memory: {
+      total: number;
+      used: number;
+      free: number;
+    };
+    disk: {
       total: number;
       used: number;
       free: number;
@@ -41,68 +72,74 @@ async function checkDatabaseConnection(): Promise<{ status: string; latency: num
   }
 }
 
-function getSystemMetrics() {
-  if (typeof process === 'undefined') {
+async function getSystemMetrics() {
+  try {
+    const { stdout: dfOutput } = await execAsync('df -B1 / | tail -n 1');
+    const [, total, used, available] = dfOutput.split(/\s+/);
+
     return {
-      uptime: 0,
+      uptime: process.uptime(),
       memory: {
-        total: 0,
-        used: 0,
-        free: 0
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        free: Math.round((process.memoryUsage().heapTotal - process.memoryUsage().heapUsed) / 1024 / 1024)
+      },
+      disk: {
+        total: parseInt(total),
+        used: parseInt(used),
+        free: parseInt(available)
       }
     };
+  } catch (error) {
+    console.error('Error getting system metrics:', error);
+    return null;
   }
-
-  const totalMemory = process.memoryUsage().heapTotal;
-  const usedMemory = process.memoryUsage().heapUsed;
-
-  return {
-    uptime: process.uptime(),
-    memory: {
-      total: Math.round(totalMemory / 1024 / 1024),
-      used: Math.round(usedMemory / 1024 / 1024),
-      free: Math.round((totalMemory - usedMemory) / 1024 / 1024)
-    }
-  };
 }
 
 export async function GET() {
   try {
-    const dbStatus = await checkDatabaseConnection();
-    const systemMetrics = getSystemMetrics();
+    const [dbStatus, systemMetrics, containerStats] = await Promise.all([
+      checkDatabaseConnection(),
+      getSystemMetrics(),
+      getContainerStats()
+    ]);
 
     const healthStatus: HealthStatus = {
       status: dbStatus.status === 'healthy' ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
-      version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
+      version: process.env.APP_VERSION || '1.0.0',
       services: {
-        database: dbStatus
+        database: {
+          ...dbStatus,
+          metrics: containerStats?.database || null
+        },
+        traefik: {
+          status: containerStats?.traefik ? 'healthy' : 'unhealthy',
+          metrics: containerStats?.traefik || null
+        },
+        app: {
+          status: 'healthy',
+          metrics: {
+            memory: systemMetrics?.memory || { total: 0, used: 0, free: 0 },
+            uptime: systemMetrics?.uptime || 0
+          }
+        }
       },
-      system: systemMetrics
+      system: systemMetrics || {
+        uptime: 0,
+        memory: { total: 0, used: 0, free: 0 },
+        disk: { total: 0, used: 0, free: 0 }
+      }
     };
 
-    const headers = {
-      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    };
-
-    return NextResponse.json(healthStatus, { 
+    return NextResponse.json(healthStatus, {
       status: healthStatus.status === 'healthy' ? 200 : 503,
-      headers 
-    });
-  } catch (error) {
-    console.error('Health check failed:', error);
-
-    return NextResponse.json({
-      status: 'error',
-      timestamp: new Date().toISOString(),
-      error: 'Health check failed'
-    }, { 
-      status: 500,
       headers: {
         'Cache-Control': 'no-store'
       }
     });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    return NextResponse.json({ error: 'Health check failed' }, { status: 500 });
   }
 }

@@ -116,11 +116,15 @@ FlexiBuckets is MIT licensed, as found in the [LICENSE](LICENSE) file.
 
 ## ⭐️ Show Your Support
 
-Give a ⭐️ if this project helped you!
+Give a ⭐️ if this project helped you! 
+You can also support us by Sponsoring us on [GitHub Sponsors](https://github.com/sponsors/scshiv29-dev)
+20% of your contribution will go directly towards funding community bounties, empowering contributors to solve critical issues, add new features, and innovate.
+
+Your support helps sustain and grow the open-source ecosystem while recognizing and rewarding the community's hard work. Thank you for driving collaboration and progress!
 
 
 ⚠️ Security Note: The auto-update feature requires mounting the Docker socket and 
 granting certain privileges to the container. This is necessary for the application 
 to manage its own updates, but it does mean the container has elevated permissions 
 on your system. If this is a concern, you can disable auto-updates and manage 
-updates manually.
+updates manually. Currently, the auto-update feature is WIP.
