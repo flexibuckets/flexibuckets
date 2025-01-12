@@ -7,7 +7,8 @@ import {
   Settings,
   Users,
   UserCog2Icon,
-  ChartPie
+  ChartPie,
+  Heart
 } from "lucide-react";
 
 // Keep existing route constants
@@ -67,9 +68,21 @@ const accountLinks: SidebarLinkGroup = {
   ],
 };
 
+const healthLinks: SidebarLinkGroup = {
+  header: "Health",
+  links: [
+    {
+      Icon: Heart,
+      href: "/dashboard/status",
+      label: "Status",
+      activeOnRoutes: [],
+    },
+  ],
+};
 // Base sidebar links for all users
 export const sidebarLinks: SidebarLinkGroup[] = [
   applicationLinks,
   accountLinks,
+  healthLinks,
 ];
 
