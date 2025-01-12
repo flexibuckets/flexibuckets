@@ -74,15 +74,21 @@ async function checkDatabaseConnection(): Promise<{ status: string; latency: num
 
 async function getSystemMetrics() {
   try {
+    // Get system memory info
+    const { stdout: memInfo } = await execAsync('free -b');
+    const memLines = memInfo.split('\n');
+    const memValues = memLines[1].split(/\s+/);
+    
+    // Get disk usage
     const { stdout: dfOutput } = await execAsync('df -B1 / | tail -n 1');
     const [, total, used, available] = dfOutput.split(/\s+/);
 
     return {
       uptime: process.uptime(),
       memory: {
-        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-        free: Math.round((process.memoryUsage().heapTotal - process.memoryUsage().heapUsed) / 1024 / 1024)
+        total: parseInt(memValues[1]),
+        used: parseInt(memValues[2]),
+        free: parseInt(memValues[3])
       },
       disk: {
         total: parseInt(total),
