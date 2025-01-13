@@ -58,12 +58,6 @@ export default function StatusPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatusCard
-          title="Application"
-          status={status?.services.app.status || 'unknown'}
-          metrics={status?.services.app.metrics.memory}
-          uptime={status?.services.app.metrics.uptime}
-        />
-        <StatusCard
           title="Database"
           status={status?.services.database.status || 'unknown'}
           metrics={status?.services.database.metrics || undefined}
@@ -75,27 +69,7 @@ export default function StatusPage() {
         />
       </div>
 
-      <h3 className="text-xl font-semibold mt-8">System Resources</h3>
-      <div className="grid gap-4 md:grid-cols-2">
-        <StatusCard
-          title="System Memory"
-          status="healthy"
-          metrics={{
-            used: status?.system.memory.used,
-            total: status?.system.memory.total,
-            free: status?.system.memory.free
-          }}
-        />
-        <StatusCard
-          title="System Disk"
-          status="healthy"
-          metrics={{
-            used: status?.system.disk.used,
-            total: status?.system.disk.total,
-            free: status?.system.disk.free
-          }}
-        />
-      </div>
+      
     </div>
   );
 } 
