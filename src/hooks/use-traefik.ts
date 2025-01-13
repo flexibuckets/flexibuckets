@@ -33,5 +33,8 @@ export function useCurrentDomain() {
   return useQuery({
     queryKey: ['traefik-domain'],
     queryFn: traefikActions.getCurrentDomain,
+    staleTime: 1000 * 60, // Cache for 1 minute
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 }

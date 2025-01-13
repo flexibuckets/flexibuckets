@@ -31,8 +31,29 @@ export function DomainSettings({ session }: { session: Session }) {
   useEffect(() => {
     if (currentDomain) {
       setDomain(currentDomain)
+      if (currentDomain.includes('.nip.io')) {
+        setSelectedProvider('nip.io')
+      } else if (currentDomain.includes('.traefik.me')) {
+        setSelectedProvider('traefik.me')
+      } else {
+        setSelectedProvider('custom')
+      }
     }
   }, [currentDomain])
+
+  if (isLoadingDomain) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Domain Settings</CardTitle>
+          <CardDescription>Loading domain configuration...</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-6">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
+    )
+  }
 
   const generateAutoDomain = async (provider: 'nip.io' | 'traefik.me') => {
     try {
@@ -87,36 +108,36 @@ export function DomainSettings({ session }: { session: Session }) {
     }
   }
 
-  // DomainSettings.tsx
-const handleUpdate = async () => {
-  if (!domain) return;
+  const handleUpdate = async () => {
+    if (!domain) return;
 
-  const dnsValid = await checkDns(domain);
-  if (!dnsValid) return;
+    const dnsValid = await checkDns(domain);
+    if (!dnsValid) return;
 
-  try {
-    await configureDomain(
-      { domain, enableSsl: true },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Success",
-            description: "Domain configured successfully. Changes will take effect in a few minutes."
-          });
-        },
-        onError: (error) => {
-          toast({
-            title: "Error",
-            description: error.message || "Failed to configure domain. Please check server logs.",
-            variant: "destructive"
-          });
+    try {
+      await configureDomain(
+        { domain, enableSsl: true },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Success",
+              description: "Domain configured successfully. Changes will take effect in a few minutes."
+            });
+          },
+          onError: (error) => {
+            toast({
+              title: "Error",
+              description: error.message || "Failed to configure domain. Please check server logs.",
+              variant: "destructive"
+            });
+          }
         }
-      }
-    );
-  } catch (error) {
-    console.error('Failed to configure domain:', error);
-  }
-};
+      );
+    } catch (error) {
+      console.error('Failed to configure domain:', error);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>

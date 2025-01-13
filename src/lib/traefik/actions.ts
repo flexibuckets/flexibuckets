@@ -56,6 +56,19 @@ export async function configureDomain(input: DomainConfigInput) {
       throw new Error('Invalid domain format. Please enter a valid domain name (e.g., example.com or sub.example.com)');
     }
 
+    // Update database first
+    await prisma.settings.upsert({
+      where: { id: "default" },
+      create: {
+        id: "default",
+        domain: validated.domain,
+        allowSignups: false
+      },
+      update: {
+        domain: validated.domain
+      }
+    });
+
     const configPath = path.join(TRAEFIK_CONFIG_DIR, 'dynamic', 'website.yml');
     await ensureDirectoryExists(path.dirname(configPath));
 
@@ -98,19 +111,6 @@ export async function configureDomain(input: DomainConfigInput) {
       throw error;
     }
 
-    // Update database settings
-    await prisma.settings.upsert({
-      where: { id: "default" },
-      create: {
-        id: "default",
-        domain: validated.domain,
-        allowSignups: false
-      },
-      update: {
-        domain: validated.domain
-      }
-    });
-
     // Restart Traefik to apply changes
     const traefikContainer = dockerClient.docker.getContainer('flexibuckets_traefik');
     await traefikContainer.restart();
@@ -131,11 +131,12 @@ export async function getCurrentDomain() {
 
   try {
     const settings = await prisma.settings.findFirst({
-      where: { id: "default" }
+      orderBy: { createdAt: 'desc' }
     });
-    return settings?.domain || null;
-  } catch (error: any) {
-    console.error('Failed to get current domain:', error);
+    
+    return settings?.domain || '';
+  } catch (error) {
+    console.error('Error getting current domain:', error);
     throw new Error('Failed to get current domain configuration');
   }
 }
