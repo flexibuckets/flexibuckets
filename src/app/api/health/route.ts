@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { getContainerStats } from '@/lib/docker/stats'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import os from 'os'
 
 const execAsync = promisify(exec)
 
@@ -74,26 +75,27 @@ async function checkDatabaseConnection(): Promise<{ status: string; latency: num
 
 async function getSystemMetrics() {
   try {
-    // Get system memory info
+    // Get system memory info using free command
     const { stdout: memInfo } = await execAsync('free -b');
     const memLines = memInfo.split('\n');
-    const memValues = memLines[1].split(/\s+/);
+    const memValues = memLines[1].split(/\s+/).filter(Boolean);
     
-    // Get disk usage
-    const { stdout: dfOutput } = await execAsync('df -B1 / | tail -n 1');
-    const [, total, used, available] = dfOutput.split(/\s+/);
+    // Get disk usage for root partition
+    const { stdout: dfOutput } = await execAsync('df -B1 /');
+    const dfLines = dfOutput.split('\n');
+    const dfValues = dfLines[1].split(/\s+/).filter(Boolean);
 
     return {
-      uptime: process.uptime(),
+      uptime: os.uptime(),
       memory: {
         total: parseInt(memValues[1]),
         used: parseInt(memValues[2]),
         free: parseInt(memValues[3])
       },
       disk: {
-        total: parseInt(total),
-        used: parseInt(used),
-        free: parseInt(available)
+        total: parseInt(dfValues[1]),
+        used: parseInt(dfValues[2]),
+        free: parseInt(dfValues[3])
       }
     };
   } catch (error) {

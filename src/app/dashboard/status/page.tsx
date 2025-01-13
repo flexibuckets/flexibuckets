@@ -78,14 +78,22 @@ export default function StatusPage() {
       <h3 className="text-xl font-semibold mt-8">System Resources</h3>
       <div className="grid gap-4 md:grid-cols-2">
         <StatusCard
-          title="Memory"
-          status="info"
-          metrics={status?.system.memory}
+          title="System Memory"
+          status="healthy"
+          metrics={{
+            used: status?.system.memory.used,
+            total: status?.system.memory.total,
+            free: status?.system.memory.free
+          }}
         />
         <StatusCard
-          title="Disk"
-          status="info"
-          metrics={status?.system.disk}
+          title="System Disk"
+          status="healthy"
+          metrics={{
+            used: status?.system.disk.used,
+            total: status?.system.disk.total,
+            free: status?.system.disk.free
+          }}
         />
       </div>
     </div>
