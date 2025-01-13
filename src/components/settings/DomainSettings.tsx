@@ -10,6 +10,7 @@ import { AlertCircle, Loader2 } from 'lucide-react'
 import { useConfigureDomain, useCurrentDomain } from "@/hooks/use-traefik"
 import { Session } from "next-auth"
 import { toast } from "@/hooks/use-toast"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface DnsStatus {
   isValid: boolean
@@ -25,12 +26,54 @@ export function DomainSettings({ session }: { session: Session }) {
   const [dnsStatus, setDnsStatus] = useState<DnsStatus | null>(null)
   const { mutate: configureDomain, isPending } = useConfigureDomain()
   const { data: currentDomain, isLoading: isLoadingDomain } = useCurrentDomain()
+  const [selectedProvider, setSelectedProvider] = useState<'custom' | 'nip.io' | 'traefik.me'>('custom')
 
   useEffect(() => {
     if (currentDomain) {
       setDomain(currentDomain)
     }
   }, [currentDomain])
+
+  const generateAutoDomain = async (provider: 'nip.io' | 'traefik.me') => {
+    try {
+      const response = await fetch('/api/dns/check?domain=check')
+      const data = await response.json()
+      const serverIp = data.serverIp
+      
+      if (!serverIp) {
+        toast({
+          title: "Error",
+          description: "Could not fetch server IP",
+          variant: "destructive"
+        })
+        return
+      }
+
+      const newDomain = provider === 'nip.io' 
+        ? `app-${serverIp.replace(/\./g, '-')}.nip.io`
+        : `app-${serverIp.replace(/\./g, '-')}.traefik.me`
+
+      setDomain(newDomain)
+      await checkDns(newDomain)
+    } catch (error) {
+      console.error('Failed to generate domain:', error)
+      toast({
+        title: "Error",
+        description: "Failed to generate domain",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleProviderChange = (value: string) => {
+    setSelectedProvider(value as 'custom' | 'nip.io' | 'traefik.me')
+    if (value !== 'custom') {
+      generateAutoDomain(value as 'nip.io' | 'traefik.me')
+    } else {
+      setDomain('')
+      setDnsStatus(null)
+    }
+  }
 
   const checkDns = async (domain: string) => {
     try {
@@ -78,35 +121,41 @@ const handleUpdate = async () => {
     <Card>
       <CardHeader>
         <CardTitle>Domain Settings</CardTitle>
-        <CardDescription>Configure your custom domain</CardDescription>
+        <CardDescription>Configure your custom domain or use an automatic domain</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
+          <Label>Domain Type</Label>
+          <Select value={selectedProvider} onValueChange={handleProviderChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select domain type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="custom">Custom Domain</SelectItem>
+              <SelectItem value="nip.io">Auto Domain (nip.io)</SelectItem>
+              <SelectItem value="traefik.me">Auto Domain (traefik.me)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="domain">Domain</Label>
-          {currentDomain ? (
-            <div className="flex items-center space-x-2">
-              <Input
-                id="domain"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                disabled={isPending}
-                className="flex-1"
-              />
-              <div className="text-sm text-muted-foreground">
-                Current: {currentDomain}
-              </div>
-            </div>
-          ) : (
-            <Input
-              id="domain"
-              placeholder="example.com"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              disabled={isPending}
-            />
+          <Input
+            id="domain"
+            placeholder={selectedProvider === 'custom' ? "example.com" : "Auto-generated domain"}
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            disabled={isPending || selectedProvider !== 'custom'}
+          />
+          {currentDomain && (
+            <p className="text-sm text-muted-foreground">
+              Current: {currentDomain}
+            </p>
           )}
           <p className="text-sm text-muted-foreground">
-            Enter your domain name without http:// or https://
+            {selectedProvider === 'custom' 
+              ? "Enter your domain name without http:// or https://"
+              : "Using auto-generated domain with automatic DNS resolution"}
           </p>
         </div>
 
@@ -132,12 +181,15 @@ const handleUpdate = async () => {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            After updating your domain, make sure to:
-            <ol className="list-decimal ml-4 mt-2">
-              <li>Point your domain's A record to your server's IP address</li>
-              <li>Wait for DNS propagation (may take up to 48 hours)</li>
-              <li>SSL certificate will be automatically provisioned via Let's Encrypt</li>
-            </ol>
+            {selectedProvider === 'custom' ? (
+              <ol className="list-decimal ml-4 mt-2">
+                <li>Point your domain's A record to your server's IP address</li>
+                <li>Wait for DNS propagation (may take up to 48 hours)</li>
+                <li>SSL certificate will be automatically provisioned via Let's Encrypt</li>
+              </ol>
+            ) : (
+              <p>Using an automatic domain provides immediate access without DNS configuration</p>
+            )}
           </AlertDescription>
         </Alert>
       </CardContent>
