@@ -410,7 +410,7 @@ main() {
     # Start services
     start_services
     
-    # Setup databases
+    # Setup database
     setup_database
 
 
