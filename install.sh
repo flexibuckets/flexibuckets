@@ -411,6 +411,7 @@ main() {
     start_services
     
     # Setup database
+
     setup_database
 
 
