@@ -47,17 +47,17 @@ check_system_requirements() {
         exit 1
     fi
 
-    # Check minimum system requirements
-    if [ "$(nproc)" -lt 2 ]; then
-        log "WARN" "Recommended minimum: 2 CPU cores"
-    fi
+#     # Check minimum system requirements
+#     if [ "$(nproc)" -lt 2 ]; then
+#         log "WARN" "Recommended minimum: 2 CPU cores"
+#     fi
     
-    local mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-    local mem_gb=$((mem_kb / 1024 / 1024))
-    if [ "$mem_gb" -lt 4 ]; then
-        log "WARN" "Recommended minimum: 4GB RAM (found: ${mem_gb}GB)"
-    fi
-}
+#     local mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+#     local mem_gb=$((mem_kb / 1024 / 1024))
+#     if [ "$mem_gb" -lt 4 ]; then
+#         log "WARN" "Recommended minimum: 4GB RAM (found: ${mem_gb}GB)"
+#     fi
+# }
 
 # Function to install Docker and Docker Compose
 install_docker() {
