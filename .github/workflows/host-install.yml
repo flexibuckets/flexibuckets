@@ -32,4 +32,5 @@ jobs:
             --endpoint-url https://182ef4f2f26e109928afe9e4a3bf7cc9.r2.cloudflarestorage.com \
             --content-type "text/x-shellscript" \
             --cache-control "public, max-age=3600" \
-            --acl public-read
+            --acl public-read \
+            --no-sign-request
