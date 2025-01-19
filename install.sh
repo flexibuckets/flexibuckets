@@ -47,7 +47,7 @@ check_system_requirements() {
         exit 1
     fi
 
-#     # Check minimum system requirements
+# Check minimum system requirements
 #     if [ "$(nproc)" -lt 2 ]; then
 #         log "WARN" "Recommended minimum: 2 CPU cores"
 #     fi
