@@ -57,7 +57,7 @@ check_system_requirements() {
 #     if [ "$mem_gb" -lt 4 ]; then
 #         log "WARN" "Recommended minimum: 4GB RAM (found: ${mem_gb}GB)"
 #     fi
-# }
+ }
 
 # Function to install Docker and Docker Compose
 install_docker() {
