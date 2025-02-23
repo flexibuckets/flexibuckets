@@ -380,7 +380,7 @@ update_env_file() {
         sed -i "/^DOCKER_GID=/c\DOCKER_GID=${DOCKER_GID}" .env
     else
         echo "APP_UID=${APP_UID}" >> .env
-        echo "DOCKER_GID=${DOCKER_GID}" >> .env 
+        echo "DOCKER_GID=${DOCKER_GID}" >> .env
     fi
 }
 
