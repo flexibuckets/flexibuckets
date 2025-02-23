@@ -25,19 +25,16 @@ export function useConfigureDomain() {
       queryClient.setQueryData(['traefik-domain'], context?.previousDomain);
       toast({
         title: 'Error',
-        description: error.message,
+        description: error.message || 'Failed to configure domain',
         variant: 'destructive',
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['traefik-domain'] });
+    onSuccess: (data) => {
+      queryClient.setQueryData(['traefik-domain'], data.domain);
       toast({
         title: 'Success',
         description: 'Domain configured successfully',
       });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['traefik-domain'] });
     }
   });
 }
@@ -45,10 +42,14 @@ export function useConfigureDomain() {
 export function useCurrentDomain() {
   return useQuery({
     queryKey: ['traefik-domain'],
-    queryFn: traefikActions.getCurrentDomain,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    retry: 2
+    queryFn: async () => {
+      const domain = await traefikActions.getCurrentDomain();
+      if (!domain) {
+        // If no domain is set, try to get the default from env
+        return process.env.DOMAIN || null;
+      }
+      return domain;
+    },
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
   });
 }

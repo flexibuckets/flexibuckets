@@ -15,12 +15,12 @@ const TRAEFIK_CONFIG_DIR = process.env.TRAEFIK_CONFIG_DIR || '/etc/traefik';
 
 const DomainConfigSchema = z.object({
   domain: z.string()
-    .min(1, "Domain is required")
+    .min(1)
     .regex(
       /^(?!-)[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/,
-      "Invalid domain format"
+      "Invalid domain format. Please enter a valid domain name (e.g., example.com or sub.example.com)"
     ),
-  enableSsl: z.boolean().default(true)
+  enableSsl: z.boolean().default(true),
 });
 
 export type DomainConfigInput = z.infer<typeof DomainConfigSchema>;
@@ -55,7 +55,6 @@ export async function configureDomain(input: DomainConfigInput) {
       }
     });
 
-    // Update Traefik configuration
     const configPath = path.join(TRAEFIK_CONFIG_DIR, 'dynamic', 'website.yml');
     await ensureDirectoryExists(path.dirname(configPath));
 
@@ -69,6 +68,11 @@ export async function configureDomain(input: DomainConfigInput) {
               certResolver: "letsencrypt"
             },
             entryPoints: ["websecure"]
+          },
+          "website-http": {
+            rule: `Host(\`${validated.domain}\`)`,
+            service: "website-service",
+            entryPoints: ["web"]
           }
         },
         services: {
@@ -86,7 +90,6 @@ export async function configureDomain(input: DomainConfigInput) {
     const yamlStr = yaml.dump(routeConfig);
     await fs.writeFile(configPath, yamlStr);
 
-    // Restart Traefik to apply changes
     try {
       await dockerClient.docker.getContainer('flexibuckets_traefik').restart();
     } catch (error) {
@@ -106,20 +109,13 @@ export async function configureDomain(input: DomainConfigInput) {
 }
 
 export async function getCurrentDomain() {
-  const session = await auth();
-  if (!session?.user?.isAdmin) {
-    throw new Error('Unauthorized - Admin access required');
-  }
-
   try {
     const settings = await prisma.settings.findFirst({
-      where: { id: "default" },
-      select: { domain: true }
+      where: { id: "default" }
     });
-    
-    return settings?.domain || '';
+    return settings?.domain || null;
   } catch (error) {
-    console.error('Error getting current domain:', error);
-    throw new Error('Failed to get current domain configuration');
+    console.error('Failed to get current domain:', error);
+    throw error;
   }
 }

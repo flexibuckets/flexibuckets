@@ -38,21 +38,25 @@ export function DomainSettings({ session }: { session: Session }) {
       } else {
         setSelectedProvider('custom')
       }
+      checkDns(currentDomain)
     }
   }, [currentDomain])
 
-  if (isLoadingDomain) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Domain Settings</CardTitle>
-          <CardDescription>Loading domain configuration...</CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center py-6">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </CardContent>
-      </Card>
-    )
+  const checkDns = async (domainToCheck: string) => {
+    try {
+      const response = await fetch(`/api/dns/check?domain=${domainToCheck}`)
+      const data = await response.json()
+      setDnsStatus(data)
+      return data.isValid
+    } catch (error) {
+      console.error('Failed to check DNS:', error)
+      toast({
+        title: "Error",
+        description: "Failed to check DNS configuration",
+        variant: "destructive"
+      })
+      return false
+    }
   }
 
   const generateAutoDomain = async (provider: 'nip.io' | 'traefik.me') => {
@@ -86,39 +90,45 @@ export function DomainSettings({ session }: { session: Session }) {
     }
   }
 
-  const handleProviderChange = (value: string) => {
+  const handleProviderChange = async (value: string) => {
+    if (currentDomain) {
+      const confirmed = window.confirm(
+        'Changing the domain will affect all existing configurations. Are you sure you want to proceed?'
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
     setSelectedProvider(value as 'custom' | 'nip.io' | 'traefik.me')
     if (value !== 'custom') {
-      generateAutoDomain(value as 'nip.io' | 'traefik.me')
+      await generateAutoDomain(value as 'nip.io' | 'traefik.me')
     } else {
       setDomain('')
       setDnsStatus(null)
     }
   }
 
-  const checkDns = async (domain: string) => {
-    try {
-      const response = await fetch(`/api/dns/check?domain=${domain}`)
-      const data = await response.json()
-      setDnsStatus(data)                   
-      return data.isValid
-    } catch (error) {
-      console.error('Failed to check DNS:', error)
-      return false
-    }
-  }
-
   const handleUpdate = async () => {
-    if (!domain) return;
+    if (!domain) return
 
-    const dnsValid = await checkDns(domain);
-    if (!dnsValid) {
+    if (currentDomain && domain !== currentDomain) {
+      const confirmed = window.confirm(
+        'Changing the domain will affect all existing configurations. Are you sure you want to proceed?'
+      )
+      if (!confirmed) {
+        return
+      }
+    }
+
+    const dnsValid = await checkDns(domain)
+    if (!dnsValid && selectedProvider === 'custom') {
       toast({
         title: "DNS Error",
         description: "Please ensure your DNS is correctly configured before proceeding.",
         variant: "destructive"
-      });
-      return;
+      })
+      return
     }
 
     configureDomain(
@@ -128,11 +138,25 @@ export function DomainSettings({ session }: { session: Session }) {
           toast({
             title: "Success",
             description: "Domain configured successfully. Changes will take effect in a few minutes."
-          });
+          })
         }
       }
-    );
-  };
+    )
+  }
+
+  if (isLoadingDomain) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Domain Settings</CardTitle>
+          <CardDescription>Loading domain configuration...</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-6">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>
@@ -229,4 +253,5 @@ export function DomainSettings({ session }: { session: Session }) {
     </Card>
   )
 }
+
 
