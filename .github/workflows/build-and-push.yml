@@ -44,16 +44,3 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  cleanup:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Delete old images
-        uses: snok/container-retention-policy@v2
-        with:
-          image-names: flexibuckets/flexibuckets
-          cut-off: 2 weeks ago UTC
-          account-type: personal
-          keep-at-least: 5
-          skip-tags: latest
-          token: ${{ secrets.DOCKERHUB_TOKEN }}
