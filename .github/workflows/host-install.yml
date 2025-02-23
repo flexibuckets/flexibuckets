@@ -14,15 +14,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure AWS CLI
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.CF_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.CF_SECRET_ACCESS_KEY }}
+          aws configure set default.region auto
+
       - name: Upload to R2
         env:
-          R2_ACCESS_KEY_ID: ${{ secrets.CF_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.CF_SECRET_ACCESS_KEY }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.CF_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CF_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
         run: |
+          echo "Starting upload to R2..."
+          echo "Using endpoint: https://182ef4f2f26e109928afe9e4a3bf7cc9.r2.cloudflarestorage.com"
+          echo "Bucket name: ${{ secrets.CF_BUCKET_NAME }}"
+          
           aws s3 cp install.sh s3://${{ secrets.CF_BUCKET_NAME }}/install.sh \
-            --endpoint-url https://${{ secrets.CF_ACCOUNT_ID }}.r2.cloudflarestorage.com \
+            --endpoint-url https://182ef4f2f26e109928afe9e4a3bf7cc9.r2.cloudflarestorage.com \
             --content-type "text/x-shellscript" \
             --cache-control "public, max-age=3600" \
             --acl public-read \
-            --no-sign-request
+            --debug
+          
+          if [ $? -eq 0 ]; then
+            echo "Upload successful!"
+          else
+            echo "Upload failed!"
+            exit 1
+          fi
