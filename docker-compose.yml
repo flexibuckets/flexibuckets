@@ -75,8 +75,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/traefik/dynamic:/etc/traefik/dynamic:rw
-      - /app/data:/app/data
-      - /app/.next/cache:/app/.next/cache
+      - app_data:/app/data:rw
+      - next_cache:/app/.next/cache:rw
     networks:
       - flexibuckets_network
     labels:
@@ -96,6 +96,12 @@ services:
         condition: service_healthy
       traefik:
         condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
 
 networks:
   flexibuckets_network:
