@@ -112,30 +112,26 @@ export function DomainSettings({ session }: { session: Session }) {
     if (!domain) return;
 
     const dnsValid = await checkDns(domain);
-    if (!dnsValid) return;
-
-    try {
-      await configureDomain(
-        { domain, enableSsl: true },
-        {
-          onSuccess: () => {
-            toast({
-              title: "Success",
-              description: "Domain configured successfully. Changes will take effect in a few minutes."
-            });
-          },
-          onError: (error) => {
-            toast({
-              title: "Error",
-              description: error.message || "Failed to configure domain. Please check server logs.",
-              variant: "destructive"
-            });
-          }
-        }
-      );
-    } catch (error) {
-      console.error('Failed to configure domain:', error);
+    if (!dnsValid) {
+      toast({
+        title: "DNS Error",
+        description: "Please ensure your DNS is correctly configured before proceeding.",
+        variant: "destructive"
+      });
+      return;
     }
+
+    configureDomain(
+      { domain, enableSsl: true },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: "Domain configured successfully. Changes will take effect in a few minutes."
+          });
+        }
+      }
+    );
   };
 
   return (
