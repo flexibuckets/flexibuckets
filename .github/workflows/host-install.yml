@@ -14,23 +14,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install AWS CLI
-        run: |
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          sudo ./aws/install --update
-
       - name: Configure AWS CLI
         run: |
           aws configure set aws_access_key_id ${{ secrets.CF_ACCESS_KEY_ID }}
           aws configure set aws_secret_access_key ${{ secrets.CF_SECRET_ACCESS_KEY }}
           aws configure set region auto
+          aws configure set default.s3.addressing_style path
 
       - name: Upload to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.CF_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CF_SECRET_ACCESS_KEY }}
+          AWS_EC2_METADATA_DISABLED: true
         run: |
           aws s3 cp install.sh s3://${{ secrets.CF_BUCKET_NAME }}/install.sh \
             --endpoint-url https://182ef4f2f26e109928afe9e4a3bf7cc9.r2.cloudflarestorage.com \
             --content-type "text/x-shellscript" \
             --cache-control "public, max-age=3600" \
-            --acl public-read \
-            --no-sign-request
+            --acl public-read

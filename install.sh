@@ -385,7 +385,14 @@ update_env_file() {
 }
 # Main installation function
 main() {
-    echo -e "\n${BOLD}FlexiBuckets Installer${NC}\n"
+    cat << "EOF"
+  _____   _                 _   ____                   _             _         
+ |  ___| | |   ___  __  __ (_) | __ )   _   _    ___  | | __   ___  | |_   ___ 
+ | |_    | |  / _ \ \ \/ / | | |  _ \  | | | |  / __| | |/ /  / _ \ | __| / __|
+ |  _|   | | |  __/  >  <  | | | |_) | | |_| | | (__  |   <  |  __/ | |_  \__ \
+ |_|     |_|  \___| /_/\_\ |_| |____/   \__,_|  \___| |_|\_\  \___|  \__| |___/                                                     
+EOF
+echo
     SERVER_IP=$(get_public_ip)
     # Check system requirements
     check_system_requirements
