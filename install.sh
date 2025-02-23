@@ -383,6 +383,35 @@ update_env_file() {
         echo "DOCKER_GID=${DOCKER_GID}" >> .env
     fi
 }
+
+setup_permissions() {
+    log "INFO" "Setting up permissions..."
+    
+    # Data directory permissions
+    mkdir -p /app/data
+    chown -R ${APP_UID}:${DOCKER_GID} /app/data
+    chmod -R 770 /app/data
+    
+    # Next.js cache permissions
+    mkdir -p /app/.next/cache
+    chown -R ${APP_UID}:${DOCKER_GID} /app/.next/cache
+    chmod -R 770 /app/.next/cache
+    
+    # Docker socket permissions
+    if [ -e /var/run/docker.sock ]; then
+        chmod 660 /var/run/docker.sock
+        chown root:docker /var/run/docker.sock
+    fi
+    
+    # Traefik specific permissions
+    mkdir -p "${TRAEFIK_DIR}/acme"
+    touch "${TRAEFIK_DIR}/acme/acme.json"
+    chmod 600 "${TRAEFIK_DIR}/acme/acme.json"
+    chown -R ${APP_UID}:${DOCKER_GID} "${TRAEFIK_DIR}"
+    chmod -R 750 "${TRAEFIK_DIR}"
+    chmod -R 770 "${TRAEFIK_DYNAMIC_DIR}"  # Need write access for dynamic config
+}
+
 # Main installation function
 main() {
     echo -e "\n${BOLD}FlexiBuckets Installer${NC}\n"
@@ -413,7 +442,7 @@ main() {
     # Setup database
     setup_database
 
-
+    setup_permissions
 
     log "INFO" "Installation completed successfully!"
     echo -e "\nAccess your FlexiBuckets instance at:"

@@ -74,12 +74,28 @@ RUN chmod +x /usr/local/bin/healthcheck.sh
 
 # Set up directories and permissions with error handling
 
-RUN mkdir -p /app/data /app/.next/cache/images && \
+RUN mkdir -p /app/data /app/.next/cache && \
     chown -R flexibuckets:docker /app && \
-    chmod -R 755 /app && \
-    chmod -R 777 /app/.next/cache/images
+    chmod -R 750 /app && \
+    chmod -R 770 /app/data /app/.next/cache
 
-USER flexibuckets
+# Add specific paths that need write access
+RUN mkdir -p /app/data \
+    /app/.next/cache \
+    /tmp \
+    /var/run && \
+    chown -R flexibuckets:docker \
+        /app/data \
+        /app/.next/cache \
+        /tmp \
+        /var/run && \
+    chmod -R 770 \
+        /app/data \
+        /app/.next/cache \
+        /tmp \
+        /var/run
+
+USER flexibuckets:docker
 
 EXPOSE 3000
 

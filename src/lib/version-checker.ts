@@ -26,60 +26,31 @@ export async function checkForUpdates(): Promise<Version | null> {
       return versionCache.data;
     }
 
-    const response = await fetch(
-      'https://api.github.com/repos/flexibuckets/flexibuckets/commits/main',
-      {
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'FlexiBuckets-Self-Hosted'
-        }
-      }
-    );
-    
-    if (!response.ok) {
-      if (response.status === 403) {
-        console.warn('GitHub API rate limit reached. Using cached data if available.');
-        return versionCache?.data || null;
-      }
-      throw new Error(`Failed to fetch version info: ${response.status} ${response.statusText}`);
-    }
-
-    const responseText = await response.text();
-    console.log('GitHub API Response:', responseText);
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Error parsing GitHub API response:', parseError);
-      throw new Error(`Failed to parse GitHub API response`);
-    }
-
-    const latestShaShort = data.sha.substring(0, 6);
-    
-    const versionResponse = await fetch(
-      'https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/version.txt'
-    );
-    const latestVersion = await versionResponse.text();
-
-    const currentShaShort = process.env.APP_SHA_SHORT || '000000';
     const currentVersion = process.env.APP_VERSION || '0.0.0';
+    const currentShaShort = process.env.APP_SHA_SHORT || '000000';
 
-    console.log('Current version:', currentVersion);
-    console.log('Latest version:', latestVersion);
-    console.log('Current SHA:', currentShaShort);
-    console.log('Latest SHA:', latestShaShort);
+    const [versionResponse, commitResponse] = await Promise.all([
+      fetch('https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/version.txt'),
+      fetch('https://api.github.com/repos/flexibuckets/flexibuckets/commits/main')
+    ]);
 
-    // Compare versions using semver
-    const isNewer = semver.gt(latestVersion.trim(), currentVersion.trim());
+    if (!versionResponse.ok || !commitResponse.ok) {
+      throw new Error('Failed to fetch version information');
+    }
 
+    const latestVersion = (await versionResponse.text()).trim();
+    const commitData = await commitResponse.json();
+    const latestShaShort = commitData.sha.substring(0, 6);
+
+    const isNewer = semver.gt(latestVersion, currentVersion);
+    
     if (!isNewer && latestShaShort === currentShaShort) {
       versionCache = { timestamp: Date.now(), data: null };
       return null;
     }
 
     const migrationsResponse = await fetch(
-      `https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/prisma/migrations/migration_manifest.json`
+      'https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/prisma/migrations/migration_manifest.json'
     );
     
     const migrations = await migrationsResponse.json();
@@ -88,12 +59,12 @@ export async function checkForUpdates(): Promise<Version | null> {
     );
 
     const changelogResponse = await fetch(
-      `https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/CHANGELOG.md`
+      'https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/CHANGELOG.md'
     );
     const changeLog = await changelogResponse.text();
 
     const versionInfo: Version = {
-      version: latestVersion.trim(),
+      version: latestVersion,
       shaShort: latestShaShort,
       requiredMigrations,
       changeLog,
