@@ -43,14 +43,11 @@ curl -fsSL https://cdn.flexibuckets.com/install.sh | sudo bash
 For Kubernetes, Coolify, Dokploy, or environments where you manage your own SSL/proxy:
 
 ```bash
-# Clone the repository
-git clone https://github.com/flexibuckets/flexibuckets.git
-cd flexibuckets
+# Using Docker Compose
+docker run -d --name flexibuckets -p 3000:3000 flexibuckets/flexibuckets:no-traefik
 
-# Use the no-Traefik configuration
-cp scripts/docker/docker-compose.no-traefik.yml docker-compose.yml
-
-# Start the services
+# Or with Docker Compose
+wget https://raw.githubusercontent.com/flexibuckets/flexibuckets/remove-traefik/scripts/docker/docker-compose.no-traefik.yml -O docker-compose.yml
 docker compose up -d
 ```
 
