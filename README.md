@@ -30,22 +30,37 @@ FlexiBuckets is an open-source, self-hosted solution for managing multiple S3-co
 
 The easiest way to get started is using Docker:
 
-To use the improved installation:
+### Standard Installation (with Traefik)
 
-Basic installation:
+Standard installation with automatic SSL configuration via Traefik:
 
 ```bash
 curl -fsSL https://cdn.flexibuckets.com/install.sh | sudo bash
-
 ```
 
+### Installation without Traefik
 
-The installation script will:
+For Kubernetes, Coolify, Dokploy, or environments where you manage your own SSL/proxy:
+
+```bash
+# Clone the repository
+git clone https://github.com/flexibuckets/flexibuckets.git
+cd flexibuckets
+
+# Use the no-Traefik configuration
+cp scripts/docker/docker-compose.no-traefik.yml docker-compose.yml
+
+# Start the services
+docker compose up -d
+```
+
+For more details, see the [No Traefik Installation Guide](scripts/docker/README.md).
+
+The installation will:
 1. Install necessary dependencies
 2. Set up the database
 3. Configure environment variables
 4. Start FlexiBuckets
-
 
 Visit `http://your-server-ip:3000` to access your FlexiBuckets instance.
 

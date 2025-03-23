@@ -26,9 +26,9 @@ services:
     environment:
       - SERVER_IP=${SERVER_IP}
       - DOMAIN=${DOMAIN}
-      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_URL=http://${DOMAIN}:3000
       - NEXTAUTH_URL_INTERNAL=http://localhost:3000
-      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - NEXT_PUBLIC_APP_URL=http://${DOMAIN}:3000
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - APP_UID=${APP_UID}
       - DOCKER_GID=${DOCKER_GID}
@@ -63,5 +63,4 @@ volumes:
     name: flexibuckets_postgres_data
   app_data:
   next_cache:
-    driver: local
-
+    driver: local 

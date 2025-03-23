@@ -10,11 +10,8 @@ BOLD='\033[1m'
 
 # Configuration
 INSTALL_DIR="/opt/flexibuckets"
-TRAEFIK_CONFIG_DIR="/etc/traefik"
 ENV_FILE="${INSTALL_DIR}/.env"
 REPO_URL="https://github.com/flexibuckets/flexibuckets.git"
-TRAEFIK_DIR="/etc/traefik"
-TRAEFIK_DYNAMIC_DIR="/etc/traefik/dynamic"
 APP_USER="flexibuckets"
 DOCKER_GROUP="docker"
 
@@ -46,17 +43,6 @@ check_system_requirements() {
         log "ERROR" "Please run as root (use sudo)"
         exit 1
     fi
-
-# Check minimum system requirements
-#     if [ "$(nproc)" -lt 2 ]; then
-#         log "WARN" "Recommended minimum: 2 CPU cores"
-#     fi
-    
-#     local mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-#     local mem_gb=$((mem_kb / 1024 / 1024))
-#     if [ "$mem_gb" -lt 4 ]; then
-#         log "WARN" "Recommended minimum: 4GB RAM (found: ${mem_gb}GB)"
-#     fi
  }
 
 # Function to install Docker and Docker Compose
@@ -182,19 +168,14 @@ SERVER_IP=${SERVER_IP}
 
 # Application Configuration
 NODE_ENV=production
-NEXTAUTH_URL=https://${SERVER_IP}
-NEXT_PUBLIC_APP_URL=https://${SERVER_IP}
+NEXTAUTH_URL=http://${SERVER_IP}:3000
+NEXT_PUBLIC_APP_URL=http://${SERVER_IP}:3000
 NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 AUTH_TRUST_HOST=true
 
 # Docker Configuration  
 DOMAIN=${SERVER_IP}
 APP_VERSION=latest
-TRAEFIK_CONFIG_DIR=${TRAEFIK_CONFIG_DIR}
-TRAEFIK_DYNAMIC_DIR=${TRAEFIK_DYNAMIC_DIR}
-
-# Traefik Configuration
-ACME_EMAIL=selfhosted@flexibuckets.com
 
 # System User Configuration
 APP_UID=${APP_UID}
@@ -236,35 +217,6 @@ EOF
     echo "APP_UID=${APP_UID}"
     echo "DOCKER_GID=${DOCKER_GID}"
 }
-setup_traefik_directories() {
-    echo -e "${YELLOW}Setting up Traefik directories...${NC}"
-    
-    # Create directories
-    mkdir -p "${TRAEFIK_DIR}"
-    mkdir -p "${TRAEFIK_DYNAMIC_DIR}"
-    
-    # Set ownership and permissions
-    chown -R flexibuckets:docker "${TRAEFIK_DIR}"
-    chmod -R 775 "${TRAEFIK_DIR}"
-    
-    # Set sticky bit
-    chmod g+s "${TRAEFIK_DIR}"
-    chmod g+s "${TRAEFIK_DYNAMIC_DIR}"
-    
-    # Create ACME directory structure
-    ACME_DIR="${TRAEFIK_DIR}/acme"
-    mkdir -p "${ACME_DIR}"
-
-    # Create acme.json file
-    touch "${ACME_DIR}/acme.json"
-
-    # Set proper permissions
-    chmod 750 "${ACME_DIR}"
-    chmod 600 "${ACME_DIR}/acme.json"
-    chown -R "${APP_UID}:${DOCKER_GID}" "${ACME_DIR}"
-    echo -e "${GREEN}Traefik directories configured${NC}"
-}
-
 
 # Function to start services
 start_services() {
@@ -402,14 +354,6 @@ setup_permissions() {
         chmod 660 /var/run/docker.sock
         chown root:docker /var/run/docker.sock
     fi
-    
-    # Traefik specific permissions
-    mkdir -p "${TRAEFIK_DIR}/acme"
-    touch "${TRAEFIK_DIR}/acme/acme.json"
-    chmod 600 "${TRAEFIK_DIR}/acme/acme.json"
-    chown -R ${APP_UID}:${DOCKER_GID} "${TRAEFIK_DIR}"
-    chmod -R 750 "${TRAEFIK_DIR}"
-    chmod -R 770 "${TRAEFIK_DYNAMIC_DIR}"  # Need write access for dynamic config
 }
 
 # Main installation function
@@ -438,8 +382,6 @@ echo
         create_env_file
     fi
     setup_system_user
-    # Setup Traefik
-    setup_traefik_directories
     
     update_env_file
     
@@ -454,12 +396,10 @@ echo
     log "INFO" "Installation completed successfully!"
     echo -e "\nAccess your FlexiBuckets instance at:"
     echo -e "\U0001F310 HTTP:  http://${SERVER_IP:-localhost}:3000"
-    echo -e "\U0001F512 HTTPS: https://${SERVER_IP:-localhost}"
     
     echo -e "\n${YELLOW}Important Notes:${NC}"
     echo "1. Configuration files are in: $INSTALL_DIR"
     echo "2. Environment file is at: $ENV_FILE"
-    echo "3. Traefik configuration is in: $TRAEFIK_DIR"
     echo -e "\n${YELLOW}For support, visit: https://github.com/flexibuckets/flexibuckets${NC}\n"
 }
 
