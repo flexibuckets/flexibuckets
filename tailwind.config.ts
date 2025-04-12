@@ -5,7 +5,6 @@ const {
   default: flattenColorPalette,
 } = require("tailwindcss/lib/util/flattenColorPalette");
 
-
 const config: Config = {
   darkMode: ["class"],
   content: [
@@ -78,16 +77,48 @@ const config: Config = {
       },
       keyframes: {
         blip: {
-          "0%": { backgroundColor: "hsl(var(--accent))" }, // Start with a yellow color
-          "100%": { backgroundColor: "transparent" }, // Fade back to transparent
+          "0%": { backgroundColor: "hsl(var(--accent))" },
+          "100%": { backgroundColor: "transparent" },
+        },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        "fade-out": {
+          "0%": { opacity: "1" },
+          "100%": { opacity: "0" },
+        },
+        "slide-in": {
+          "0%": { transform: "translateY(100%)" },
+          "100%": { transform: "translateY(0)" },
+        },
+        "slide-out": {
+          "0%": { transform: "translateY(0)" },
+          "100%": { transform: "translateY(100%)" },
+        },
+        "scale-in": {
+          "0%": { transform: "scale(0.95)", opacity: "0" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        "scale-out": {
+          "0%": { transform: "scale(1)", opacity: "1" },
+          "100%": { transform: "scale(0.95)", opacity: "0" },
         },
       },
       animation: {
         blip: "blip 0.5s ease-in-out",
+        "fade-in": "fade-in 0.2s ease-out",
+        "fade-out": "fade-out 0.2s ease-out",
+        "slide-in": "slide-in 0.2s ease-out",
+        "slide-out": "slide-out 0.2s ease-out",
+        "scale-in": "scale-in 0.2s ease-out",
+        "scale-out": "scale-out 0.2s ease-out",
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), addVariablesForColors,
+  plugins: [
+    require("tailwindcss-animate"),
+    addVariablesForColors,
     function ({ matchUtilities, theme }: any) {
       matchUtilities(
         {
@@ -102,6 +133,7 @@ const config: Config = {
     },
   ],
 };
+
 export default config;
 
 function addVariablesForColors({ addBase, theme }: any) {

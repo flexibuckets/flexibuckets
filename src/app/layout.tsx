@@ -18,15 +18,14 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning>
-    
-          <Providers subscriptionPlan={subscriptionPlan}>
-          
-            {children}
-
-          
-          </Providers>
-       
+      <body suppressHydrationWarning className="min-h-screen bg-background antialiased">
+        <Providers subscriptionPlan={subscriptionPlan}>
+          <div className="relative flex min-h-screen flex-col">
+            <div className="flex-1">
+              {children}
+            </div>
+          </div>
+        </Providers>
         <Toaster />
       </body>
     </html>
