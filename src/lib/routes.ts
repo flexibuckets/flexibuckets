@@ -25,10 +25,9 @@ export const DEFAULT_REDIRECT = "/auth/signin";
 export const DASHBOARD_ROUTE = "/dashboard";
 
 // Keep existing nav links
-export const navLinks: NavLink[] = [
-  { label: "Features", href: "https://docs.flexibuckets.com/features" },
+export const navLinks: NavLink[] = [  
   { label: "Docs", href: "https://docs.flexibuckets.com" },
-  { label: "About", href: "https://flexibuckets.com/about" },
+  { label: "About", href: "https://github.com/flexibuckets/flexibuckets" },
 ];
 
 // Define reusable link structures for sidebar groups
