@@ -1,35 +1,15 @@
-import { NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
+
 export async function GET() {
-  const headersList = headers();
-  const sessionToken = headersList.get("sessionToken");
+  const session = await auth();
 
-  if (!sessionToken)
-    return NextResponse.json({ error: "No session Token" }, { status: 401 });
-  const dbUser = await prisma.session.findUnique({
-    where: {
-      sessionToken: sessionToken,
-    },
-    select: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
-          totalUploadSize: true,
-        },
-      },
-    },
-  });
-
-  if (!dbUser || !dbUser.user) {
+  if (!session || !session.user) {
     return NextResponse.json(
-      { error: `User Not Found in database: ${dbUser}` },
+      { error: `User Not Found in database` },
       { status: 401 }
     );
   }
-  const { user } = dbUser;
+  const { user } = session;
   return NextResponse.json(user);
 }
