@@ -1,8 +1,8 @@
-"use client";
-import React from "react";
-import { useRouter } from "next/navigation"; // Adjust if not using Next.js
-import { Button } from "../ui/button"; // Replace with your actual button component
-import { Lock } from "lucide-react";
+'use client';
+import React from 'react';
+import { useRouter } from 'next/navigation'; // Adjust if not using Next.js
+import { Button } from '../ui/button'; // Replace with your actual button component
+import { Lock } from 'lucide-react';
 const AccessDenied = () => {
   const router = useRouter();
   return (
@@ -12,7 +12,7 @@ const AccessDenied = () => {
       <p className="text-red-400  text-center">
         Please sign in to view your buckets.
       </p>
-      <Button variant="destructive" onClick={() => router.push("/auth")}>
+      <Button variant="destructive" onClick={() => router.push('/auth/signin')}>
         Sign In
       </Button>
     </div>

@@ -5,23 +5,10 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Folder, FileText } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { HoverEffect } from '@/components/ui/card-hover-effect';
 import { HeroHighlight, Highlight } from '@/components/ui/hero-highlight';
 import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
 import Navbar from '@/components/navigation/Navbar';
 import Footer from '@/components/navigation/Footer';
-
-
-const AnimatedText = ({ children }: { children: React.ReactNode }) => (
-  <motion.span
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5 }}
-  >
-    {children}
-  </motion.span>
-);
 
 const BucketWithFiles = () => {
   const { theme } = useTheme();
@@ -108,49 +95,8 @@ const BucketWithFiles = () => {
   );
 };
 
-const projects = [
-  {
-    title: 'Your S3 Bucket 🏖️',
-    description:
-      "BYOB: It's not just for parties anymore. Bring Your Own Bucket and keep your data close. No more data sandcastles!",
-  },
-  {
-    title: 'Swift Uploads 🚀',
-    description:
-      "Upload faster than you can say 'Where did I put that file?' No more bucket-kicking frustration! It's a file fiesta!",
-  },
-  {
-    title: 'Sharing is Caring 🤝',
-    description:
-      "Share files smoother than a well-oiled bucket handle. No spills, no thrills, just easy sharing. It's a data pool party!",
-  },
-  {
-    title: 'Bucket List Search 🔍',
-    description:
-      "Find your files faster than finding a drop in a... well, you know. Our search is that good! It's like a treasure hunt, minus the wet sand.",
-  },
-  {
-    title: 'Fort Knox Security 🔒',
-    description:
-      "Your bucket is locked down tighter than a submarine hatch. Not even a drop gets through! It's like a digital life jacket for your data.",
-  },
-  {
-    title: 'Plays Well with Others ☁️',
-    description:
-      "We're like the Switzerland of buckets. Neutral and compatible with AWS, Backblaze, Wasabi, and more! It's a cloud party, and everyone's invited!",
-  },
-];
-
-function CardHoverEffectDemo() {
-  return (
-    <div className="max-w-5xl mx-auto px-8">
-      <HoverEffect items={projects} />
-    </div>
-  );
-}
-
 export default function LandingPage() {
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -218,7 +164,7 @@ export default function LandingPage() {
                       href="/signup"
                       className="flex items-center justify-center"
                     >
-                      Get Started 💦
+                      Get Started
                       <ArrowRight
                         className={`ml-2 h-5 w-5 ${
                           theme === 'dark' ? 'text-zinc-100' : 'text-zinc-100'

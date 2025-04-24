@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 import { checkForUpdates } from '@/app/actions';
 import { NextResponse } from 'next/server';
 
@@ -14,4 +15,3 @@ export async function GET() {
     );
   }
 }
-

@@ -14,10 +14,10 @@ export class DockerClient {
     const isWindows = platform() === 'win32';
     const config = isWindows
       ? {
-          socketPath: '//./pipe/docker_engine'
+          socketPath: '//./pipe/docker_engine',
         }
       : {
-          socketPath: '/var/run/docker.sock'
+          socketPath: '/var/run/docker.sock',
         };
 
     this.docker = new Docker(config);
