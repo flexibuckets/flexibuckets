@@ -1,5 +1,18 @@
-"use server";
-
+'use server';
+import {
+  verifyTeamAccess,
+  verifyTeamRole,
+  getUserTeams,
+  addTeamMember,
+  createTeam,
+} from '@/lib/db/teams';
+import {
+  getTeamBuckets,
+  addTeamBucket,
+  removeTeamMember,
+  updateTeamMemberRole,
+} from '@/lib/db/teams';
+import { getTeamSharedFiles, isTeamSharingAllowed } from '@/lib/db/teams.share';
 import {
   verifyS3Credentials,
   addS3Credentials,
@@ -10,7 +23,10 @@ import {
   createFolder,
   deleteFolder,
   getFileFromS3,
-} from "@/lib/s3";
+  deleteTeamFile,
+  getTeamBucketFiles,
+  handleTeamFileUpload,
+} from '@/lib/s3';
 import {
   getS3Credentials,
   getUserS3Buckets,
@@ -36,9 +52,11 @@ import {
   updateUserName,
   verifyBucketUser,
   getUserUsage,
-  deleteBucket
-} from "@/lib/dboperations";
-import { checkForUpdates,executeUpdate } from "@/lib/version-checker";
+  deleteBucket,
+  createManyTeamFiles,
+  deleteCompleteBucket,
+} from '@/lib/dboperations';
+import { checkForUpdates, executeUpdate } from '@/lib/version-checker';
 
 export {
   checkForUpdates,
@@ -76,5 +94,36 @@ export {
   isAllowedToShare,
   updateUserName,
   verifyBucketUser,
-  deleteBucket
+  deleteBucket,
+  removeTeamMember,
+  updateTeamMemberRole,
+  getTeamBuckets,
+  addTeamBucket,
+  verifyTeamAccess,
+  verifyTeamRole,
+  getUserTeams,
+  addTeamMember,
+  createTeam,
+  getTeamBucketFiles,
+  deleteTeamFile,
+  createManyTeamFiles,
+  getTeamSharedFiles,
+  isTeamSharingAllowed,
+  deleteCompleteBucket,
 };
+
+export async function uploadTeamFileAction(formData: FormData) {
+  const file = formData.get('file') as File;
+  const bucketId = formData.get('bucketId') as string;
+  const userId = formData.get('userId') as string;
+  const parentId = formData.get('parentId') as string;
+
+  const bucket = await verifyBucketUser({ userId, bucketId });
+
+  return handleTeamFileUpload({
+    file,
+    bucket,
+    userId,
+    parentId: parentId || undefined,
+  });
+}

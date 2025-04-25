@@ -23,3 +23,13 @@ export function ReactQueryClientProvider({
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
 }
+
+import { TeamsProvider } from '@/context/TeamsContext';
+
+export function UserContextProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <TeamsProvider>{children}</TeamsProvider>;
+}

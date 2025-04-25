@@ -5,6 +5,7 @@ import {
   NextAuthProvider,
   ReactQueryClientProvider,
   ThemeProvider,
+  UserContextProvider,
 } from './client-providers';
 
 interface ProvidersProps {
@@ -24,7 +25,9 @@ export function ClientProviders({
       disableTransitionOnChange
     >
       <NextAuthProvider>
-        <ReactQueryClientProvider>{children}</ReactQueryClientProvider>
+        <ReactQueryClientProvider>
+          <UserContextProvider>{children}</UserContextProvider>
+        </ReactQueryClientProvider>
       </NextAuthProvider>
     </ThemeProvider>
   );

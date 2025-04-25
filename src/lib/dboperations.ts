@@ -1,12 +1,10 @@
 // dboperations.ts - Handles all database operations except authentication
 
-import { prisma } from "@/lib/prisma";
-import { S3Provider } from "@prisma/client";
-import { getBucketDetails, getSharedFolderStructure } from "./s3";
-import {
-DEFAULT_CONFIG
-} from "@/config/dodo";
-import { CompleteBucket } from "./types";
+import { prisma } from '@/lib/prisma';
+import { S3Provider } from '@prisma/client';
+import { getBucketDetails, getSharedFolderStructure } from './s3';
+import { DEFAULT_CONFIG } from '@/config/dodo';
+import { CompleteBucket } from './types';
 
 // Create a new file entry in the database
 export async function createFile({
@@ -66,7 +64,6 @@ export async function updateUserTotalFileUploadSize({
     data: { totalUploadSize: newSize },
   });
 }
-
 
 export async function updateUserName({
   userId,
@@ -140,11 +137,11 @@ export async function getParentKey({
     });
 
     // If folder is not found, return the path we built so far
-    if (!folder) return folderNames.reverse().join("/");
+    if (!folder) return folderNames.reverse().join('/');
 
     // Prevent infinite loops in case of circular references
     if (visitedFolders.has(folderId)) {
-      throw new Error("Circular folder structure detected.");
+      throw new Error('Circular folder structure detected.');
     }
     visitedFolders.add(folderId);
 
@@ -152,11 +149,11 @@ export async function getParentKey({
     if (folder.name) {
       folderNames.push(folder.name);
     } else {
-      folderNames.push("Unnamed Folder"); // Fallback if folder name is null or empty
+      folderNames.push('Unnamed Folder'); // Fallback if folder name is null or empty
     }
 
     // If no more parent, return the built path
-    if (!folder.parentId) return folderNames.reverse().join("/");
+    if (!folder.parentId) return folderNames.reverse().join('/');
 
     // Move up the folder hierarchy
     folderId = folder.parentId;
@@ -178,8 +175,8 @@ export async function createManyFiles(
   let totalUploadSize = 0;
 
   for (const file of files) {
-    const pathParts = file.name.split("/");
-    const fileName = pathParts.pop() || "";
+    const pathParts = file.name.split('/');
+    const fileName = pathParts.pop() || '';
 
     const folderId = file.folderId;
 
@@ -188,7 +185,7 @@ export async function createManyFiles(
     let uniqueName = fileName;
 
     const addAttemptBeforeExtension = (name: string) => {
-      const dotIndex = name.lastIndexOf(".");
+      const dotIndex = name.lastIndexOf('.');
       if (dotIndex === -1) {
         return `${name}(${attempt})`;
       } else {
@@ -215,14 +212,14 @@ export async function createManyFiles(
         totalUploadSize += parseInt(file.size);
         break;
       } catch (error) {
-        if (error instanceof Error && "code" in error && "meta" in error) {
+        if (error instanceof Error && 'code' in error && 'meta' in error) {
           if (
-            error.code === "P2002" &&
-            typeof error.meta === "object" &&
+            error.code === 'P2002' &&
+            typeof error.meta === 'object' &&
             error.meta !== null &&
-            "target" in error.meta &&
+            'target' in error.meta &&
             Array.isArray(error.meta.target) &&
-            error.meta.target.includes("s3Key")
+            error.meta.target.includes('s3Key')
           ) {
             attempt++;
             uniqueS3Key = addAttemptBeforeExtension(file.s3Key);
@@ -245,11 +242,15 @@ export async function createManyFiles(
   return createdFiles;
 }
 
-
 export async function getUserTotalFileUpload({ userId }: { userId: string }) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { totalUploadSize: true, totalFileShares: true, totalSharedStorage: true, totalDownloadedSize: true },
+    select: {
+      totalUploadSize: true,
+      totalFileShares: true,
+      totalSharedStorage: true,
+      totalDownloadedSize: true,
+    },
   });
   if (!user) return 0;
   const totalUploadSize = user.totalUploadSize;
@@ -260,7 +261,7 @@ export async function getUserTotalFileUpload({ userId }: { userId: string }) {
 export async function getUserFiles(userId: string, folderId?: string) {
   return await prisma.file.findMany({
     where: { userId, folderId },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: 'desc' },
     include: { folder: true, s3Credential: true },
   });
 }
@@ -378,12 +379,14 @@ export async function shareFile({
   userId,
   shortUrl,
   expiresAt,
+  teamId,
   isSharedInfinitely,
 }: {
   fileId: string;
   userId: string;
   shortUrl: string;
   expiresAt: Date | null;
+  teamId?: string;
   isSharedInfinitely?: boolean;
 }) {
   const file = await prisma.file.findUnique({
@@ -393,43 +396,83 @@ export async function shareFile({
     },
   });
 
-  if (!file) throw new Error("File not found");
+  if (!file) throw new Error('File not found');
+
+  // If file is already shared, update the sharing settings
+  if (file.sharedFile) {
+    return await prisma.sharedFile.update({
+      where: { fileId },
+      data: {
+        expiresAt,
+        isSharedInfinitely: isSharedInfinitely ?? false,
+      },
+    });
+  }
 
   return await prisma.$transaction(async (prisma) => {
+    // Handle team sharing
+    let team;
+    if (teamId) {
+      team = await prisma.team.findUnique({
+        where: { id: teamId },
+        select: { totalStorageUsed: true, totalSharedStorage: true },
+      });
+
+      if (!team) throw new Error('Team not found');
+    }
+
+    // Create shared file record
     const sharedFile = await prisma.sharedFile.create({
       data: {
         fileId,
         sharedById: userId,
         downloadUrl: shortUrl,
         expiresAt,
+        teamId,
         isSharedInfinitely: isSharedInfinitely ?? false,
-        downloadedSize: "0",
+        downloadedSize: '0', // Initialize downloaded size
       },
     });
 
+    // Update file status
     await prisma.file.update({
       where: { id: fileId },
       data: { isShared: true },
     });
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { totalFileShares: true, totalSharedStorage: true },
-    });
+    // Update team or user metrics
+    if (teamId && team) {
+      const newSharedStorage = (
+        BigInt(team.totalSharedStorage) + BigInt(file.size)
+      ).toString();
 
-    if (!user) throw new Error("User not found");
+      await prisma.team.update({
+        where: { id: teamId },
+        data: {
+          totalSharedFiles: { increment: 1 },
+          totalSharedStorage: newSharedStorage,
+        },
+      });
+    } else {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { totalFileShares: true, totalSharedStorage: true },
+      });
 
-    const newSharedStorage = (
-      BigInt(user.totalSharedStorage) + BigInt(file.size)
-    ).toString();
+      if (!user) throw new Error('User not found');
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        totalFileShares: { increment: 1 },
-        totalSharedStorage: newSharedStorage,
-      },
-    });
+      const newSharedStorage = (
+        BigInt(user.totalSharedStorage) + BigInt(file.size)
+      ).toString();
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          totalFileShares: { increment: 1 },
+          totalSharedStorage: newSharedStorage,
+        },
+      });
+    }
 
     return sharedFile;
   });
@@ -460,7 +503,7 @@ export async function getSharedFiles(userId: string) {
       file: true,
     },
     orderBy: {
-      createdAt: "desc",
+      createdAt: 'desc',
     },
   });
   const sharedFolders = await prisma.sharedFolder.findMany({
@@ -471,7 +514,7 @@ export async function getSharedFiles(userId: string) {
       folder: true,
     },
     orderBy: {
-      createdAt: "desc",
+      createdAt: 'desc',
     },
   });
   return { sharedFolders, sharedFiles };
@@ -542,8 +585,8 @@ export const getUserS3Buckets = async (userId: string) => {
 
     return credentials;
   } catch (error) {
-    console.error("Error fetching S3 credentials:", error);
-    throw new Error("Failed to fetch user S3 credentials");
+    console.error('Error fetching S3 credentials:', error);
+    throw new Error('Failed to fetch user S3 credentials');
   }
 };
 
@@ -565,8 +608,8 @@ export const getBucketFiles = async ({
     ...(searchQuery
       ? {
           OR: [
-            { name: { contains: searchQuery, mode: "insensitive" as const } },
-            { type: { contains: searchQuery, mode: "insensitive" as const } },
+            { name: { contains: searchQuery, mode: 'insensitive' as const } },
+            { type: { contains: searchQuery, mode: 'insensitive' as const } },
           ],
         }
       : {}),
@@ -583,7 +626,7 @@ export const getBucketFiles = async ({
       s3CredentialId,
       parentId: parentId,
       ...(searchQuery
-        ? { name: { contains: searchQuery, mode: "insensitive" } }
+        ? { name: { contains: searchQuery, mode: 'insensitive' } }
         : {}),
     },
     include: { sharedFolder: true },
@@ -602,7 +645,7 @@ export async function getSharedFolderInfo(downloadUrl: string) {
     !sharedFolder ||
     (sharedFolder.expiresAt && new Date(sharedFolder.expiresAt) <= new Date())
   ) {
-    throw new Error("File expired or not found");
+    throw new Error('File expired or not found');
   }
   const folderStructure = await getSharedFolderStructure(sharedFolder.id);
   return { folderStructure, sharedFolderId: sharedFolder.id };
@@ -615,7 +658,12 @@ export async function getSingleCredential(id: string) {
 
   return cred;
 }
-
+export async function getS3CredentialsWithTeamBuckets(userId: string) {
+  return await prisma.s3Credential.findMany({
+    where: { userId: userId },
+    include: { teamBuckets: true },
+  });
+}
 // Get all files in a specific folder
 export async function getFolderFiles(folderId: string, userId: string) {
   return await prisma.file.findMany({
@@ -650,13 +698,13 @@ export async function getBreadcrumbsLinks({
 
     // Prevent infinite loops in case of circular references
     if (visitedFolders.has(parentId)) {
-      throw new Error("Circular folder structure detected.");
+      throw new Error('Circular folder structure detected.');
     }
     visitedFolders.add(parentId);
 
     // Add the current folder to breadcrumbs (ensure name exists)
     breadcrumbs.push({
-      name: folder.name || "Unnamed Folder", // Fallback if folder name is null or empty
+      name: folder.name || 'Unnamed Folder', // Fallback if folder name is null or empty
       id: folder.id,
     });
 
@@ -707,7 +755,7 @@ export async function updateBatchFolderSize({
     // Wait for all folder sizes to be updated
     await Promise.all(updatePromises);
   } catch (error) {
-    console.error("Error updating folder sizes: ", error);
+    console.error('Error updating folder sizes: ', error);
   }
 }
 
@@ -731,7 +779,7 @@ export async function shareFolder({
   userId: string;
   shortUrl: string;
   expiresAt: Date | null;
-  teamId?: string | null;
+  teamId?: string;
 }) {
   const folder = await prisma.folder.findUnique({
     where: { id: folderId },
@@ -740,7 +788,7 @@ export async function shareFolder({
     },
   });
 
-  if (!folder) throw new Error("Folder not found");
+  if (!folder) throw new Error('Folder not found');
 
   // Check if folder is already shared
   if (folder.sharedFolder) {
@@ -753,6 +801,17 @@ export async function shareFolder({
     });
   }
 
+  return await prisma.$transaction(async (prisma) => {
+    // First get current team storage if needed
+    let team;
+    if (teamId) {
+      team = await prisma.team.findUnique({
+        where: { id: teamId },
+        select: { totalStorageUsed: true, totalSharedStorage: true },
+      });
+
+      if (!team) throw new Error('Team not found');
+    }
 
     // Update folder status
     await prisma.folder.update({
@@ -766,16 +825,30 @@ export async function shareFolder({
         sharedById: userId,
         downloadUrl: shortUrl,
         expiresAt,
+        teamId,
       },
     });
 
+    if (teamId && team) {
+      const newSharedStorage = (
+        BigInt(team.totalSharedStorage) + BigInt(folder.size)
+      ).toString();
+
+      await prisma.team.update({
+        where: { id: teamId },
+        data: {
+          totalSharedFiles: { increment: 1 },
+          totalSharedStorage: newSharedStorage,
+        },
+      });
+    } else {
       // Update user storage if teamId is not provided
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { totalFileShares: true, totalSharedStorage: true },
       });
 
-      if (!user) throw new Error("User not found");
+      if (!user) throw new Error('User not found');
 
       const newSharedStorage = (
         BigInt(user.totalSharedStorage) + BigInt(folder.size)
@@ -787,25 +860,26 @@ export async function shareFolder({
           totalFileShares: { increment: 1 },
           totalSharedStorage: newSharedStorage,
         },
-    });
+      });
+    }
 
     return sharedFolder;
-  }
-
+  });
+}
 
 export const deleteSharedItem = async ({
   id,
   type,
 }: {
   id: string;
-  type: "file" | "folder";
+  type: 'file' | 'folder';
 }) => {
   const result =
-    type === "file"
+    type === 'file'
       ? await deleteSharedFile({ fileId: id })
       : await deleteSharedFolder({ folderId: id });
   return {
-    message: "Shared file deleted successfully",
+    message: 'Shared file deleted successfully',
     file: result,
   };
 };
@@ -817,10 +891,11 @@ export const deleteSharedFile = async ({ fileId }: { fileId: string }) => {
       where: { fileId },
       include: {
         file: true,
+        team: true,
       },
     });
 
-    if (!sharedFile) throw new Error("Shared file not found");
+    if (!sharedFile) throw new Error('Shared file not found');
 
     // Delete the shared file entry
     await prisma.sharedFile.delete({
@@ -836,9 +911,23 @@ export const deleteSharedFile = async ({ fileId }: { fileId: string }) => {
       },
     });
 
-    return updatedFile;
+    // Update team storage if it was a team share
+    if (sharedFile.teamId && sharedFile.team) {
+      const newSharedStorage = (
+        BigInt(sharedFile.team.totalSharedStorage) -
+        BigInt(sharedFile.file.size)
+      ).toString();
 
-        
+      await prisma.team.update({
+        where: { id: sharedFile.teamId },
+        data: {
+          totalSharedFiles: { decrement: 1 },
+          totalSharedStorage: newSharedStorage,
+        },
+      });
+    }
+
+    return updatedFile;
   });
 };
 
@@ -853,10 +942,11 @@ export const deleteSharedFolder = async ({
       where: { folderId },
       include: {
         folder: true,
+        team: true,
       },
     });
 
-    if (!sharedFolder) throw new Error("Shared folder not found");
+    if (!sharedFolder) throw new Error('Shared folder not found');
 
     // Delete the shared folder entry
     await prisma.sharedFolder.delete({
@@ -870,6 +960,22 @@ export const deleteSharedFolder = async ({
         isShared: false,
       },
     });
+
+    // Update team storage if it was a team share
+    if (sharedFolder.teamId && sharedFolder.team && sharedFolder.folder.size) {
+      const newSharedStorage = (
+        BigInt(sharedFolder.team.totalSharedStorage) -
+        BigInt(sharedFolder.folder.size)
+      ).toString();
+
+      await prisma.team.update({
+        where: { id: sharedFolder.teamId },
+        data: {
+          totalSharedFiles: { decrement: 1 },
+          totalSharedStorage: newSharedStorage,
+        },
+      });
+    }
 
     return updatedFolder;
   });
@@ -933,7 +1039,7 @@ export async function isAllowedToUpload({
   // Use DEFAULT_CONFIG for limits
   const uploadStorageLimitInBytes =
     BigInt(DEFAULT_CONFIG.storage) * BigInt(1024 * 1024 * 1024); // GB to bytes
-  
+
   if (finUpload >= uploadStorageLimitInBytes) {
     return false;
   }
@@ -942,6 +1048,24 @@ export async function isAllowedToUpload({
   if (fileCount > DEFAULT_CONFIG.maxFileUpload) {
     return false;
   }
+
+  return true;
+}
+
+export async function isAllowedToUploadOnTeam({
+  teamId,
+  fileSize,
+}: {
+  teamId: string;
+  fileSize: number;
+}) {
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!team) return false;
+
+  const planLimit = Infinity; // Set to Infinity for now, adjust as needed
+  const totalUpload = parseInt(team.totalStorageUsed) + fileSize;
+
+  if (totalUpload > planLimit) return false;
 
   return true;
 }
@@ -957,7 +1081,7 @@ export async function isDownloadAllowed({
     where: { id: userId },
     select: { totalDownloadedSize: true },
   });
-  
+
   if (!user) return false;
 
   const currentDownloadSize = BigInt(user.totalDownloadedSize);
@@ -976,20 +1100,62 @@ export async function verifyBucketUser({
   userId: string;
   bucketId: string;
 }) {
-  const bucket = await prisma.s3Credential.findFirst({
-    where: { 
-      AND: [
-        { id: bucketId },
-        { userId: userId }
-      ]
+  const bucket = await prisma.s3Credential.findUnique({
+    where: { id: bucketId },
+    include: {
+      teamBuckets: {
+        include: {
+          team: {
+            include: {
+              members: {
+                where: { userId },
+                include: { user: { select: { name: true } } },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
-  if (!bucket) {
-   return false
+  if (!bucket) throw new Error('Bucket not found');
+  // Check if user owns the bucket directly or has team access
+  const hasTeamAccess = bucket.teamBuckets.some(
+    (tb) => tb.team.members.length > 0
+  );
+
+  if (!hasTeamAccess && bucket.userId !== userId) {
+    throw new Error('Unauthorized');
   }
 
-  return bucket;
+  // Get bucket details
+  const bucketDetails = await getBucketDetails({
+    bucketName: bucket.bucket,
+    accessKey: bucket.accessKey,
+    secretKey: bucket.secretKey,
+    endpointUrl: bucket.endpointUrl,
+    region: bucket.region,
+  });
+
+  const teamBucket =
+    bucket.teamBuckets.length >= 0 ? bucket.teamBuckets[0] : null;
+  const completeBucket: CompleteBucket = {
+    ...bucket,
+    name: bucket.bucket, // Use bucket name as display name
+    filesCount: bucketDetails.totalFiles,
+    size: bucketDetails.totalSizeInMB.toString(),
+    teamBucket: teamBucket
+      ? {
+          id: teamBucket.id,
+          permissions: teamBucket.permissions,
+          bucketOwner: teamBucket.team.ownerId,
+          teamId: teamBucket.team.id,
+          userRole: teamBucket.team.members[0].role,
+        }
+      : null,
+  };
+
+  return completeBucket;
 }
 
 export const getUserUsage = async (userId: string) => {
@@ -1011,14 +1177,30 @@ export const getUserUsage = async (userId: string) => {
       totalFileShares: true,
       totalSharedStorage: true,
       totalUploadSize: true,
+      teamMemberships: {
+        where: { role: 'OWNER' },
+        select: {
+          team: {
+            select: {
+              id: true,
+              currentMembers: true,
+              maxMembers: true,
+              totalSharedFiles: true,
+              totalStorageUsed: true,
+              name: true,
+              totalSharedStorage: true,
+            },
+          },
+        },
+      },
     },
   });
 
   if (!user) {
-    throw new Error("No User Found!");
+    throw new Error('No User Found!');
   }
 
-  const { s3Credentials: buckets, ...rest } = user;
+  const { s3Credentials: buckets, teamMemberships, ...rest } = user;
 
   // Ensure buckets is an array and not null
   const bucketCount = buckets ? buckets.length : 0;
@@ -1032,10 +1214,12 @@ export const getUserUsage = async (userId: string) => {
     ? buckets.reduce((total, bucket) => total + (bucket._count.folders || 0), 0)
     : 0;
 
+  const teams = teamMemberships.map(({ team }) => team);
   return {
     bucketCount,
     fileCount,
     folderCount,
+    teams,
     ...rest,
   };
 };
@@ -1044,7 +1228,6 @@ export async function isAllowedToAddBucket(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
-      
       s3Credentials: {
         select: { id: true },
       },
@@ -1067,45 +1250,207 @@ export async function deleteBucket({ bucketId }: { bucketId: string }) {
       await tx.sharedFile.deleteMany({
         where: {
           file: {
-            s3CredentialId: bucketId
-          }
-        }
+            s3CredentialId: bucketId,
+          },
+        },
       });
 
       // 2. Delete all shared folders associated with this bucket's folders
       await tx.sharedFolder.deleteMany({
         where: {
           folder: {
-            s3CredentialId: bucketId
-          }
-        }
+            s3CredentialId: bucketId,
+          },
+        },
       });
 
       // 3. Delete all files in the bucket
       await tx.file.deleteMany({
         where: {
-          s3CredentialId: bucketId
-        }
+          s3CredentialId: bucketId,
+        },
       });
 
       // 4. Delete all folders in the bucket
       await tx.folder.deleteMany({
         where: {
-          s3CredentialId: bucketId
-        }
+          s3CredentialId: bucketId,
+        },
       });
 
       // 5. Finally delete the bucket (s3Credential) itself
       const deletedBucket = await tx.s3Credential.delete({
         where: {
-          id: bucketId
-        }
+          id: bucketId,
+        },
       });
 
       return deletedBucket;
     });
   } catch (error) {
-    console.error("Error deleting bucket:", error);
-    throw new Error("Failed to delete bucket and its contents");
+    console.error('Error deleting bucket:', error);
+    throw new Error('Failed to delete bucket and its contents');
+  }
+}
+
+export async function updateTeamTotalFileUploadSize({
+  sizeToUpdate,
+  teamId,
+}: {
+  teamId: string;
+  sizeToUpdate: number;
+}) {
+  if (sizeToUpdate === 0) return;
+
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
+    select: { totalStorageUsed: true },
+  });
+
+  if (!team) return;
+
+  const currentSize = BigInt(team.totalStorageUsed);
+  const newSize = (currentSize + BigInt(sizeToUpdate)).toString();
+
+  await prisma.team.update({
+    where: { id: teamId },
+    data: { totalStorageUsed: newSize },
+  });
+}
+
+export async function createManyTeamFiles({
+  files,
+  teamId,
+}: {
+  files: {
+    userId: string;
+    name: string;
+    type: string;
+    s3Key: string;
+    size: string;
+    s3CredentialId: string;
+    folderId?: string;
+  }[];
+  teamId: string;
+}) {
+  const createdFiles = [];
+  let totalUploadSize = 0;
+
+  for (const file of files) {
+    const pathParts = file.name.split('/');
+    const fileName = pathParts.pop() || '';
+
+    const folderId = file.folderId;
+
+    let attempt = 0;
+    let uniqueS3Key = file.s3Key;
+    let uniqueName = fileName;
+
+    const addAttemptBeforeExtension = (name: string) => {
+      const dotIndex = name.lastIndexOf('.');
+      if (dotIndex === -1) {
+        return `${name}(${attempt})`;
+      } else {
+        const baseName = name.substring(0, dotIndex);
+        const extension = name.substring(dotIndex);
+        return `${baseName}(${attempt})${extension}`;
+      }
+    };
+
+    while (true) {
+      try {
+        const createdFile = await prisma.file.create({
+          data: {
+            userId: file.userId,
+            name: uniqueName,
+            type: file.type,
+            s3Key: uniqueS3Key,
+            size: file.size,
+            s3CredentialId: file.s3CredentialId,
+            folderId: folderId,
+          },
+        });
+        createdFiles.push(createdFile);
+        totalUploadSize += parseInt(file.size);
+        break;
+      } catch (error) {
+        if (error instanceof Error && 'code' in error && 'meta' in error) {
+          if (
+            error.code === 'P2002' &&
+            typeof error.meta === 'object' &&
+            error.meta !== null &&
+            'target' in error.meta &&
+            Array.isArray(error.meta.target) &&
+            error.meta.target.includes('s3Key')
+          ) {
+            attempt++;
+            uniqueS3Key = addAttemptBeforeExtension(file.s3Key);
+            uniqueName = addAttemptBeforeExtension(fileName);
+          } else {
+            throw error;
+          }
+        }
+      }
+    }
+  }
+
+  if (totalUploadSize > 0) {
+    await updateTeamTotalFileUploadSize({
+      teamId,
+      sizeToUpdate: totalUploadSize,
+    });
+  }
+
+  return createdFiles;
+}
+
+export async function deleteCompleteBucket({ bucketId }: { bucketId: string }) {
+  try {
+    // Use a transaction to ensure all operations complete or none do
+    return await prisma.$transaction(async (tx) => {
+      // 1. First delete all shared files associated with this bucket's files
+      await tx.sharedFile.deleteMany({
+        where: {
+          file: {
+            s3CredentialId: bucketId,
+          },
+        },
+      });
+
+      // 2. Delete all shared folders associated with this bucket's folders
+      await tx.sharedFolder.deleteMany({
+        where: {
+          folder: {
+            s3CredentialId: bucketId,
+          },
+        },
+      });
+
+      // 3. Delete all files in the bucket
+      await tx.file.deleteMany({
+        where: {
+          s3CredentialId: bucketId,
+        },
+      });
+
+      // 4. Delete all folders in the bucket
+      await tx.folder.deleteMany({
+        where: {
+          s3CredentialId: bucketId,
+        },
+      });
+
+      // 5. Finally delete the bucket (s3Credential) itself
+      const deletedBucket = await tx.s3Credential.delete({
+        where: {
+          id: bucketId,
+        },
+      });
+
+      return deletedBucket;
+    });
+  } catch (error) {
+    console.error('Error deleting bucket:', error);
+    throw new Error('Failed to delete bucket and its contents');
   }
 }

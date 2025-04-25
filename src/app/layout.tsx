@@ -4,6 +4,7 @@ import './globals.css';
 import Providers from '@/components/providers/providers';
 
 import { constructMetadata } from '@/lib/utils';
+import { WorkspaceResetProvider } from '@/components/providers/WorkspaceResetProvider';
 
 import { DEFAULT_CONFIG } from '@/config/dodo';
 
@@ -18,13 +19,16 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning className="min-h-screen bg-background antialiased">
+      <body
+        suppressHydrationWarning
+        className="min-h-screen bg-background antialiased"
+      >
         <Providers subscriptionPlan={subscriptionPlan}>
-          <div className="relative flex min-h-screen flex-col">
-            <div className="flex-1">
-              {children}
+          <WorkspaceResetProvider>
+            <div className="relative flex min-h-screen flex-col">
+              <div className="flex-1">{children}</div>
             </div>
-          </div>
+          </WorkspaceResetProvider>
         </Providers>
         <Toaster />
       </body>

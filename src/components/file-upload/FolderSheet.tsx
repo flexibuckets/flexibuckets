@@ -10,18 +10,21 @@ import { Folder } from '@/lib/types';
 import FileIcon from './FileIcon';
 import { cn } from '@/lib/utils';
 import { dropzoneContext } from '@/context/DropzoneContext';
+import { teamDropzoneContext } from '@/context/TeamDropzoneContext';
 
 interface FolderSheetProps {
   folder: Folder;
   closeSheet: () => void;
+  isTeams: boolean;
 }
 
 const FolderSheet: React.FC<FolderSheetProps> = ({
   folder,
   closeSheet,
+  isTeams,
 }) => {
   const { removeFileFromFolder, removeSubfolder } = useContext(
-    dropzoneContext
+    isTeams ? teamDropzoneContext : dropzoneContext
   );
 
   // Recursive function to render folders and files

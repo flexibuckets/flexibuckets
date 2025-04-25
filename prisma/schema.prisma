@@ -30,9 +30,16 @@ model User {
   files            File[]
   folders          Folder[]
   s3Credentials    S3Credential[]
-  sharedFiles      SharedFile[]    @relation("SharedByUser")
-  sharedFolders    SharedFolder[]  @relation("SharedByUser")
+  sharedFiles      SharedFile[]    
+  sharedFolders    SharedFolder[]  
   
+  // Team Related
+  teamMaxMembers      Int              @default(0)
+  currentTeamMembers  Int              @default(0)
+  teamMemberships     TeamMember[]
+  addedBuckets        TeamSharedBucket[] @relation("BucketAddedBy")
+  teamJoinRequests    TeamJoinRequest[]
+
   // Timestamps
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
@@ -81,8 +88,10 @@ model SharedFile {
   id           String   @id @default(cuid())
   file         File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
   fileId       String   @unique
-  sharedBy     User     @relation("SharedByUser", fields: [sharedById], references: [id], onDelete: Cascade)
+  sharedBy     User     @relation(fields: [sharedById], references: [id], onDelete: Cascade)
   sharedById   String
+  teamId       String?  // Optional team context
+  team         Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   downloadUrl  String   @unique
   expiresAt    DateTime?
   isSharedInfinitely Boolean @default(false)
@@ -119,6 +128,7 @@ model S3Credential {
   folders      Folder[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+  teamBuckets TeamSharedBucket[]
   @@unique([bucket,accessKey,secretKey])
   @@index([userId, bucket])
 }
@@ -181,8 +191,10 @@ model SharedFolder {
   id           String   @id @default(cuid())
   folderId     String   @unique
   folder       Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  sharedBy     User     @relation("SharedByUser", fields: [sharedById], references: [id], onDelete: Cascade)
+  sharedBy     User     @relation(fields: [sharedById], references: [id], onDelete: Cascade)
   sharedById   String
+  teamId       String?  // Optional team context
+  team         Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   downloadUrl  String   @unique
   expiresAt    DateTime?
   isSharedInfinitely Boolean  @default(false) 
@@ -207,4 +219,104 @@ model Settings {
   updatedAt    DateTime      @updatedAt
 
   @@map("settings")
+}
+
+model Team {
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  ownerId        String    // User who created the team
+  members       TeamMember[]
+  buckets       TeamSharedBucket[]
+  totalStorageUsed       String    @default("0") // Total storage used by team
+  inviteCode    String?   @unique // Optional invite code
+  maxMembers    Int       @default(5) // Maximum number of members
+  currentMembers Int       @default(1) // Current number of members
+  joinRequests TeamJoinRequest[]
+  teamInvites TeamInvite[]
+  sharedFiles    SharedFile[]
+  sharedFolders  SharedFolder[]
+  totalSharedFiles Int @default(0)
+  totalSharedStorage String @default("0")
+}
+
+
+model TeamMember {
+  id            String    @id @default(cuid())
+  userId        String
+  teamId        String
+  role          TeamRole  @default(MEMBER)
+  joinedAt      DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id])
+  team          Team      @relation(fields: [teamId], references: [id])
+
+  @@unique([userId, teamId])
+}
+
+model TeamSharedBucket {
+  id            String       @id @default(cuid())
+  teamId        String
+  s3CredentialId String      @unique
+  name          String       // Bucket display name in team context
+  addedAt       DateTime     @default(now())
+  addedById     String       // Track who added the bucket
+  permissions   BucketPermission @default(READ_WRITE)
+  
+  // Relations
+  team          Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  s3Credential  S3Credential  @relation(fields: [s3CredentialId], references: [id], onDelete: Cascade)
+  addedBy       User          @relation("BucketAddedBy", fields: [addedById], references: [id])
+
+  @@unique([teamId, s3CredentialId])
+  @@index([teamId])
+  @@index([s3CredentialId])
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum BucketPermission {
+  READ_ONLY
+  READ_WRITE
+  FULL_ACCESS
+}
+
+// Add this enum for request status
+enum TeamJoinRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+// Add TeamJoinRequest model
+model TeamJoinRequest {
+  id        String               @id @default(cuid())
+  team      Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  status    TeamJoinRequestStatus @default(PENDING)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  
+  @@unique([teamId, userId,status])
+  @@index([teamId])
+  @@index([userId])
+}
+model TeamInvite {
+  id        String   @id @default(cuid())
+  email     String
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  used      Boolean  @default(false)
+
+  @@unique([email, teamId])
+  @@index([teamId])
 }

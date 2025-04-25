@@ -1,11 +1,12 @@
-import { dropzoneContext } from "@/context/DropzoneContext";
-import React, { useContext } from "react";
-import { Button } from "../ui/button";
-import { Loader2, Upload } from "lucide-react";
+import { dropzoneContext } from '@/context/DropzoneContext';
+import React, { useContext } from 'react';
+import { Button } from '../ui/button';
+import { Loader2, Upload } from 'lucide-react';
+import { teamDropzoneContext } from '@/context/TeamDropzoneContext';
 
 const UploadBtn = ({ isTeams = false }: { isTeams?: boolean }) => {
   const { totalCount, batchUpload, isUploading } = useContext(
-dropzoneContext
+    isTeams ? teamDropzoneContext : dropzoneContext
   );
   return (
     <>

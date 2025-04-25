@@ -1,22 +1,22 @@
-import { getpresignedPutUrl } from "@/app/actions";
-import { presignedUrlSchema } from "@/lib/schemas";
-
-import { auth } from "@/auth";
+import { getpresignedPutUrl } from '@/app/actions';
+import { teamPresignedUrlSchema } from '@/lib/schemas';
+import { isAllowedToUploadOnTeam } from '@/lib/dboperations';
+import { auth } from '@/auth';
 
 export async function POST(request: Request) {
   try {
     // Authenticate the user
     const session = await auth();
     if (!session || !session.user || !session.user.id) {
-      return new Response(JSON.stringify({ message: "Unauthorized" }), {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
     // Parse and validate the request body
     const body = await request.json();
-    const validatedData = presignedUrlSchema.parse(body);
+    const validatedData = teamPresignedUrlSchema.parse(body);
 
     // Extract validated values
     const {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       bucketName,
       region,
       fileSizes,
-      
+      teamId,
     } = validatedData;
 
     // Ensure fileNames and fileSizes are arrays
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       fileSizes.length !== fileNames.length
     ) {
       throw new Error(
-        "fileNames and fileSizes must be non-empty arrays of the same length"
+        'fileNames and fileSizes must be non-empty arrays of the same length'
       );
     }
 
@@ -46,7 +46,20 @@ export async function POST(request: Request) {
     const totalFileSize = fileSizes.reduce((sum, size) => sum + size, 0);
 
     // Check if the user is allowed to upload
+    const isAllowed = await isAllowedToUploadOnTeam({
+      teamId: teamId,
+      fileSize: totalFileSize,
+    });
 
+    if (!isAllowed) {
+      return new Response(
+        JSON.stringify({ message: 'Upload limit exceeded' }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     // Generate presigned URLs for all file names
     const urls = await Promise.all(
@@ -64,19 +77,19 @@ export async function POST(request: Request) {
 
     return new Response(JSON.stringify({ urls }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
     if (error instanceof Error) {
       return new Response(JSON.stringify({ message: error.message }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ message: "Invalid request" }), {
+    return new Response(JSON.stringify({ message: 'Invalid request' }), {
       status: 400,
-      headers: { "Content-Type": "application/json" },
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 }

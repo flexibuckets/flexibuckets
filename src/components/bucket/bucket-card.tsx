@@ -1,30 +1,35 @@
-import React from "react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Database, HardDrive, AlertCircle } from "lucide-react";
+import React from 'react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Database, HardDrive, AlertCircle } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 
-import type { Bucket } from "@/lib/types"; // Ensure Bucket type is updated
-import { Skeleton } from "../ui/skeleton";
-import { cn } from "@/lib/utils";
-import { DeleteBucket } from "./delete-bucket";
+import type { Bucket } from '@/lib/types'; // Ensure Bucket type is updated
+import { Skeleton } from '../ui/skeleton';
+import { cn } from '@/lib/utils';
+import { DeleteBucket } from './delete-bucket';
 
 interface BucketCardProps {
   bucket: Bucket & {
     isAccessible?: boolean;
     errorMessage?: string;
   };
+  canDeleteBucket?: boolean;
   userId: string;
 }
 
-export function BucketCard({ bucket, userId }: BucketCardProps) {
-  const usedStorage = parseInt(bucket.size.replace(/[^\d]/g, "")); // Ensure bucket.size is correctly formatted
+export function BucketCard({
+  bucket,
+  userId,
+  canDeleteBucket,
+}: BucketCardProps) {
+  const usedStorage = parseInt(bucket.size.replace(/[^\d]/g, '')); // Ensure bucket.size is correctly formatted
   const totalStorage = 100000; // Assuming 10GB total storage for this example
   const storagePercentage = (usedStorage / totalStorage) * 100;
 
@@ -42,17 +47,23 @@ export function BucketCard({ bucket, userId }: BucketCardProps) {
                       <AlertCircle className="h-5 w-5 text-destructive" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{bucket.errorMessage || "Bucket is not accessible"}</p>
+                      <p>{bucket.errorMessage || 'Bucket is not accessible'}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              {bucket.endpointUrl || "/"}
+              {bucket.endpointUrl || '/'}
             </p>
           </div>
-          <DeleteBucket bucketId={bucket.id} bucketName={bucket.name}  userId={userId}/>
+          {canDeleteBucket && (
+            <DeleteBucket
+              bucketId={bucket.id}
+              bucketName={bucket.name}
+              userId={userId}
+            />
+          )}
         </div>
         <div className="flex items-center space-x-4 mb-4">
           <div className="flex items-center">
@@ -78,11 +89,11 @@ export function BucketCard({ bucket, userId }: BucketCardProps) {
             <Link href={`/dashboard/bucket/${bucket.id}`}>Open Bucket</Link>
           </Button>
         ) : (
-          <Button 
+          <Button
             className={cn(
-              "w-full cursor-not-allowed",
-              "hover:no-underline hover:opacity-50"
-            )} 
+              'w-full cursor-not-allowed',
+              'hover:no-underline hover:opacity-50'
+            )}
             disabled
           >
             Open Bucket
@@ -99,7 +110,8 @@ export function BucketCardLoader({ count = 1 }) {
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className="bg-card text-card-foreground rounded-lg border-border border shadow-md dark:shadow-secondary overflow-hidden mb-4">
+          className="bg-card text-card-foreground rounded-lg border-border border shadow-md dark:shadow-secondary overflow-hidden mb-4"
+        >
           <div className="p-6">
             <div className="flex justify-between items-start mb-4">
               <div className="space-y-2">

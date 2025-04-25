@@ -14,28 +14,38 @@ import MobileMoreInfo, {
 import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from '../ui/skeleton';
 import SharedFileRows from './SharedFileRows';
-
+import { getTeamSharedFiles } from '@/app/actions';
+import { TeamRole } from '@prisma/client';
+import TeamSharedFileRows from './TeamSharedFileRows';
+import { TeamSharedContent } from '@/lib/types';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SharedFilesTableProps {
   userId: string;
+  teamId?: string;
+  userTeamRole?: TeamRole | 'NONE';
 }
 
-const getSharedContent = ({ userId }: SharedFilesTableProps) => {
+const getSharedContent = ({ userId, teamId }: SharedFilesTableProps) => {
+  if (teamId) {
+    return getTeamSharedFiles({ userId, teamId });
+  }
   return getSharedFiles(userId);
 };
 
 export function SharedFilesTable({
   userId,
+  teamId,
+  userTeamRole,
 }: SharedFilesTableProps) {
   const { data, isLoading, isError } = useQuery({
-    queryFn: () => getSharedContent({ userId }),
-    queryKey: ['shared-files'],
+    queryFn: () => getSharedContent({ userId, teamId }),
+    queryKey: [teamId ? 'team-shared-files' : 'shared-files'],
   });
   const isMobile = useIsMobile();
   const getTableRows = () => {
     if (isLoading) {
-      return <TableLoader count={3} colCount={5} />;
+      return <TableLoader count={3} colCount={teamId ? 6 : 5} />;
     }
     if (data) {
       const { sharedFiles, sharedFolders } = data;
@@ -43,11 +53,23 @@ export function SharedFilesTable({
         return <NoRows isError={isError} />;
       return (
         <>
-          <SharedFileRows
-            sharedFiles={sharedFiles}
-            sharedFolders={sharedFolders}
-            isMobile={isMobile}
-          />
+          {teamId ? (
+            <TeamSharedFileRows
+              sharedFiles={sharedFiles as TeamSharedContent['sharedFiles']}
+              sharedFolders={
+                sharedFolders as TeamSharedContent['sharedFolders']
+              }
+              userId={userId}
+              userTeamRole={userTeamRole ?? 'NONE'}
+              isMobile={isMobile}
+            />
+          ) : (
+            <SharedFileRows
+              sharedFiles={sharedFiles}
+              sharedFolders={sharedFolders}
+              isMobile={isMobile}
+            />
+          )}
         </>
       );
     }
@@ -65,6 +87,7 @@ export function SharedFilesTable({
             <>
               <TableHead>Type</TableHead>
               <TableHead>Size</TableHead>
+              {teamId && <TableHead>SharedBy</TableHead>}
               <TableHead>Shared On</TableHead>
               <TableHead>Expires</TableHead>
             </>
@@ -125,13 +148,14 @@ export const NoRows = ({ isError }: { isError: boolean }) => {
 type SharedTableMoreInfoProps = {
   type: string;
   size: string;
+  sharedBy?: string;
   sharedOn: string;
   expires: string;
 };
-
 export const SharedTableMoreInfo = ({
   type,
   size,
+  sharedBy,
   sharedOn,
   expires,
 }: SharedTableMoreInfoProps) => {
@@ -139,8 +163,13 @@ export const SharedTableMoreInfo = ({
     <TableCell>
       <MobileMoreInfo>
         <MobileMoreInfoRow heading="type" value={type} />
+
         <MobileMoreInfoRow heading="size" value={size} />
+
+        {sharedBy && <MobileMoreInfoRow heading="shared by" value={sharedBy} />}
+
         <MobileMoreInfoRow heading="shared on" value={sharedOn} />
+
         <MobileMoreInfoRow heading="expires" value={expires} />
       </MobileMoreInfo>
     </TableCell>
