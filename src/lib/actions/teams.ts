@@ -1,40 +1,42 @@
-'use server'
+'use server';
 
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import { sendTeamInviteEmail, sendTeamJoinRequestEmail } from "@/lib/email";
-import { revalidatePath } from "next/cache";
-import { generateTeamInviteLink, getTeamOwnerEmail } from "../db/teams";
-import { Prisma } from "@prisma/client";
+import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
+import { sendTeamInviteEmail, sendTeamJoinRequestEmail } from '@/lib/email';
+import { revalidatePath } from 'next/cache';
+import { generateTeamInviteLink, getTeamOwnerEmail } from '../db/teams';
+import { Prisma } from '@prisma/client';
 
 export async function inviteToTeam(teamId: string, email: string) {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("Unauthorized");
+  if (!session?.user?.id) throw new Error('Unauthorized');
 
   const team = await prisma.team.findUnique({
     where: { id: teamId },
-    include: { 
+    include: {
       members: true,
       teamInvites: {
         where: {
           email,
           used: false,
-          expiresAt: { gt: new Date() }
-        }
-      }
+          expiresAt: { gt: new Date() },
+        },
+      },
     },
   });
 
-  if (!team) throw new Error("Team not found");
+  if (!team) throw new Error('Team not found');
 
   // Check if team has reached max members
   if (team.members.length >= team.maxMembers) {
-    throw new Error("Team has reached maximum member limit. Please upgrade your plan for more seats.");
+    throw new Error(
+      'Team has reached maximum member limit. Please upgrade your plan for more seats.'
+    );
   }
 
   // Check if user is already invited
   if (team.teamInvites.length > 0) {
-    throw new Error("User has already been invited");
+    throw new Error('User has already been invited');
   }
 
   // Create invite with 7 day expiration
@@ -67,17 +69,20 @@ export async function inviteToTeam(teamId: string, email: string) {
     revalidatePath(`/teams/${teamId}/manage/`);
     return invite;
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      throw new Error("User has already been invited");
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      throw new Error('User has already been invited');
     }
-    throw new Error("Failed to send invitation");
+    throw new Error('Failed to send invitation');
   }
 }
 
 export async function joinTeamWithCode(inviteCode: string) {
   const session = await auth();
   if (!session?.user?.id || !session?.user?.email) {
-    throw new Error("Unauthorized");
+    throw new Error('Unauthorized');
   }
 
   const team = await prisma.team.findFirst({
@@ -91,44 +96,46 @@ export async function joinTeamWithCode(inviteCode: string) {
       teamInvites: {
         where: {
           email: session.user.email,
-          expiresAt: { gt: new Date() }
-        }
+          expiresAt: { gt: new Date() },
+        },
       },
       joinRequests: {
         where: {
           userId: session.user.id,
-        }
-      }
+        },
+      },
     },
   });
 
-  if (!team) throw new Error("Invalid invite code");
+  if (!team) throw new Error('Invalid invite code');
 
   // Find team owner
-  const owner = team.members.find(member => member.role === "OWNER");
-  if (!owner) throw new Error("Team owner not found");
+  const owner = team.members.find((member) => member.role === 'OWNER');
+  if (!owner) throw new Error('Team owner not found');
 
   // Check if user is already a member
-  if (team.members.some(member => member.userId === session.user.id)) {
-    throw new Error("You are already a member of this team");
+  if (team.members.some((member) => member.userId === session.user.id)) {
+    throw new Error('You are already a member of this team');
   }
 
   // Check if user was previously a member
-  const previousRequests = team.joinRequests.filter(req => 
-    req.status === 'ACCEPTED' || req.status === 'REJECTED'
+  const previousRequests = team.joinRequests.filter(
+    (req) => req.status === 'ACCEPTED' || req.status === 'REJECTED'
   );
-  
+
   if (previousRequests.length > 0) {
-    throw new Error("You cannot rejoin this team. Please contact the team owner.");
+    throw new Error(
+      'You cannot rejoin this team. Please contact the team owner.'
+    );
   }
 
   // Check if team has reached max members
   if (team.members.length >= team.maxMembers) {
-    throw new Error("Team has reached maximum member limit");
+    throw new Error('Team has reached maximum member limit');
   }
 
-  const validInvite = team.teamInvites.find(invite => 
-    !invite.used && invite.email === session.user.email
+  const validInvite = team.teamInvites.find(
+    (invite) => !invite.used && invite.email === session.user.email
   );
 
   try {
@@ -137,23 +144,23 @@ export async function joinTeamWithCode(inviteCode: string) {
       const joinRequest = await tx.teamJoinRequest.create({
         data: {
           teamId: team.id,
-          userId: session.user.id,
-          status: validInvite ? "ACCEPTED" : "PENDING",
+          userId: session.user.id!,
+          status: validInvite ? 'ACCEPTED' : 'PENDING',
         },
         include: {
           team: true,
           user: true,
         },
       });
-      
+
       if (validInvite) {
         // Add user to team immediately if invited and increment owner's count
         await Promise.all([
           tx.teamMember.create({
             data: {
               teamId: team.id,
-              userId: session.user.id,
-              role: "MEMBER",
+              userId: session.user.id!,
+              role: 'MEMBER',
             },
           }),
           // Mark invite as used
@@ -166,17 +173,17 @@ export async function joinTeamWithCode(inviteCode: string) {
             where: { id: owner.user.id },
             data: {
               currentTeamMembers: {
-                increment: 1
-              }
-            }
-          })
+                increment: 1,
+              },
+            },
+          }),
         ]);
       } else {
         // Send join request notification to team owner
         const ownerEmail = await getTeamOwnerEmail(team.id);
         await sendTeamJoinRequestEmail({
           ownerEmail,
-          requesterName: session.user.name || session.user.email || "",
+          requesterName: session.user.name || session.user.email || '',
           teamName: team.name,
           requestLink: `${process.env.NEXT_PUBLIC_APP_URL}/teams/${team.id}/manage/members`,
         });
@@ -187,9 +194,8 @@ export async function joinTeamWithCode(inviteCode: string) {
 
     revalidatePath(`/teams/${team.id}/manage/requests`);
     return result;
-
   } catch (error) {
-    console.error("Error processing join request:", error);
+    console.error('Error processing join request:', error);
     throw error;
   }
 }
