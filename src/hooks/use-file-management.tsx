@@ -1,7 +1,7 @@
 import { FileStatus, FileWithId, Folder } from "@/lib/types";
 import { useState } from "react";
 
-import useParentId from "@/hooks/use-parentId";
+import {useParentId }from "@/hooks/use-parentId";
 
 export const updateFilesInFolder = (
   folder: Folder,

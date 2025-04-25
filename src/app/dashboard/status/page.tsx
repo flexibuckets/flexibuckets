@@ -1,12 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useStatus } from "@/hooks/use-status";
 import { StatusCard } from "@/components/status/status-card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
-export default function StatusPage() {
+const StatusContent = () => {
   const { data: status, isLoading, isError, refetch } = useStatus();
 
   if (isLoading) {
@@ -68,8 +69,14 @@ export default function StatusPage() {
           metrics={status?.services.traefik.metrics || undefined}
         />
       </div>
-
-      
     </div>
+  );
+};
+
+export default function StatusPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <StatusContent />
+    </Suspense>
   );
 } 

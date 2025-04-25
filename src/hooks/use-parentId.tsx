@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+'use client';
 
-const useParentId = () => {
-  const searchParams = useSearchParams();
-  const initialParentId = searchParams.get("parentId");
+import { useEffect, useState } from "react";
+import { useSearchParamsWithSuspense } from "./use-searchparams";
+
+export const useParentId = () => {
+  const { getParam } = useSearchParamsWithSuspense();
+  const initialParentId = getParam("parentId");
   const [parentId, setParentId] = useState<string | null>(initialParentId);
 
   useEffect(() => {
@@ -20,4 +22,6 @@ const useParentId = () => {
   };
 };
 
-export default useParentId;
+export const ParentIdProvider = ({ children }: { children: React.ReactNode }) => {
+  return children;
+};

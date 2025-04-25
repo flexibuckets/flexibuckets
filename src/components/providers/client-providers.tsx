@@ -4,6 +4,8 @@ import { SessionProvider } from 'next-auth/react';
 import { useState } from 'react';
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import { type ThemeProviderProps } from 'next-themes';
+import { SearchParamsProvider } from '@/hooks/use-searchparams';
+import { TeamsProvider } from '@/context/TeamsContext';
 
 export function NextAuthProvider({ children }: { children: React.ReactNode }) {
   return <SessionProvider>{children}</SessionProvider>;
@@ -24,12 +26,14 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
 }
 
-import { TeamsProvider } from '@/context/TeamsContext';
-
 export function UserContextProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <TeamsProvider>{children}</TeamsProvider>;
+  return (
+    <SearchParamsProvider>
+      <TeamsProvider>{children}</TeamsProvider>
+    </SearchParamsProvider>
+  );
 }

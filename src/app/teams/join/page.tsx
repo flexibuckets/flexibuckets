@@ -1,84 +1,92 @@
-import { auth } from '@/auth';
-import { getTeamByInviteCode } from '@/lib/db/teams';
-import { redirect } from 'next/navigation';
-import { JoinTeamForm } from '@/components/teams/JoinTeamForm';
-import { prisma } from '@/lib/prisma';
-import { Team } from '@/types/team';
-import { TeamRole } from '@prisma/client';
-import AlreadyTeamMember from '@/components/teams/AlreadyTeamMember';
+'use client';
 
-interface JoinPageProps {
-  searchParams: { code?: string };
-}
+import { Suspense } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { joinTeam } from '@/lib/actions/team-join-actions';
+import { toast } from 'sonner';
+import { useSearchParamsWithSuspense } from '@/hooks/use-searchparams';
 
-export default async function JoinPage({ searchParams }: JoinPageProps) {
-  const session = await auth();
-  if (!session?.user?.id || !session?.user?.email) {
-    redirect('/auth/signin');
-  }
+const JoinTeamForm = ({ code }: { code: string }) => {
+  const { data: session } = useSession();
+  const router = useRouter();
 
-  const { code } = searchParams;
-  if (!code) {
-    redirect('/dashboard');
-  }
+  const handleJoinTeam = async () => {
+    if (!session?.user?.id) {
+      toast.error('You must be logged in to join a team');
+      return;
+    }
 
-  const teamData = await getTeamByInviteCode(code, session.user.id);
-  if (!teamData) {
-    redirect('/dashboard?error=invalid-code');
-  }
-
-  // Transform team data to match Team type with all required properties
-  const transformedTeam: Team = {
-    ...teamData,
-    description: teamData.description || null,
-    inviteCode: teamData.inviteCode || null,
-    joinRequests: [],
-    role: teamData.userTeamRole as TeamRole | 'MEMBER',
-    owner: {
-      ...teamData.owner,
-      totalUploadSize: '0',
-      totalFileShares: 0,
-    },
-    members: teamData.members.map((member) => ({
-      id: member.id,
-      teamId: teamData.id,
-      userId: member.userId,
-      role: member.role,
-      user: {
-        id: member.user.id,
-        name: member.user.name,
-        email: member.user.email,
-        image: member.user.image,
-      },
-    })),
+    try {
+      const result = await joinTeam(code, code);
+      
+      if (result.teamId) {
+        toast.success('Successfully joined the team!');
+        router.push('/dashboard');
+      }
+    } catch (error) {
+      console.error('Error joining team:', error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to join team. Please try again.');
+      }
+    }
   };
 
-  // Check if user is already a member
-  const isMember = transformedTeam.members.some(
-    (member) => member.user.id === session.user.id
+  return (
+    <div className="container mx-auto p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Join Team</CardTitle>
+          <CardDescription>
+            You have been invited to join a team. Click the button below to accept the invitation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleJoinTeam} className="w-full">
+            Join Team
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
+};
 
-  if (isMember) {
-    return <AlreadyTeamMember teamId={teamData.id} teamName={teamData.name} />;
+const JoinTeamContent = () => {
+  const { getParam } = useSearchParamsWithSuspense();
+  const router = useRouter();
+  const code = getParam('code');
+
+  if (!code) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Invalid Invitation</CardTitle>
+            <CardDescription>
+              This invitation link is invalid or has expired.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => router.push('/dashboard')}>
+              Return to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  // Check for valid invite
-  const validInvite = await prisma.teamInvite.findFirst({
-    where: {
-      teamId: teamData.id,
-      email: session.user.email,
-      used: false,
-      expiresAt: { gt: new Date() },
-    },
-  });
+  return <JoinTeamForm code={code} />;
+};
 
+export default function JoinTeamPage() {
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <JoinTeamForm
-        team={transformedTeam}
-        inviteCode={code}
-        hasValidInvite={!!validInvite}
-      />
-    </div>
+    <Suspense fallback={<div>Loading...</div>}>
+      <JoinTeamContent />
+    </Suspense>
   );
 }
