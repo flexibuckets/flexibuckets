@@ -4,7 +4,7 @@ import { CompleteBucket } from '@/lib/types';
 import TeamFileTable from '@/components/file-table/TeamFileTable';
 import TeamDropzoneSelector from '@/components/file-upload/TeamDropzoneSelector';
 import { BucketPermission } from '@prisma/client';
-import useParentId from '@/hooks/use-parentId';
+import {useParentId }from '@/hooks/use-parentId';
 import FileBreadCrumbs from '@/components/file-table/FileBreadCrumbs';
 import { BreadcrumbPage } from '@/components/ui/breadcrumb';
 import { DeleteBucket } from './delete-bucket';

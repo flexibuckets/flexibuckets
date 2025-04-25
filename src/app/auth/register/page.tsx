@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Icons } from '@/components/ui/icons'
-import { toast, useToast } from '@/hooks/use-toast'
+import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 import { z } from 'zod'
 
@@ -17,12 +17,10 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
-export default function RegisterPage() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-  })
+const RegisterContent = () => {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
@@ -33,24 +31,27 @@ export default function RegisterPage() {
 
     try {
       // Validate form data
-      registerSchema.parse(formData)
+      registerSchema.parse({ name, email, password })
 
       const response = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+        }),
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed')
+        throw new Error('Registration failed')
       }
 
-      // Sign in the user after successful registration
       const result = await signIn('credentials', {
-        email: formData.email,
-        password: formData.password,
+        email,
+        password,
         redirect: false,
       })
 
@@ -64,10 +65,11 @@ export default function RegisterPage() {
         description: "Your account has been created.",
       })
     } catch (error) {
+      console.error('Registration error:', error)
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        title: 'Registration failed',
+        description: 'Please try again',
+        variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
@@ -78,7 +80,7 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-md space-y-8 rounded-lg border border-border bg-card p-8 shadow-lg">
         <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Create an Account</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Create an account</h1>
           <p className="text-sm text-muted-foreground">Enter your details to get started</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -88,8 +90,8 @@ export default function RegisterPage() {
               id="name"
               type="text"
               placeholder="John Doe"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               required
             />
           </div>
@@ -99,8 +101,8 @@ export default function RegisterPage() {
               id="email"
               type="email"
               placeholder="you@example.com"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
@@ -109,8 +111,8 @@ export default function RegisterPage() {
             <Input
               id="password"
               type="password"
-              value={formData.password}
-              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
@@ -121,17 +123,25 @@ export default function RegisterPage() {
                 Please wait
               </>
             ) : (
-              'Register'
+              'Create account'
             )}
           </Button>
+          <div className="text-center text-sm mt-4">
+            Already have an account?{' '}
+            <Link href="/auth/signin" className="text-primary hover:underline">
+              Sign in
+            </Link>
+          </div>
         </form>
-        <div className="text-center text-sm">
-          Already have an account?{' '}
-          <Link href="/auth/signin" className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </div>
       </div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <RegisterContent />
+    </Suspense>
   )
 } 

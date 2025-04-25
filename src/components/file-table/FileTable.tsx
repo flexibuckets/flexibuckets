@@ -18,7 +18,7 @@ import FileActions from './FileActions';
 
 import { format } from 'date-fns';
 
-import useParentId from '@/hooks/use-parentId';
+import {useParentId }from '@/hooks/use-parentId';
 import FolderNameButton from './FolderNameButton';
 import FileBreadCrumbs from './FileBreadCrumbs';
 import { BreadcrumbPage } from '../ui/breadcrumb';

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getTeamBucketFiles, deleteTeamFile } from "@/app/actions";
 import { toast } from "./use-toast";
-import useParentId from "./use-parentId";
+import { useParentId } from "./use-parentId";
 import { useEffect, useState } from "react";
 import useDebounce from "./useDebounce";
 

@@ -7,6 +7,7 @@ import { constructMetadata } from '@/lib/utils';
 import { WorkspaceResetProvider } from '@/components/providers/WorkspaceResetProvider';
 
 import { DEFAULT_CONFIG } from '@/config/dodo';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = constructMetadata();
 
@@ -23,14 +24,17 @@ export default async function RootLayout({
         suppressHydrationWarning
         className="min-h-screen bg-background antialiased"
       >
-        <Providers subscriptionPlan={subscriptionPlan}>
-          <WorkspaceResetProvider>
-            <div className="relative flex min-h-screen flex-col">
+        <Suspense>
+          <Providers subscriptionPlan={subscriptionPlan}>
+            <WorkspaceResetProvider>
+              <div className="relative flex min-h-screen flex-col">
               <div className="flex-1">{children}</div>
             </div>
-          </WorkspaceResetProvider>
-        </Providers>
+            </WorkspaceResetProvider>
+          </Providers>
+      
         <Toaster />
+        </Suspense>
       </body>
     </html>
   );

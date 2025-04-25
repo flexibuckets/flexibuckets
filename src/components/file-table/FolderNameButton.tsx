@@ -1,6 +1,6 @@
 import React from "react";
 import { useRouter } from "next/navigation";
-import useParentId from "@/hooks/use-parentId";
+import { useParentId } from "@/hooks/use-parentId";
 import { Button } from "../ui/button";
 
 const FolderNameButton = ({

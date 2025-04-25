@@ -1,8 +1,11 @@
+'use client';
+
 import { createContext, useContext, ReactNode, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { useSession } from 'next-auth/react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useSearchParamsWithSuspense } from '@/hooks/use-searchparams';
 import { useWorkspaceStore } from '@/hooks/use-workspace-context';
 import { toast } from '@/hooks/use-toast';
 
@@ -15,9 +18,9 @@ const TeamsContext = createContext<TeamsContextType | undefined>(undefined);
 export function TeamsProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const { getParam } = useSearchParamsWithSuspense();
   const router = useRouter();
-  const searchParamTeamId = searchParams.get('teamId');
+  const searchParamTeamId = getParam('teamId');
 
   const { data: queryTeams = [], isLoading } = useQuery({
     queryKey: ['teams'],
