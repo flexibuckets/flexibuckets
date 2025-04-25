@@ -3,8 +3,8 @@ import {
   getBucketFiles,
   getSharedFiles,
   getTeamBucketFiles,
-} from "@/app/actions";
-
+} from '@/app/actions';
+import { getTeamSharedFiles } from './db/teams.share';
 export type NavLink = { label: string; href: string };
 export type SidebarLinkType = NavLink & {
   Icon: LucideIcon;
@@ -53,13 +53,22 @@ export type CompleteBucket = BucketWithCredentials[number] &
 
 export type CompleteFile = Awaited<
   ReturnType<typeof getBucketFiles>
->["files"][number];
+>['files'][number];
 
 export type CompleteFolder = Awaited<
   ReturnType<typeof getBucketFiles>
->["folders"][number];
+>['folders'][number];
+
+export type CompleteTeamFile = Awaited<
+  ReturnType<typeof getTeamBucketFiles>
+>['files'][number];
+
+export type CompleteTeamFolder = Awaited<
+  ReturnType<typeof getTeamBucketFiles>
+>['folders'][number];
 
 export type SharedContent = Awaited<ReturnType<typeof getSharedFiles>>;
+export type TeamSharedContent = Awaited<ReturnType<typeof getTeamSharedFiles>>;
 
 export type TimeValues = { value: string; label: string; isLocked?: boolean };
 
@@ -76,9 +85,9 @@ export type HandleUploadParams = {
 
 // types/next-auth.d.ts
 // @ts-expect-error - next-auth types
-import NextAuth from "next-auth";
+import NextAuth from 'next-auth';
 
-declare module "next-auth" {
+declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
@@ -91,12 +100,12 @@ declare module "next-auth" {
 }
 
 export const addBucketFormSchema = z.object({
-  accessKey: z.string().min(1, { message: "Access Key is required" }),
-  secretKey: z.string().min(1, { message: "Secret Key is required" }),
-  bucket: z.string().min(1, { message: "Bucket name is required" }), // Consider renaming to bucketName
+  accessKey: z.string().min(1, { message: 'Access Key is required' }),
+  secretKey: z.string().min(1, { message: 'Secret Key is required' }),
+  bucket: z.string().min(1, { message: 'Bucket name is required' }), // Consider renaming to bucketName
   region: z.string().optional(), // Make region optional
   provider: z.string().optional(), // Make provider optional
-  endpointUrl: z.string().url({ message: "Endpoint URL must be a valid URL" }),
+  endpointUrl: z.string().url({ message: 'Endpoint URL must be a valid URL' }),
 });
 export type Bucket = {
   id: string;
@@ -106,9 +115,7 @@ export type Bucket = {
   endpointUrl: string;
 };
 
-
-
-declare module "next-auth" {
+declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
@@ -119,7 +126,7 @@ declare module "next-auth" {
     };
   }
 }
-export type FileStatus = "uploaded" | "uploading" | "inQueue" | null;
+export type FileStatus = 'uploaded' | 'uploading' | 'inQueue' | null;
 export type FileWithId = {
   id: string;
   file: File;

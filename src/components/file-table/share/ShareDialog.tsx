@@ -1,24 +1,24 @@
-import React, { useState } from "react";
-import { Share2, Loader2, Lock, KeyRound } from "lucide-react";
+import React, { useState } from 'react';
+import { Share2, Loader2, Lock, KeyRound } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import TimePicker from "./TimePicker";
-import { TimeValues } from "@/lib/types";
-import { addTimeToNow } from "@/lib/utils";
-import { ShareMutation, SharedResponse } from "@/lib/types/share";
-import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import SharingExpire from "./SharingExpire";
-import CopyBtn from "@/components/ui/copy-button";
-import { Switch } from "@/components/ui/switch";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import TimePicker from './TimePicker';
+import { TimeValues } from '@/lib/types';
+import { addTimeToNow } from '@/lib/utils';
+import { ShareMutation, SharedResponse } from '@/lib/types/share';
+import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import SharingExpire from './SharingExpire';
+import CopyBtn from '@/components/ui/copy-button';
+import { Switch } from '@/components/ui/switch';
 
-type DialogType = "File" | "Folder";
+type DialogType = 'File' | 'Folder';
 
 type ShareDialogProps = {
   mutation: ShareMutation;
@@ -28,6 +28,7 @@ type ShareDialogProps = {
   name: string;
   sharedResponse?: SharedResponse;
   fileSize: string;
+  teamId?: string;
 };
 
 const ShareDialog = ({
@@ -38,25 +39,26 @@ const ShareDialog = ({
   downloadUrl,
   sharedResponse,
   fileSize,
+  teamId,
 }: ShareDialogProps) => {
   const timeOptions: TimeValues[] = [
-    { value: "1_hour", label: "1 Hour" },
-    { value: "12_hours", label: "12 Hours" },
-    { value: "1_day", label: "1 Day" },
-    { value: "3_days", label: "3 Days" },
-    { value: "1_week", label: "1 Week" },
-    { value: "unlimited", label: "Never Expire" },
+    { value: '1_hour', label: '1 Hour' },
+    { value: '12_hours', label: '12 Hours' },
+    { value: '1_day', label: '1 Day' },
+    { value: '3_days', label: '3 Days' },
+    { value: '1_week', label: '1 Week' },
+    { value: 'unlimited', label: 'Never Expire' },
   ];
   const [isOpen, setIsOpen] = useState(false);
 
   const [expiresAt, setExpiresAt] = useState<string | null>(
-    sharedResponse?.expiresAt?.toString() || addTimeToNow("1_day")
+    sharedResponse?.expiresAt?.toString() || addTimeToNow('1_day')
   );
 
   const [isInfinite, setIsInfinite] = useState(false);
 
   const onTimeChange = (val: string) => {
-    if (val === "unlimited") {
+    if (val === 'unlimited') {
       setExpiresAt(null);
     } else {
       const time = addTimeToNow(val);
@@ -68,6 +70,7 @@ const ShareDialog = ({
     mutation.mutate({
       id,
       expiresAt: expiresAt ? new Date(expiresAt) : null,
+      teamId,
       fileSize,
       isInfinite,
     });
@@ -78,14 +81,15 @@ const ShareDialog = ({
       <Button
         variant="info"
         onClick={() => setIsOpen(true)}
-        disabled={mutation.isPending}>
+        disabled={mutation.isPending}
+      >
         {mutation.isPending ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <Share2 className="mr-2 h-4 w-4" />
         )}
 
-        <span>{mutation.isPending ? "Sharing..." : `Share ${dialogType}`}</span>
+        <span>{mutation.isPending ? 'Sharing...' : `Share ${dialogType}`}</span>
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -128,13 +132,16 @@ const ShareDialog = ({
                     checked={isInfinite}
                     onCheckedChange={setIsInfinite}
                   />
-                  <label htmlFor="infinite-sharing">Enable infinite sharing</label>
+                  <label htmlFor="infinite-sharing">
+                    Enable infinite sharing
+                  </label>
                 </div>
                 <Button
                   onClick={handleShare}
                   disabled={mutation.isPending}
                   variant="info"
-                  className="self-end">
+                  className="self-end"
+                >
                   {mutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating
@@ -164,7 +171,7 @@ const getDescription = (
   if (!isShared) {
     return (
       <DialogDescription>
-        This action cannot be undone. This will make{" "}
+        This action cannot be undone. This will make{' '}
         <Badge className="mr-2">{name}</Badge>
         public for the selected time.
       </DialogDescription>

@@ -1,7 +1,8 @@
-import { BucketFileSystem } from "@/components/bucket/bucket-file-system";
-import { auth } from "@/auth";
-import AccessDenied from "@/components/dashboard/AccessDenied";
-import { verifyBucketUser } from "@/app/actions";
+import { BucketFileSystem } from '@/components/bucket/bucket-file-system';
+import { auth } from '@/auth';
+import { TeamBucketFileSystem } from '@/components/bucket/team-bucket-file-system';
+import AccessDenied from '@/components/dashboard/AccessDenied';
+import { verifyBucketUser } from '@/app/actions';
 
 export default async function BucketPage({
   params,
@@ -26,12 +27,22 @@ export default async function BucketPage({
     return <AccessDenied />;
   }
 
+  if (bucketData.teamBucket) {
+    return (
+      <TeamBucketFileSystem
+        bucket={bucketData}
+        userId={userId}
+        permissions={bucketData.teamBucket.permissions}
+      />
+    );
+  }
+
   const completeBucket = {
     ...bucketData,
     name: bucketData.bucket,
     filesCount: 0,
-    size: "0",
-    teamBucket: null
+    size: '0',
+    teamBucket: null,
   };
 
   return <BucketFileSystem bucket={completeBucket} userId={userId} />;

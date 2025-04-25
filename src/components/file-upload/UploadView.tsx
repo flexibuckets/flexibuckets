@@ -1,6 +1,6 @@
-import {dropzoneContext } from "@/context/DropzoneContext";
-import { FileWithId, Folder } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { dropzoneContext } from '@/context/DropzoneContext';
+import { FileWithId, Folder } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import {
   Clock,
   FileCheck,
@@ -8,11 +8,12 @@ import {
   FolderIcon,
   Loader2,
   Trash,
-} from "lucide-react";
-import React, { useContext} from "react";
-import FileIcon from "./FileIcon";
-import FolderSheet from "./FolderSheet";
+} from 'lucide-react';
+import React, { useContext } from 'react';
+import FileIcon from './FileIcon';
+import FolderSheet from './FolderSheet';
 import * as mime from 'mime-types';
+import { teamDropzoneContext } from '@/context/TeamDropzoneContext';
 
 const UploadView = ({ isTeams }: { isTeams: boolean }) => {
   const {
@@ -25,18 +26,19 @@ const UploadView = ({ isTeams }: { isTeams: boolean }) => {
     fileCount,
     selectedFolderId,
     updateSelectedFolder,
-  } = useContext( dropzoneContext);
+  } = useContext(isTeams ? teamDropzoneContext : dropzoneContext);
 
   const fileList = files.map(({ id, file, status }: FileWithId) => {
     const mimeType = mime.lookup(file.name) || file.type;
-    
+
     return (
       <div
         key={id}
         className={cn(
-          "flex items-center justify-between space-x-2 p-2 bg-secondary/80 hover:bg-secondary rounded-md mb-2 max-w-lg",
-          { "animate-pulse": status === "uploading" }
-        )}>
+          'flex items-center justify-between space-x-2 p-2 bg-secondary/80 hover:bg-secondary rounded-md mb-2 max-w-lg',
+          { 'animate-pulse': status === 'uploading' }
+        )}
+      >
         <div className="flex items-center space-x-2 ">
           <FileIcon fileType={mimeType} />
           <span className="text-sm max-w-[20ch] overflow-hidden truncate">
@@ -46,18 +48,19 @@ const UploadView = ({ isTeams }: { isTeams: boolean }) => {
         <button
           disabled={status !== null}
           className={cn(
-            "focus:outline-none p-2",
-            status === "uploading" && "text-blue-500",
-            status === "uploaded" && "text-green-500",
-            status === "inQueue" && "text-yellow-500",
-            status === null && "text-red-500 hover:text-red-700"
+            'focus:outline-none p-2',
+            status === 'uploading' && 'text-blue-500',
+            status === 'uploaded' && 'text-green-500',
+            status === 'inQueue' && 'text-yellow-500',
+            status === null && 'text-red-500 hover:text-red-700'
           )}
-          onClick={() => removeFile(id)}>
-          {status === "uploading" ? (
+          onClick={() => removeFile(id)}
+        >
+          {status === 'uploading' ? (
             <Loader2 className="h-4 w-4 animate-spin" />
-          ) : status === "uploaded" ? (
+          ) : status === 'uploaded' ? (
             <FileCheck className="h-4 w-4" />
-          ) : status === "inQueue" ? (
+          ) : status === 'inQueue' ? (
             <Clock className="h-4 w-4 animate-spin" />
           ) : (
             <Trash className="h-4 w-4" />
@@ -73,12 +76,14 @@ const UploadView = ({ isTeams }: { isTeams: boolean }) => {
       <div
         key={id}
         className={cn(
-          "flex items-center justify-between space-x-2 p-2 bg-secondary/80 hover:bg-secondary rounded-md mb-2 max-w-lg",
-          { "animate-pulse": status === "uploading" }
-        )}>
+          'flex items-center justify-between space-x-2 p-2 bg-secondary/80 hover:bg-secondary rounded-md mb-2 max-w-lg',
+          { 'animate-pulse': status === 'uploading' }
+        )}
+      >
         <button
           onClick={() => updateSelectedFolder(folder.id)}
-          className="flex items-center space-x-2  hover:underline">
+          className="flex items-center space-x-2  hover:underline"
+        >
           <FolderIcon />
           <span className="text-sm max-w-[20ch] overflow-hidden truncate">
             {name}
@@ -87,18 +92,19 @@ const UploadView = ({ isTeams }: { isTeams: boolean }) => {
         <button
           disabled={status !== null}
           className={cn(
-            "focus:outline-none p-2",
-            status === "uploading" && "text-blue-500",
-            status === "uploaded" && "text-green-500",
-            status === "inQueue" && "text-yellow-500",
-            status === null && "text-red-500 hover:text-red-700"
+            'focus:outline-none p-2',
+            status === 'uploading' && 'text-blue-500',
+            status === 'uploaded' && 'text-green-500',
+            status === 'inQueue' && 'text-yellow-500',
+            status === null && 'text-red-500 hover:text-red-700'
           )}
-          onClick={() => removeFolder(id)}>
-          {status === "uploading" ? (
+          onClick={() => removeFolder(id)}
+        >
+          {status === 'uploading' ? (
             <Loader2 className="h-4 w-4 animate-spin" />
-          ) : status === "uploaded" ? (
+          ) : status === 'uploaded' ? (
             <FolderCheck className="h-4 w-4" />
-          ) : status === "inQueue" ? (
+          ) : status === 'inQueue' ? (
             <Clock className="h-4 w-4 animate-spin" />
           ) : (
             <Trash className="h-4 w-4" />
@@ -117,9 +123,9 @@ const UploadView = ({ isTeams }: { isTeams: boolean }) => {
         ) : (
           <div className="text-sm space-y-2">
             <div>
-              Folders: {folderCount}{" "}
+              Folders: {folderCount}{' '}
               <span className="italic">
-                {"(click on folder name to open folder view)"}
+                {'(click on folder name to open folder view)'}
               </span>
             </div>
             <span>Files: {fileCount}</span>
@@ -133,8 +139,9 @@ const UploadView = ({ isTeams }: { isTeams: boolean }) => {
       </div>
       {selectedFolder ? (
         <FolderSheet
+          isTeams={isTeams}
           folder={selectedFolder}
-          closeSheet={() => updateSelectedFolder("")}
+          closeSheet={() => updateSelectedFolder('')}
         />
       ) : null}
     </>

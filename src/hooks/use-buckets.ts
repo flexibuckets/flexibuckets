@@ -1,117 +1,175 @@
-"use client";
+'use client';
 
-import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAllBuckets, addS3Credentials, verifyS3Credentials, deleteBucket } from "@/app/actions";
-import { addBucketFormSchema as formSchema } from "@/lib/schemas";
-import { z } from "zod";
-import { Bucket } from "@/lib/types";
+import { useToast } from '@/hooks/use-toast';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  getAllBuckets,
+  getTeamBuckets,
+  addTeamBucket,
+  addS3Credentials,
+  verifyS3Credentials,
+  deleteBucket,
+  deleteCompleteBucket,
+} from '@/app/actions';
+import { addBucketFormSchema as formSchema } from '@/lib/schemas';
+import { z } from 'zod';
+import { Bucket } from '@/lib/types';
+import { useWorkspaceStore } from './use-workspace-context';
+import { useRouter } from 'next/navigation';
 
 type BucketWithStatus = Bucket & {
   isAccessible?: boolean;
   errorMessage?: string;
 };
 
-const getBuckets = async (userId: string): Promise<BucketWithStatus[]> => {
+const getBuckets = async (
+  teamId: string | null,
+  userId: string
+): Promise<BucketWithStatus[]> => {
+  if (teamId) {
+    const teamBuckets = await getTeamBuckets(teamId);
+    return teamBuckets.map((bucket) => ({
+      ...bucket,
+      size: bucket.size.toString(),
+    }));
+  }
   const buckets = await getAllBuckets({ userId });
   return buckets;
 };
 
-const verifyBucketCreds = async (values: z.infer<typeof formSchema>) => {
-  let formattedValues = { ...values };
-  
-  // Remove http:// or https:// from endpoint URL
-  if (formattedValues.endpointUrl) {
-    formattedValues.endpointUrl = formattedValues.endpointUrl
-      .replace(/^https?:\/\//, '')
-      .replace(/\/$/, ''); // Also remove trailing slash
-  }
-
-  const verificationResult = await verifyS3Credentials(formattedValues);
-  if (!verificationResult.isVerified) {
-    throw new Error('Failed to verify bucket credentials');
-  }
-  return formattedValues;
-};
-
 const addCredsToDb = async ({
   userId,
+  teamId,
   values,
 }: {
   userId: string;
+  teamId: string | null;
   values: z.infer<typeof formSchema>;
 }) => {
-  return await addS3Credentials({ userId, values });
+  try {
+    const bucket = await addS3Credentials({ userId, values });
+    if (!teamId) {
+      return bucket;
+    }
+    await addTeamBucket({
+      teamId,
+      s3CredentialId: bucket.id,
+      addedById: userId,
+      name: bucket.bucket,
+    });
+    return bucket;
+  } catch (error: any) {
+    console.log();
+    if (error.digest && error.digest === '3232525769') {
+      throw new Error('Bucket Already Exists with these credentials.');
+    }
+    throw new Error(error.message);
+  }
 };
 
-export function useBuckets(userId: string) {
-  const queryClient = useQueryClient();
+export function useBuckets({
+  userId,
+  onCreateComplete,
+}: {
+  userId: string;
+  onCreateComplete?: (bucketName: string) => void;
+}) {
+  const { selectedTeam } = useWorkspaceStore();
+  const teamId = selectedTeam ? selectedTeam?.id : null;
+  const {
+    data: buckets,
+    isLoading: isBucketsLoading,
+    isError: isBucketsError,
+  } = useQuery({
+    queryFn: () => getBuckets(teamId, userId),
+    queryKey: [teamId ? `team-buckets-${teamId}` : 'user-buckets'],
+  });
+
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const router = useRouter();
 
-  const { data: buckets, isLoading, isError } = useQuery({
-    queryKey: ["buckets", userId],
-    queryFn: () => getBuckets(userId),
-  });
-
-  const verifyMutation = useMutation({
-    mutationFn: verifyBucketCreds,
-    onSuccess: async (formattedValues) => {
-      try {
-        await addBucketMutation.mutateAsync({ userId, values: formattedValues });
-      } catch (error) {
-        // If adding to DB fails, we don't want to swallow the error
-        throw error;
-      }
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Verification failed",
-        description: error instanceof Error ? error.message : "Failed to verify bucket credentials",
-      });
-      // Ensure we don't proceed with adding credentials by throwing the error
-      throw error;
-    },
-  });
-
-  const addBucketMutation = useMutation({
+  const { mutate: addCreds, isPending: isAddingCreds } = useMutation({
     mutationFn: addCredsToDb,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["buckets", userId] });
-      toast({ title: "Bucket added successfully" });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: [teamId ? `team-buckets-${teamId}` : 'user-buckets'],
+      });
+      if (onCreateComplete) onCreateComplete(data.bucket);
     },
     onError: (error) => {
       toast({
-        variant: "destructive",
-        title: "Error adding bucket",
-        description: error instanceof Error ? error.message : "An error occurred",
+        title: 'Error',
+        description:
+          error.message ||
+          'An error occurred while adding the bucket. Please try again.',
+        variant: 'destructive',
       });
     },
   });
 
-  const deleteBucketMutation = useMutation({
-    mutationFn: async ({ bucketId }: { bucketId: string }) => {
-      const response = await fetch(`/api/buckets/${bucketId}`, {
-        method: 'DELETE',
+  const { mutate: verify, isPending: isVerifying } = useMutation({
+    mutationFn: (values: z.infer<typeof formSchema>) =>
+      verifyS3Credentials(values, userId),
+    onSuccess: (data) => {
+      if (!data.isVerified) {
+        toast({
+          variant: 'destructive',
+          title: 'Verification Failed',
+          description: 'Please check your S3 credentials and try again.',
+        });
+        return;
+      }
+      const { isVerified, ...credentialsData } = data;
+      addCreds({ userId, teamId, values: credentialsData });
+      toast({
+        title: 'Bucket Verified',
+        description:
+          'Bucket is verified, now adding this bucket to your account',
       });
-      if (!response.ok) throw new Error('Failed to delete bucket');
-      return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["buckets", userId] });
-    }
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description:
+          error.message ||
+          'An error occurred while adding the bucket. Please try again.',
+        variant: 'destructive',
+      });
+    },
   });
 
+  const { mutate: deleteBucket, isPending: isDeleting } = useMutation({
+    mutationFn: (bucketId: string) => deleteCompleteBucket({ bucketId }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: [teamId ? `team-buckets-${teamId}` : 'user-buckets'],
+      });
+      toast({
+        title: 'Deleted Successfully',
+        description: `Your bucket ${data.bucket} has been removed successfully.`,
+        variant: 'success',
+      });
+      router.push('/dashboard');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description:
+          error.message ||
+          'An error occurred while deleting the bucket. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
   return {
     buckets,
-    isLoading,
-    isError,
-    verifyBucket: verifyMutation.mutate,
-    isVerifying: verifyMutation.isPending,
-    addBucket: addBucketMutation.mutate,
-    isAddingCreds: addBucketMutation.isPending,
-    deleteBucket: deleteBucketMutation.mutate,
-    isDeleting: deleteBucketMutation.isPending,
+    isBucketsLoading,
+    isBucketsError,
+    verify,
+    isAddingCreds,
+    isVerifying,
+    deleteBucket,
+    isDeleting,
   };
 }
-

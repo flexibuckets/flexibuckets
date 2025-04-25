@@ -1,22 +1,23 @@
-import { CompleteFile} from "@/lib/types";
-import React, { useState } from "react";
-import ShareDialog from "./ShareDialog";
-import { useShareFile } from "@/hooks/mutations/useShareFile";
+import { CompleteFile, CompleteTeamFile } from '@/lib/types';
+import React, { useState } from 'react';
+import ShareDialog from './ShareDialog';
+import { useShareFile } from '@/hooks/mutations/useShareFile';
 
 type ShareFileProps = {
-  file: CompleteFile;
+  file: CompleteFile | CompleteTeamFile;
+  teamId?: string;
 };
 
-const ShareFile = ({ file }: ShareFileProps) => {
+const ShareFile = ({ file, teamId }: ShareFileProps) => {
   const { sharedFile: sharedResponse } = file;
   const urlPrefix = `${process.env.NEXT_PUBLIC_APP_URL}/shared`;
   const [downloadUrl, setDownloadUrl] = useState<string>(() => {
-    if (!sharedResponse) return "";
+    if (!sharedResponse) return '';
     if (
       sharedResponse.expiresAt &&
       sharedResponse.expiresAt.getTime() < new Date().getTime()
     ) {
-      return "";
+      return '';
     }
     const tempDownloadUrl = `${urlPrefix}/${sharedResponse.downloadUrl}`;
     return tempDownloadUrl;
@@ -37,6 +38,7 @@ const ShareFile = ({ file }: ShareFileProps) => {
       name={file.name}
       sharedResponse={file.sharedFile}
       fileSize={file.size}
+      teamId={teamId}
     />
   );
 };

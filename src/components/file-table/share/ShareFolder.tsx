@@ -1,23 +1,24 @@
-import React, { useState } from "react";
-import { CompleteFolder } from "@/lib/types";
-import ShareDialog from "./ShareDialog";
-import { useShareFolder } from "@/hooks/mutations/useShareFolder";
+import React, { useState } from 'react';
+import { CompleteFolder, CompleteTeamFolder } from '@/lib/types';
+import ShareDialog from './ShareDialog';
+import { useShareFolder } from '@/hooks/mutations/useShareFolder';
 
 interface ShareFolderProps {
-  folder: CompleteFolder;
+  folder: CompleteFolder | CompleteTeamFolder;
+  teamId?: string;
 }
 
-const ShareFolder: React.FC<ShareFolderProps> = ({ folder }) => {
+const ShareFolder: React.FC<ShareFolderProps> = ({ folder, teamId }) => {
   const { sharedFolder: sharedResponse } = folder;
 
   const urlPrefix = `${process.env.NEXT_PUBLIC_APP_URL}/shared/folder`;
   const [downloadUrl, setDownloadUrl] = useState<string>(() => {
-    if (!sharedResponse) return "";
+    if (!sharedResponse) return '';
     if (
       sharedResponse.expiresAt &&
       sharedResponse.expiresAt.getTime() < new Date().getTime()
     ) {
-      return "";
+      return '';
     }
     const tempDownloadUrl = `${urlPrefix}/${sharedResponse.downloadUrl}`;
     return tempDownloadUrl;
@@ -36,7 +37,8 @@ const ShareFolder: React.FC<ShareFolderProps> = ({ folder }) => {
       id={folder.id}
       name={folder.name}
       sharedResponse={folder.sharedFolder}
-      fileSize={folder.size || "0"}
+      fileSize={folder.size || '0'}
+      teamId={teamId}
     />
   );
 };

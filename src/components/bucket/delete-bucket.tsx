@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Trash, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { Trash, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,9 +9,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { useBuckets } from "@/hooks/use-buckets";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useBuckets } from '@/hooks/use-buckets';
 
 interface DeleteBucketProps {
   bucketId: string;
@@ -19,14 +19,18 @@ interface DeleteBucketProps {
   userId: string;
 }
 
-export function DeleteBucket({ bucketId, bucketName, userId }: DeleteBucketProps) {
+export function DeleteBucket({
+  bucketId,
+  bucketName,
+  userId,
+}: DeleteBucketProps) {
   const [open, setOpen] = useState(false);
-  const [confirmName, setConfirmName] = useState("");
-  const { deleteBucket, isDeleting } = useBuckets(userId);
+  const [confirmName, setConfirmName] = useState('');
+  const { deleteBucket, isDeleting } = useBuckets({ userId });
 
   const handleDelete = () => {
     if (confirmName === bucketName) {
-      deleteBucket({ bucketId });
+      deleteBucket(bucketId);
       setOpen(false);
     }
   };
@@ -52,14 +56,15 @@ export function DeleteBucket({ bucketId, bucketName, userId }: DeleteBucketProps
         <DialogHeader>
           <DialogTitle>Delete Bucket</DialogTitle>
           <DialogDescription>
-            This action cannot be undone. This will permanently delete the{" "}
-            <span className="font-semibold">{bucketName}</span> bucket and all its
-            contents.
+            This action cannot be undone. This will permanently delete the{' '}
+            <span className="font-semibold">{bucketName}</span> bucket and all
+            its contents.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <p className="text-sm text-muted-foreground mb-2">
-            Please type <span className="font-semibold">{bucketName}</span> to confirm
+            Please type <span className="font-semibold">{bucketName}</span> to
+            confirm
           </p>
           <Input
             value={confirmName}
@@ -87,11 +92,11 @@ export function DeleteBucket({ bucketId, bucketName, userId }: DeleteBucketProps
                 Deleting...
               </>
             ) : (
-              "Delete Bucket"
+              'Delete Bucket'
             )}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

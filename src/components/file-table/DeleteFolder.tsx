@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,21 +9,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Loader2, Trash, X } from "lucide-react";
-import { Button } from "../ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+} from '@/components/ui/alert-dialog';
+import { Loader2, Trash, X } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { useToast } from "@/hooks/use-toast";
-import { deleteFolder } from "@/app/actions";
-import { CompleteFolder} from "@/lib/types";
+import { useToast } from '@/hooks/use-toast';
+import { deleteFolder } from '@/app/actions';
+import { CompleteFolder, CompleteTeamFolder } from '@/lib/types';
 
 const DeleteFolder = ({
   folder,
   updateLoading,
 }: {
-  folder: CompleteFolder;
+  folder: CompleteFolder | CompleteTeamFolder;
   updateLoading: (val: boolean) => void;
 }) => {
   const { id, userId, name, s3CredentialId } = folder;
@@ -40,28 +40,28 @@ const DeleteFolder = ({
     },
     onSuccess: () => {
       toast({
-        title: "Folder Removed",
+        title: 'Folder Removed',
         description: (
           <>
             Successfully deleted <Badge variant="success">{name}</Badge> and its
             contents.
           </>
         ),
-        variant: "success",
+        variant: 'success',
       });
-      queryClient.invalidateQueries({ queryKey: ["bucket-files"] });
-      queryClient.invalidateQueries({ queryKey: ["total-file-size"] });
+      queryClient.invalidateQueries({ queryKey: ['bucket-files'] });
+      queryClient.invalidateQueries({ queryKey: ['total-file-size'] });
     },
     onError: () => {
       toast({
-        title: "Error",
+        title: 'Error',
         description: (
           <>
             Unable to delete <Badge variant="destructive">{name}.</Badge> Please
             try again later.
           </>
         ),
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
     onSettled: () => {
@@ -103,7 +103,8 @@ const DeleteFolder = ({
             onClick={() =>
               removeFolder({ userId, folderId: id, s3CredentialId })
             }
-            className="text-destructive bg-white border border-destructive hover:text-white hover:bg-destructive">
+            className="text-destructive bg-white border border-destructive hover:text-white hover:bg-destructive"
+          >
             <Trash className="h-4 w-4 mr-2" />
             Delete
           </AlertDialogAction>

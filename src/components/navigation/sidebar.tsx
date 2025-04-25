@@ -19,9 +19,10 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import UpdateNotification from '@/components/update/update-notification';
-import { sidebarLinks } from '@/lib/routes';
+import { sidebarLinks, getTeamSidebarLinks } from '@/lib/routes';
 import UserBox from './UserBox';
-
+import { SidebarTeamSection } from '../teams/SidebarTeamSection';
+import { useWorkspaceStore } from '@/hooks/use-workspace-context';
 
 import { Badge } from '../ui/badge';
 
@@ -64,7 +65,10 @@ const SidebarLink = ({
 
 export function AppSidebar() {
   const pathname = usePathname();
-  
+  const { selectedTeam } = useWorkspaceStore();
+  const links = selectedTeam
+    ? getTeamSidebarLinks(selectedTeam.id, selectedTeam.role)
+    : sidebarLinks;
 
   return (
     <Sidebar>
@@ -73,9 +77,9 @@ export function AppSidebar() {
           <Image src={Logo} height={75} width={100} alt="Flexibuckets" />
         </Link>
       </SidebarHeader>
-      
+      <SidebarTeamSection />
       <SidebarContent>
-        {sidebarLinks.map((group) => (
+        {links.map((group) => (
           <SidebarGroup key={group.header}>
             <SidebarGroupLabel>{group.header}</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -87,6 +91,11 @@ export function AppSidebar() {
                     ) || pathname === link.href;
 
                   // Add badge for join requests if it's the requests link
+                  const badge = link.href.includes('/manage/requests')
+                    ? selectedTeam?.joinRequests?.filter(
+                        (r) => r.status === 'PENDING'
+                      ).length
+                    : undefined;
 
                   return (
                     <SidebarMenuItem key={link.label}>
@@ -94,6 +103,7 @@ export function AppSidebar() {
                         <SidebarLink
                           link={link}
                           isActiveLink={isActiveLink}
+                          badge={badge}
                         />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -107,7 +117,6 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <UserBox />
-      
       </SidebarFooter>
     </Sidebar>
   );

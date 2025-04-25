@@ -1,44 +1,44 @@
 // File Worker - Handles all file operations and S3 credential management
 
-import { z } from "zod";
+import { z } from 'zod';
 
-import { Client } from "minio";
+import { Client } from 'minio';
 import {
   createFile,
   updateFileName,
   getUserFiles,
-  createS3Credentials,
   deleteS3Credentials,
   getS3Credentials,
   getSingleCredential,
   createFolder as dbCreateFolder,
   isAllowedToAddBucket,
-} from "./dboperations";
-import { Readable } from "stream";
-import { Bucket, CompleteBucket, FolderStructure } from "@/lib/types";
-import { addBucketFormSchema as formSchema } from "@/lib/schemas";
-import { prisma } from "./prisma";
-import JSZip from "jszip";
-
+  getS3CredentialsWithTeamBuckets,
+} from './dboperations';
+import { Readable } from 'stream';
+import { Bucket, CompleteBucket, FolderStructure } from '@/lib/types';
+import { addBucketFormSchema as formSchema } from '@/lib/schemas';
+import { prisma } from './prisma';
+import JSZip from 'jszip';
 
 const MAX_UPLOAD_LIMIT_BYTES = 100 * 1024 * 1024 * 1024;
 // Add this utility function at the top of the file
 function handleMinioError(error: unknown): never {
   // Log the full error for debugging (only visible in server logs)
-  console.error("MinIO operation failed:", error);
+  console.error('MinIO operation failed:', error);
 
   // Determine appropriate user-facing error message
-  let errorMessage = "Unable to complete operation";
-  
+  let errorMessage = 'Unable to complete operation';
+
   if (error instanceof Error) {
     if (error.message.includes('ECONNREFUSED')) {
-      errorMessage = "Cannot connect to storage endpoint. Please check your endpoint URL and network connection.";
+      errorMessage =
+        'Cannot connect to storage endpoint. Please check your endpoint URL and network connection.';
     } else if (error.message.includes('AccessDenied')) {
-      errorMessage = "Access denied. Please check your credentials.";
+      errorMessage = 'Access denied. Please check your credentials.';
     } else if (error.message.includes('NoSuchBucket')) {
-      errorMessage = "Bucket not found. Please verify the bucket name.";
+      errorMessage = 'Bucket not found. Please verify the bucket name.';
     } else if (error.message.includes('InvalidAccessKeyId')) {
-      errorMessage = "Invalid access key. Please check your credentials.";
+      errorMessage = 'Invalid access key. Please check your credentials.';
     }
   }
 
@@ -50,7 +50,7 @@ export async function getMinioClient(s3CredentialId: string) {
   try {
     const credentials = await getSingleCredential(s3CredentialId);
     if (!credentials) {
-      throw new Error("No S3 credentials found");
+      throw new Error('No S3 credentials found');
     }
 
     const { accessKey, secretKey, endpointUrl, region } = credentials;
@@ -61,7 +61,7 @@ export async function getMinioClient(s3CredentialId: string) {
       useSSL: true,
       accessKey,
       secretKey,
-      region: region || "auto",
+      region: region || 'auto',
     });
   } catch (error) {
     handleMinioError(error);
@@ -97,7 +97,7 @@ export async function uploadFile({
     });
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error('User not found');
     }
 
     const currentTotalSize = BigInt(user.totalUploadSize);
@@ -106,7 +106,7 @@ export async function uploadFile({
     // Check if the new file size will exceed the limit
     if (currentTotalSize + newFileSize > BigInt(MAX_UPLOAD_LIMIT_BYTES)) {
       throw new Error(
-        "Upload limit exceeded. You can only upload up to 100GB in total."
+        'Upload limit exceeded. You can only upload up to 100GB in total.'
       );
     }
 
@@ -121,7 +121,7 @@ export async function uploadFile({
       fileStream,
       Number(fileSize),
       {
-        "Content-Type": mimeType,
+        'Content-Type': mimeType,
       }
     );
 
@@ -143,8 +143,8 @@ export async function uploadFile({
       folderId,
     });
   } catch (error) {
-    console.error("Error uploading file:", error);
-    throw new Error("File upload failed");
+    console.error('Error uploading file:', error);
+    throw new Error('File upload failed');
   }
 }
 
@@ -172,12 +172,12 @@ export async function deleteFile({
     });
 
     if (!file) {
-      throw new Error("File not found");
+      throw new Error('File not found');
     }
 
     // Ensure that the file belongs to the user
     if (file.userId !== userId) {
-      throw new Error("Unauthorized file deletion");
+      throw new Error('Unauthorized file deletion');
     }
 
     // Step 2: Delete the file from MinIO
@@ -218,8 +218,8 @@ export async function deleteFile({
       where: { id: fileId },
     });
   } catch (error) {
-    console.error("Error deleting file:", error);
-    throw new Error("File deletion failed");
+    console.error('Error deleting file:', error);
+    throw new Error('File deletion failed');
   }
 }
 async function updateParentFoldersSizeRecursively(
@@ -295,10 +295,10 @@ export async function addS3Credentials({
   const cleanedValues = {
     ...values,
     endpointUrl: values.endpointUrl
-      .replace(/^https?:\/\//, '')  // Remove http:// or https://
-      .replace(/\/$/, '')           // Remove trailing slash
+      .replace(/^https?:\/\//, '') // Remove http:// or https://
+      .replace(/\/$/, ''), // Remove trailing slash
   };
-  
+
   return await prisma.s3Credential.create({
     data: {
       userId,
@@ -318,39 +318,69 @@ export async function getUserS3Credentials(userId: string) {
 }
 
 // Verify S3 credentials by attempting to list buckets
-export async function verifyS3Credentials(values: z.infer<typeof formSchema>) {
+export async function verifyS3Credentials(
+  values: z.infer<typeof formSchema>,
+  userId: string
+) {
   let { endpointUrl, accessKey, secretKey, bucket, region, provider } = values;
-  
-  if (endpointUrl.startsWith("https://")) {
-    endpointUrl = endpointUrl.replace("https://", "");
+
+  if (endpointUrl.startsWith('https://')) {
+    endpointUrl = endpointUrl.replace('https://', '');
+  }
+
+  // Check bucket limit before doing any S3 verification
+  const canAddBucket = await isAllowedToAddBucket(userId);
+  if (!canAddBucket) {
+    return {
+      isVerified: false,
+      ...values,
+      endpointUrl,
+      error:
+        'Bucket limit reached for your plan. Please upgrade to add more buckets.',
+    };
   }
 
   try {
+    /* Temporarily removed AWS provider support
+    if (provider === 'AWS') {
+      // AWS specific handling code removed
+    }
+    */
+
+    // For non-AWS providers, use the existing verification logic
     const minioClient = new Client({
       endPoint: endpointUrl,
       port: 443,
       useSSL: true,
       accessKey,
       secretKey,
-      region: region || "auto",
-      pathStyle: true
+      region: region || 'auto',
     });
 
-    // First verify bucket exists
+    // Verify credentials by listing buckets
     const buckets = await minioClient.listBuckets();
     const bucketExists = buckets.some((b) => b.name === bucket);
-    
     if (!bucketExists) {
       return {
         isVerified: false,
         ...values,
         endpointUrl,
-        error: `Bucket "${bucket}" not found.`
+        error: `Bucket "${bucket}" not found. Please check the bucket name.`,
       };
     }
 
-    // Then verify bucket access by listing objects
-    await minioClient.listObjects(bucket, "", true);
+    // Verify bucket access by trying to list objects
+    try {
+      await minioClient.listObjects(bucket, '', true);
+    } catch (bucketError) {
+      console.error('Error accessing bucket:', bucketError);
+      return {
+        isVerified: false,
+        ...values,
+        endpointUrl,
+        error: 'Unable to access bucket. Please check your permissions.',
+      };
+    }
 
     return {
       isVerified: true,
@@ -358,20 +388,17 @@ export async function verifyS3Credentials(values: z.infer<typeof formSchema>) {
       endpointUrl,
     };
   } catch (error) {
-    console.error("Error verifying S3 credentials:", error);
-    let errorMessage = "Failed to verify credentials";
-    
+    console.error('Error verifying S3 credentials:', error);
+    let errorMessage = 'Failed to verify credentials';
     if (error instanceof Error) {
       if (error.message.includes('wrong; expecting')) {
         const match = error.message.match(/expecting '([^']+)'/);
         const expectedRegion = match ? match[1] : 'unknown';
         errorMessage = `Invalid region. The bucket is in ${expectedRegion} region.`;
       } else if (error.message.includes('InvalidAccessKeyId')) {
-        errorMessage = "Invalid access key. Please check your credentials.";
+        errorMessage = 'Invalid access key. Please check your credentials.';
       } else if (error.message.includes('SignatureDoesNotMatch')) {
-        errorMessage = "Invalid secret key. Please check your credentials.";
-      } else if (error.message.includes('NoSuchBucket')) {
-        errorMessage = "Bucket not found. Please verify the bucket name.";
+        errorMessage = 'Invalid secret key. Please check your credentials.';
       }
     }
 
@@ -412,19 +439,19 @@ export async function getBucketDetails({
       useSSL: true,
       accessKey,
       secretKey,
-      region: region || "auto",
-      pathStyle: true
+      region: region || 'auto',
+      pathStyle: true,
     });
 
     // Test bucket access
-    await minioClient.listObjects(bucketName, "", true);
-    
+    await minioClient.listObjects(bucketName, '', true);
+
     // Get bucket stats
     let totalFiles = 0;
     let totalSizeInBytes = 0;
 
     const objectsStream = minioClient.listObjects(bucketName, '', true);
-    
+
     for await (const obj of objectsStream) {
       totalFiles++;
       totalSizeInBytes += obj.size || 0;
@@ -434,19 +461,19 @@ export async function getBucketDetails({
       totalFiles,
       totalSizeInMB: Math.ceil(totalSizeInBytes / (1024 * 1024)),
       isAccessible: true,
-      errorMessage: null
+      errorMessage: null,
     };
   } catch (error) {
-    console.error("Error getting bucket details:", error);
-    let errorMessage = "Unable to access bucket";
-    
+    console.error('Error getting bucket details:', error);
+    let errorMessage = 'Unable to access bucket';
+
     if (error instanceof Error) {
       if (error.message.includes('InvalidAccessKeyId')) {
-        errorMessage = "Invalid access key";
+        errorMessage = 'Invalid access key';
       } else if (error.message.includes('SignatureDoesNotMatch')) {
-        errorMessage = "Invalid secret key";
+        errorMessage = 'Invalid secret key';
       } else if (error.message.includes('NoSuchBucket')) {
-        errorMessage = "Bucket not found";
+        errorMessage = 'Bucket not found';
       }
     }
 
@@ -454,16 +481,21 @@ export async function getBucketDetails({
       totalFiles: 0,
       totalSizeInMB: 0,
       isAccessible: false,
-      errorMessage
+      errorMessage,
     };
   }
 }
 
 export async function getAllBuckets({ userId }: { userId: string }) {
-  const bucketData: (Bucket & { isAccessible?: boolean; errorMessage?: string })[] = [];
-  const bucketsDetails = await getS3Credentials(userId);
+  const bucketData: (Bucket & {
+    isAccessible?: boolean;
+    errorMessage?: string;
+  })[] = [];
+  const bucketsDetails = await getS3CredentialsWithTeamBuckets(userId);
 
-  for (const da of bucketsDetails) {
+  for (const da of bucketsDetails.filter(
+    ({ teamBuckets }) => teamBuckets.length === 0
+  )) {
     const bucketdetails = await getBucketDetails({
       bucketName: da.bucket,
       accessKey: da.accessKey,
@@ -479,7 +511,8 @@ export async function getAllBuckets({ userId }: { userId: string }) {
       size: bucketdetails.totalSizeInMB.toString(),
       endpointUrl: da.endpointUrl,
       isShared: false,
-      permissions: "READ_WRITE",
+      permissions: 'READ_WRITE',
+      team: null,
       isAccessible: bucketdetails.isAccessible,
       errorMessage: bucketdetails.errorMessage || undefined,
     };
@@ -506,7 +539,7 @@ export async function createFolder({
     const s3Credential = await getSingleCredential(s3CredentialId);
 
     if (!s3Credential) {
-      throw new Error("S3 credential not found");
+      throw new Error('S3 credential not found');
     }
 
     // Create the folder entry in the database
@@ -520,8 +553,8 @@ export async function createFolder({
 
     return folder;
   } catch (error) {
-    console.error("Error creating folder:", error);
-    throw new Error("Failed to create folder");
+    console.error('Error creating folder:', error);
+    throw new Error('Failed to create folder');
   }
 }
 
@@ -540,7 +573,7 @@ export async function getpresignedPutUrl({
     useSSL: true,
     accessKey,
     secretKey,
-    region: region || "auto",
+    region: region || 'auto',
   });
   const presignedUrl = await minioClient.presignedPutObject(
     bucketName,
@@ -565,7 +598,7 @@ export async function deleteFolder({
   const s3Credential = await getSingleCredential(s3CredentialId);
 
   if (!s3Credential) {
-    throw new Error("S3 credential not found");
+    throw new Error('S3 credential not found');
   }
 
   let totalDeletedSize = BigInt(0); // To track the total size of deleted files
@@ -673,7 +706,7 @@ export async function getSharedFolderStructure(sharedFolderId: string) {
     !sharedFolder ||
     (sharedFolder.expiresAt && sharedFolder.expiresAt < new Date())
   ) {
-    throw new Error("Shared folder not found or expired");
+    throw new Error('Shared folder not found or expired');
   }
 
   return await getFolderStructure(sharedFolder.folder.id);
@@ -700,13 +733,13 @@ async function getFolderStructure(
   });
 
   if (!folder) {
-    throw new Error("Folder not found");
+    throw new Error('Folder not found');
   }
 
   const structure: FolderStructure = {
     id: folder.id,
     name: folder.name,
-    type: "folder",
+    type: 'folder',
     size: folder.size,
     children: [],
     parentFolder,
@@ -751,24 +784,23 @@ export async function refreshShareLinks(itemIds: string[], isFolder: boolean) {
       });
     }
 
-    return { message: "Share links refreshed successfully" };
+    return { message: 'Share links refreshed successfully' };
   } catch (error) {
-    console.error("Error refreshing share links:", error);
-    throw new Error("Failed to refresh share links");
+    console.error('Error refreshing share links:', error);
+    throw new Error('Failed to refresh share links');
   }
 }
-
 
 export async function getPresignedUrl(
   s3CredentialId: string,
   key: string,
   expiryTime = 60 * 60
 ) {
-  const  minioClient = await getMinioClient(s3CredentialId);
+  const minioClient = await getMinioClient(s3CredentialId);
   const credentials = await getSingleCredential(s3CredentialId);
 
   if (!credentials) {
-    throw new Error("No S3 credentials found for the provided ID");
+    throw new Error('No S3 credentials found for the provided ID');
   }
 
   const presignedUrl = await minioClient.presignedGetObject(
@@ -787,7 +819,7 @@ export async function getFolderDownloadUrls(folderId: string, userId: string) {
     });
 
     if (!folder) {
-      throw new Error("Folder not found or unauthorized");
+      throw new Error('Folder not found or unauthorized');
     }
 
     const minioClient = await getMinioClient(folder.s3CredentialId);
@@ -829,8 +861,8 @@ export async function getFolderDownloadUrls(folderId: string, userId: string) {
     await getFolderContentsUrls(folderId, folder.name);
     return urls;
   } catch (error) {
-    console.error("Error getting folder download URLs:", error);
-    throw new Error("Failed to get folder download URLs");
+    console.error('Error getting folder download URLs:', error);
+    throw new Error('Failed to get folder download URLs');
   }
 }
 
@@ -847,7 +879,6 @@ export async function getPresignedUrlUsingParamClient(
   );
 }
 
-
 export const createZipFromFiles = async (files: File[]) => {
   const zip = new JSZip();
 
@@ -855,7 +886,7 @@ export const createZipFromFiles = async (files: File[]) => {
     zip.file(file.name, file);
   }
 
-  return await zip.generateAsync({ type: "blob" });
+  return await zip.generateAsync({ type: 'blob' });
 };
 
 export async function deleteTeamFile(fileId: string) {
@@ -865,7 +896,7 @@ export async function deleteTeamFile(fileId: string) {
       include: { s3Credential: true },
     });
 
-    if (!file) throw new Error("File not found");
+    if (!file) throw new Error('File not found');
 
     const minioClient = await getMinioClient(file.s3CredentialId);
     await minioClient.removeObject(file.s3Credential.bucket, file.s3Key);
@@ -880,13 +911,165 @@ export async function deleteTeamFile(fileId: string) {
   }
 }
 
+export async function getTeamBucketFiles({
+  userId,
+  s3CredentialId,
+  parentId,
+  searchQuery,
+}: {
+  userId: string;
+  s3CredentialId: string;
+  parentId: string | null;
+  searchQuery?: string;
+}) {
+  const bucket = await prisma.s3Credential.findUnique({
+    where: { id: s3CredentialId },
+    include: {
+      teamBuckets: true,
+    },
+  });
+  if (!bucket || bucket.teamBuckets.length <= 0) {
+    throw new Error('Invalid Bucket');
+  }
+  const teamId = bucket.teamBuckets[0].teamId;
+
+  const whereClause = {
+    s3CredentialId,
+    folderId: parentId,
+    ...(searchQuery
+      ? {
+          OR: [
+            { name: { contains: searchQuery, mode: 'insensitive' as const } },
+            { type: { contains: searchQuery, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const files = await prisma.file.findMany({
+    where: whereClause,
+    include: {
+      sharedFile: true,
+      user: {
+        select: { name: true, teamMemberships: { where: { teamId } } },
+      },
+    },
+  });
+
+  const formattedFiles = files.map(
+    ({
+      id,
+      name,
+      type,
+      size,
+      updatedAt,
+      s3CredentialId,
+
+      userId,
+      user,
+      sharedFile,
+    }) => ({
+      id,
+      name,
+      type,
+      sharedFile,
+      size,
+      updatedAt,
+      s3CredentialId,
+      userId,
+      uploadedBy: user?.name ?? 'Unknown',
+      uploadedByRole: user?.teamMemberships[0]?.role ?? 'MEMBER',
+    })
+  );
+
+  const folders = await prisma.folder.findMany({
+    where: {
+      s3CredentialId,
+      parentId: parentId,
+      ...(searchQuery
+        ? { name: { contains: searchQuery, mode: 'insensitive' } }
+        : {}),
+    },
+    include: {
+      sharedFolder: true,
+      user: {
+        select: { name: true, teamMemberships: { where: { teamId } } },
+      },
+    },
+  });
+
+  const formattedFolders = folders.map(
+    ({
+      id,
+      name,
+      size,
+      updatedAt,
+      s3CredentialId,
+      userId,
+      sharedFolder,
+      user,
+    }) => ({
+      id,
+      name,
+      size,
+      sharedFolder,
+      updatedAt,
+      s3CredentialId,
+      userId,
+      uploadedBy: user?.name ?? 'Unknown',
+      uploadedByRole: user?.teamMemberships[0]?.role ?? 'MEMBER',
+    })
+  );
+  return { files: formattedFiles, folders: formattedFolders };
+}
+
+export async function handleTeamFileUpload({
+  file,
+  bucket,
+  userId,
+  parentId,
+}: {
+  file: File;
+  bucket: CompleteBucket;
+  userId: string;
+  parentId?: string;
+}) {
+  try {
+    const minioClient = await getMinioClient(bucket.id);
+    const s3Key = parentId
+      ? `team/${parentId}/${Date.now()}-${file.name}`
+      : `team/${Date.now()}-${file.name}`;
+
+    const presignedUrl = await minioClient.presignedPutObject(
+      bucket.bucket,
+      s3Key,
+      60 * 60
+    );
+
+    await prisma.file.create({
+      data: {
+        name: file.name,
+        type: file.type,
+        size: file.size.toString(),
+        s3Key,
+        userId,
+        s3CredentialId: bucket.id,
+        folderId: parentId,
+      },
+    });
+
+    return { presignedUrl, s3Key };
+  } catch (error) {
+    handleMinioError(error);
+  }
+}
 
 export async function deleteS3Bucket(s3CredentialId: string) {
   const s3Credential = await getSingleCredential(s3CredentialId);
   if (!s3Credential) {
-    throw new Error("S3 credential not found");
+    throw new Error('S3 credential not found');
   }
   const minioClient = await getMinioClient(s3CredentialId);
-  
+
   await minioClient.removeBucket(s3Credential.bucket);
 }
