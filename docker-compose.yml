@@ -102,6 +102,12 @@ services:
     tmpfs:
       - /tmp
       - /var/run
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   flexibuckets_network:
@@ -111,6 +117,15 @@ volumes:
   postgres_data:
     name: flexibuckets_postgres_data
   app_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /app/data
+      o: bind
   next_cache:
     driver: local
+    driver_opts:
+      type: none
+      device: /app/.next/cache
+      o: bind
 
