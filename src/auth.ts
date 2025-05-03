@@ -95,7 +95,12 @@ export const authConfig: NextAuthConfig = {
       }
     })
   ],
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.AUTH_SECRET,
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  trustHost: true,
   useSecureCookies: false, // Allow non-HTTPS
   cookies: {
     sessionToken: {
@@ -119,9 +124,4 @@ export const authConfig: NextAuthConfig = {
   },
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  trustHost: true,
-  adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  ...authConfig,
-});
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
