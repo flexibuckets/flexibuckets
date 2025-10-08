@@ -126,7 +126,7 @@ verify_docker() {
     if ! docker info >/dev/null 2>&1; then
         log "ERROR" "Docker is not running properly"
         exit 1
-    fi
+    fi	
 
     log "INFO" "Verifying Docker Compose installation..."
     if ! docker compose version >/dev/null 2>&1; then
@@ -442,15 +442,15 @@ echo
     setup_traefik_directories
     
     update_env_file
-    
+        setup_permissions
     # Start services
- 
+  start_services
     
     # Setup database
     setup_database
 
-    setup_permissions
-    start_services
+
+   
     log "INFO" "Installation completed successfully!"
     echo -e "\nAccess your FlexiBuckets instance at:"
     echo -e "\U0001F310 HTTP:  http://${SERVER_IP:-localhost}:3000"
