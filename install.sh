@@ -444,13 +444,13 @@ echo
     update_env_file
     
     # Start services
-    start_services
+ 
     
     # Setup database
     setup_database
 
     setup_permissions
-
+    start_services
     log "INFO" "Installation completed successfully!"
     echo -e "\nAccess your FlexiBuckets instance at:"
     echo -e "\U0001F310 HTTP:  http://${SERVER_IP:-localhost}:3000"
