@@ -6,6 +6,8 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { DefaultSession } from "next-auth"
 
+const isSecure = process.env.NEXTAUTH_URL?.startsWith('https');
+
 declare module "next-auth" {
   interface Session {
     user: {
@@ -101,7 +103,7 @@ export const authConfig: NextAuthConfig = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   trustHost: true,
-  useSecureCookies: false, // Allow non-HTTPS
+  useSecureCookies: isSecure, // Allow non-HTTPS
   cookies: {
     sessionToken: {
       name: 'next-auth.session-token',
@@ -109,7 +111,7 @@ export const authConfig: NextAuthConfig = {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: false
+        secure: isSecure
       }
     },
     csrfToken: {
@@ -118,7 +120,7 @@ export const authConfig: NextAuthConfig = {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: false
+        secure: isSecure
       }
     }
   },
