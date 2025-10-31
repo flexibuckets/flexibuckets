@@ -194,7 +194,7 @@ TRAEFIK_CONFIG_DIR=${TRAEFIK_CONFIG_DIR}
 TRAEFIK_DYNAMIC_DIR=${TRAEFIK_DYNAMIC_DIR}
 
 # Traefik Configuration
-ACME_EMAIL=selfhosted@flexibuckets.com
+ACME_EMAIL=
 
 # System User Configuration
 APP_UID=${APP_UID}
