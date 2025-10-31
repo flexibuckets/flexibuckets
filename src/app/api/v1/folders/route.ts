@@ -1,10 +1,11 @@
+// File: app/api/v1/folders/route.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getRequestUser } from '@/lib/api/index';
 import { prisma } from '@/lib/prisma';
 
 // POST /api/v1/folders
-// Creates a new folder in a specific bucket or parent folder
+// *** NOW FINDS OR CREATES (UPSERT) A FOLDER ***
 export async function POST(req: NextRequest) {
   const user = await getRequestUser(req);
   if (!user) {
@@ -15,55 +16,43 @@ export async function POST(req: NextRequest) {
 
   // --- Validation ---
   if (!name || !s3CredentialId) {
-    return new NextResponse('Missing required fields: name and s3CredentialId', {
+    return new NextResponse('Missing fields: name, s3CredentialId', {
       status: 400,
     });
   }
 
-  // 1. Verify user owns the bucket
-  const bucket = await prisma.s3Credential.findFirst({
-    where: { id: s3CredentialId, userId: user.id },
-  });
+  const normalizedParentId = parentId || null;
 
-  if (!bucket) {
-    return new NextResponse('Bucket not found or access denied', {
-      status: 404,
-    });
-  }
-
-  // 2. (If provided) Verify user owns the parent folder
-  if (parentId) {
-    const parentFolder = await prisma.folder.findFirst({
+  try {
+    // 1. Check if the folder already exists
+    const existingFolder = await prisma.folder.findFirst({
       where: {
-        id: parentId,
+        name: name,
+        parentId: normalizedParentId,
+        s3CredentialId: s3CredentialId,
         userId: user.id,
-        s3CredentialId: s3CredentialId, // Ensure parent is in the same bucket
       },
     });
-    if (!parentFolder) {
-      return new NextResponse('Parent folder not found or access denied', {
-        status: 404,
-      });
-    }
-  }
 
-  // --- Create Folder ---
-  try {
+    // 2. If it exists, return it
+    if (existingFolder) {
+      return NextResponse.json(existingFolder);
+    }
+
+    // 3. If not, create it
     const newFolder = await prisma.folder.create({
       data: {
-        name: name,
+        name,
         userId: user.id,
-        s3CredentialId: s3CredentialId,
-        parentId: parentId || null,
+        s3CredentialId,
+        parentId: normalizedParentId,
       },
     });
 
-    return NextResponse.json(newFolder, { status: 201 });
+    return NextResponse.json(newFolder);
   } catch (error) {
-    console.error('Error creating folder:', error);
+    console.error('Error in find-or-create folder:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
 
-// You can also add a GET method here to list folders
-// e.g., /api/v1/folders?bucketId=...&parentId=...
