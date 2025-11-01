@@ -81,15 +81,9 @@ services:
       - flexibuckets_network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app-domain.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.app-domain.entrypoints=web,websecure"
-      - "traefik.http.routers.app-domain.service=app-service"
-      - "traefik.http.routers.app-domain.tls=true"
-      - "traefik.http.routers.app-domain.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.app-ip.rule=Host(`${SERVER_IP}`)"
-      - "traefik.http.routers.app-ip.entrypoints=web"
-      - "traefik.http.routers.app-ip.service=app-service"
-      - "traefik.http.services.app-service.loadbalancer.server.port=3000"
+      - "traefik.http.routers.flexibuckets-http.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.flexibuckets-http.entrypoints=web"
+      - "traefik.http.services.flexibuckets.loadbalancer.server.port=3000"
     user: "${APP_UID}:${DOCKER_GID}"
     depends_on:
       db:
