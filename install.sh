@@ -396,7 +396,7 @@ setup_permissions() {
     mkdir -p /app/.next/cache
     chown -R ${APP_UID}:${DOCKER_GID} /app/.next/cache
     chmod -R 770 /app/.next/cache
-     PUBLIC_URL="http://${SERVER_IP:-localhost}:3000"
+     PUBLIC_URL="http://${SERVER_IP}:3000"
     # Docker socket permissions
     if [ -e /var/run/docker.sock ]; then
         chmod 660 /var/run/docker.sock
@@ -453,8 +453,8 @@ echo
    
     log "INFO" "Installation completed successfully!"
     echo -e "\nAccess your FlexiBuckets instance at:"
-    echo -e "\U0001F310 HTTP:  http://${SERVER_IP:-localhost}:3000"
-    echo -e "\U0001F512 HTTPS: https://${SERVER_IP:-localhost}"
+    echo -e "\U0001F310 HTTP:  http://${SERVER_IP}:3000"
+    echo -e "\U0001F512 HTTPS: https://${SERVER_IP}"
     
     echo -e "\n${YELLOW}Important Notes:${NC}"
     echo "1. Configuration files are in: $INSTALL_DIR"
