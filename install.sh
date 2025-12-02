@@ -396,7 +396,7 @@ setup_permissions() {
     mkdir -p /app/.next/cache
     chown -R ${APP_UID}:${DOCKER_GID} /app/.next/cache
     chmod -R 770 /app/.next/cache
-    
+     PUBLIC_URL="http://${SERVER_IP:-localhost}:3000"
     # Docker socket permissions
     if [ -e /var/run/docker.sock ]; then
         chmod 660 /var/run/docker.sock
@@ -407,7 +407,7 @@ setup_permissions() {
     mkdir -p "${TRAEFIK_DIR}/acme"
     touch "${TRAEFIK_DIR}/acme/acme.json"
     chmod 600 "${TRAEFIK_DIR}/acme/acme.json"
-    chown -R ${APP_UID}:${DOCKER_GID} "${TRAEFIK_DIR}"
+NEXTAUTH_URL=${PUBLIC_URL}
     chmod -R 750 "${TRAEFIK_DIR}"
     chmod -R 770 "${TRAEFIK_DYNAMIC_DIR}"  # Need write access for dynamic config
 }
