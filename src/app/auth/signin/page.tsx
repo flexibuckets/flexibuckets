@@ -1,8 +1,9 @@
+// src/app/auth/signin/page.tsx
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
 import { signIn, getCsrfToken } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation' // Added useSearchParams
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,6 +16,7 @@ const SignInContent = () => {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams() // Get URL params
   const { toast } = useToast()
   const [csrfToken, setCsrfToken] = useState<string>()
 
@@ -41,16 +43,25 @@ const SignInContent = () => {
         throw new Error(result.error)
       }
 
-      if (result?.url) {
-        router.push(result.url)
-      } else if (result?.ok) {
-        router.push('/dashboard')
+      if (result?.ok) {
+        // FIX: Ignore result.url (which usually contains the configured NEXTAUTH_URL/IP)
+        // Instead, redirect to the callbackUrl if present (and relative), or default to /dashboard.
+        const callbackUrl = searchParams.get('callbackUrl')
+        
+        // Check if callbackUrl is relative (starts with /) to keep security
+        if (callbackUrl && callbackUrl.startsWith('/')) {
+             router.push(callbackUrl)
+        } else {
+             router.push('/dashboard')
+        }
+        
+        router.refresh() // Ensure session state is updated in UI
       }
     } catch (error) {
-      console.error('Authentication error:', error)
       toast({
-        title: 'Invalid email or password',
         variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Something went wrong',
       })
     } finally {
       setIsLoading(false)
@@ -58,12 +69,17 @@ const SignInContent = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-md space-y-8 rounded-lg border border-border bg-card p-8 shadow-lg">
-        <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome to FlexiBuckets</h1>
-          <p className="text-sm text-muted-foreground">Sign in to your account</p>
+    <div className="flex h-screen w-screen flex-col items-center justify-center">
+      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+        <div className="flex flex-col space-y-2 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Welcome back
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Enter your email to sign in to your account
+          </p>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <input name="csrfToken" type="hidden" defaultValue={csrfToken} />
           <div className="space-y-2">
