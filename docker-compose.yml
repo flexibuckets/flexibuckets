@@ -28,8 +28,7 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - traefik.http.routers.flexibuckets-http.middlewares=preserve-host@file
       - "--api.dashboard=true"
       - "--api.insecure=true"
 
@@ -59,7 +58,6 @@ services:
     restart: always
     environment:
       - SERVER_IP=${SERVER_IP}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - TRAEFIK_DYNAMIC_DIR=/etc/traefik/dynamic
       - APP_UID=${APP_UID}
       - DOCKER_GID=${DOCKER_GID}
@@ -88,7 +86,6 @@ services:
         condition: service_started
     security_opt:
       - no-new-privileges:true
-    read_only: true
     tmpfs:
       - /tmp
       - /var/run

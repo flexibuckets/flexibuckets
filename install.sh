@@ -137,6 +137,22 @@ verify_docker() {
     log "INFO" "Docker Compose is installed and functional"
 }
 
+create_traefik_middlewares() {
+cat > "${TRAEFIK_DYNAMIC_DIR}/middlewares.yaml" << 'EOF'
+http:
+  middlewares:
+    preserve-host:
+      headers:
+        customRequestHeaders:
+          Host: ""
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: false
+EOF
+}
+
+
 # Function to handle repository
 setup_repository() {
     log "INFO" "Setting up FlexiBuckets repository..."
@@ -184,7 +200,7 @@ SERVER_IP=${SERVER_IP}
 
 # Application Configuration
 NODE_ENV=production
-NEXTAUTH_URL=${PUBLIC_URL}
+NEXTAUTH_URL=
 NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 AUTH_TRUST_HOST=true
 
@@ -391,7 +407,8 @@ setup_permissions() {
     mkdir -p /app/data
     chown -R ${APP_UID}:${DOCKER_GID} /app/data
     chmod -R 770 /app/data
-    
+    chmod 600 /etc/traefik/acme/acme.json
+
     # Next.js cache permissions
     mkdir -p /app/.next/cache
     chown -R ${APP_UID}:${DOCKER_GID} /app/.next/cache
@@ -407,7 +424,6 @@ setup_permissions() {
     mkdir -p "${TRAEFIK_DIR}/acme"
     touch "${TRAEFIK_DIR}/acme/acme.json"
     chmod 600 "${TRAEFIK_DIR}/acme/acme.json"
-NEXTAUTH_URL=${PUBLIC_URL}
     chmod -R 750 "${TRAEFIK_DIR}"
     chmod -R 770 "${TRAEFIK_DYNAMIC_DIR}"  # Need write access for dynamic config
 }
@@ -440,7 +456,8 @@ echo
     setup_system_user
     # Setup Traefik
     setup_traefik_directories
-    
+    create_traefik_middlewares
+
     update_env_file
         setup_permissions
     # Start services
