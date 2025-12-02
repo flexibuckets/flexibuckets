@@ -1,0 +1,28 @@
+name: SSH and Run Commands
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Run Remote SSH Command
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Execute SSH commmands
+
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_KEY }}
+        port: 22
+
+        script: |
+          echo "I am now connected to the server!"
+          echo "Running a deployment command..."
+          whoami
