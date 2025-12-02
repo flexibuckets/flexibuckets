@@ -1,9 +1,11 @@
 name: SSH and Run Commands
 on:
-  push:
+  workflow_run:
+    workflows: ["Build and Push Docker Image"]
+    types:
+      - completed
     branches:
       - main
-
 jobs:
   deploy:
     name: Run Remote SSH Command
