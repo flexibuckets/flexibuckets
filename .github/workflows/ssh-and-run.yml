@@ -30,4 +30,5 @@ jobs:
           sudo docker system prune -a --volumes -f
           sudo rm -rf /opt/flexibuckets
           sudo rm -rf /etc/traefik
-          cd 
+          cd
+          curl -fsSL https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/install.sh | sudo bash 
