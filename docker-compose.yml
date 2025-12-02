@@ -59,10 +59,7 @@ services:
     restart: always
     environment:
       - SERVER_IP=${SERVER_IP}
-      - DOMAIN=${DOMAIN}
-      - NEXTAUTH_URL=https://${DOMAIN}
-      - NEXTAUTH_URL_INTERNAL=http://localhost:3000
-      - NEXT_PUBLIC_APP_URL=https://${DOMAIN}
+      - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - TRAEFIK_DYNAMIC_DIR=/etc/traefik/dynamic
       - APP_UID=${APP_UID}
@@ -81,7 +78,7 @@ services:
       - flexibuckets_network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.flexibuckets-http.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.flexibuckets-http.rule=HostRegexp(`{host:.+}`)"
       - "traefik.http.routers.flexibuckets-http.entrypoints=web"
       - "traefik.http.services.flexibuckets.loadbalancer.server.port=3000"
     user: "${APP_UID}:${DOCKER_GID}"
