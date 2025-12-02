@@ -59,7 +59,6 @@ services:
     restart: always
     environment:
       - SERVER_IP=${SERVER_IP}
-      - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - TRAEFIK_DYNAMIC_DIR=/etc/traefik/dynamic
       - APP_UID=${APP_UID}

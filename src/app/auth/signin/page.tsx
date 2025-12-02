@@ -1,4 +1,3 @@
-// src/app/auth/signin/page.tsx
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
@@ -16,7 +15,7 @@ const SignInContent = () => {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const searchParams = useSearchParams() // Get URL params
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [csrfToken, setCsrfToken] = useState<string>()
 
@@ -33,10 +32,11 @@ const SignInContent = () => {
     setIsLoading(true)
 
     try {
+      // 1. Perform the sign-in
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false,
+        redirect: false, // Prevent automatic redirect
       })
 
       if (result?.error) {
@@ -44,18 +44,20 @@ const SignInContent = () => {
       }
 
       if (result?.ok) {
-        // FIX: Ignore result.url (which usually contains the configured NEXTAUTH_URL/IP)
-        // Instead, redirect to the callbackUrl if present (and relative), or default to /dashboard.
-        const callbackUrl = searchParams.get('callbackUrl')
+        // 2. FORCE correct redirection
+        // We ignore 'result.url' because it likely contains the internal Docker IP/Localhost
         
-        // Check if callbackUrl is relative (starts with /) to keep security
+        const callbackUrl = searchParams.get('callbackUrl')
+
+        // If there is a valid relative callback URL, use it. Otherwise go to dashboard.
         if (callbackUrl && callbackUrl.startsWith('/')) {
-             router.push(callbackUrl)
+            router.push(callbackUrl)
         } else {
-             router.push('/dashboard')
+            router.push('/dashboard')
         }
         
-        router.refresh() // Ensure session state is updated in UI
+        // 3. Refresh to ensure the new session cookie is picked up by client components
+        router.refresh()
       }
     } catch (error) {
       toast({
