@@ -26,3 +26,8 @@ jobs:
           echo "I am now connected to the server!"
           echo "Running a deployment command..."
           whoami
+          cd /opt/flexibuckets/ && sudo docker compose down -v
+          sudo docker system prune -a --volumes -f
+          sudo rm -rf /opt/flexibuckets
+          sudo rm -rf /etc/traefik
+          cd 
