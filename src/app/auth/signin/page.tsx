@@ -41,7 +41,14 @@ const SignInContent = () => {
         throw new Error(result.error)
       }
 
-      router.push('/dashboard')
+      if (result?.url) {
+        router.push(result.url)
+        // Optionally force reload to ensure session is available
+        window.location.href = result.url
+      } else if (result?.ok) {
+        router.push('/dashboard')
+        window.location.href = '/dashboard'
+      }
     } catch (error) {
       console.error('Authentication error:', error)
       toast({
