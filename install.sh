@@ -172,6 +172,8 @@ create_env_file() {
     # Get public IP
     SERVER_IP=$(get_public_ip)
     
+# Detect public IP for NEXTAUTH_URL
+    PUBLIC_URL="http://${SERVER_IP}:3000"
     cat > "$ENV_FILE" << EOL
 # Database Configuration
 POSTGRES_USER=postgres
@@ -182,7 +184,7 @@ SERVER_IP=${SERVER_IP}
 
 # Application Configuration
 NODE_ENV=production
-NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_URL=${PUBLIC_URL}
 NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 AUTH_TRUST_HOST=true
 
