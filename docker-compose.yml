@@ -28,7 +28,6 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - traefik.http.routers.flexibuckets-http.middlewares=preserve-host@file
       - "--api.dashboard=true"
       - "--api.insecure=true"
 
@@ -78,6 +77,9 @@ services:
       - "traefik.http.routers.flexibuckets-http.rule=HostRegexp(`{host:.+}`)"
       - "traefik.http.routers.flexibuckets-http.entrypoints=web"
       - "traefik.http.services.flexibuckets.loadbalancer.server.port=3000"
+      - "traefik.http.routers.flexibuckets-http.middlewares=preserve-host@file"
+      - "traefik.http.services.flexibuckets.loadbalancer.passhostheader=true"
+
     user: "${APP_UID}:${DOCKER_GID}"
     depends_on:
       db:
