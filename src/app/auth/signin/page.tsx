@@ -1,18 +1,20 @@
-'use client'
+"use client"
 
-import { useState, useEffect, Suspense } from 'react'
-import { signIn, getCsrfToken } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Icons } from '@/components/ui/icons'
-import { useToast } from '@/hooks/use-toast'
-import Link from 'next/link'
+import type React from "react"
+
+import { useState, useEffect, Suspense } from "react"
+import { signIn, getCsrfToken } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Loader2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 const SignInContent = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
@@ -31,7 +33,7 @@ const SignInContent = () => {
     setIsLoading(true)
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
@@ -41,12 +43,13 @@ const SignInContent = () => {
         throw new Error(result.error)
       }
 
-      router.push('/dashboard')
+      router.push("/dashboard")
+      router.refresh()
     } catch (error) {
-      console.error('Authentication error:', error)
+      console.error("Authentication error:", error)
       toast({
-        title: 'Invalid email or password',
-        variant: 'destructive',
+        title: "Invalid email or password",
+        variant: "destructive",
       })
     } finally {
       setIsLoading(false)
@@ -86,15 +89,15 @@ const SignInContent = () => {
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
               <>
-                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Please wait
               </>
             ) : (
-              'Sign in'
+              "Sign in"
             )}
           </Button>
           <div className="text-center text-sm mt-4">
-            Don't have an account?{' '}
+            {"Don't have an account?"}{" "}
             <Link href="/auth/register" className="text-primary hover:underline">
               Register
             </Link>
@@ -105,9 +108,9 @@ const SignInContent = () => {
   )
 }
 
-export default function AuthPage() {
+export default function SignInPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
       <SignInContent />
     </Suspense>
   )

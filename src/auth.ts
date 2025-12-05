@@ -1,10 +1,9 @@
-import NextAuth, { NextAuthConfig } from 'next-auth';
-import Credentials from 'next-auth/providers/credentials';
-import { PrismaAdapter } from '@auth/prisma-adapter';
-import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
-import { z } from 'zod';
-import { DefaultSession } from "next-auth"
+import NextAuth, { type NextAuthConfig } from "next-auth"
+import Credentials from "next-auth/providers/credentials"
+import { prisma } from "@/lib/prisma"
+import bcrypt from "bcryptjs"
+import { z } from "zod"
+import type { DefaultSession } from "next-auth"
 
 declare module "next-auth" {
   interface Session {
@@ -18,51 +17,60 @@ declare module "next-auth" {
 const authSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-});
+})
+
+const isProduction = process.env.NODE_ENV === "production"
 
 export const authConfig: NextAuthConfig = {
   pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
+    signIn: "/auth/signin",
+    error: "/auth/error",
   },
   callbacks: {
     jwt: async ({ token, user }) => {
       if (user) {
-        token.id = user.id;
-        token.email = user.email;
+        token.id = user.id
+        token.email = user.email
       }
-      return token;
+      return token
     },
     session: async ({ session, token }) => {
-      if (session.user && token) {                       
-        session.user.id = token.id as string;
-                                         
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: {
-            totalUploadSize: true,
-            isAdmin: true,
-          },
-        });
+      if (session.user && token) {
+        session.user.id = token.id as string
 
-        if (dbUser) {
-          session.user.totalUploadSize = Number(dbUser.totalUploadSize);
-          session.user.isAdmin = dbUser.isAdmin;
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: {
+              totalUploadSize: true,
+              isAdmin: true,
+            },
+          })
+
+          if (dbUser) {
+            session.user.totalUploadSize = Number(dbUser.totalUploadSize)
+            session.user.isAdmin = dbUser.isAdmin
+          }
+        } catch (error) {
+          console.error("[auth] Failed to fetch user data:", error)
+          // Set defaults if DB query fails
+          session.user.totalUploadSize = 0
+          session.user.isAdmin = false
         }
       }
-      return session;
+      return session
     },
   },
   providers: [
     Credentials({
-      name: 'credentials',
+      name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         try {
-          const { email, password } = authSchema.parse(credentials);
+          const { email, password } = authSchema.parse(credentials)
 
           const user = await prisma.user.findUnique({
             where: { email },
@@ -72,56 +80,55 @@ export const authConfig: NextAuthConfig = {
               password: true,
               name: true,
             },
-          });
+          })
 
           if (!user || !user.password) {
-            return null;
+            return null
           }
 
-          const isPasswordValid = await bcrypt.compare(password, user.password);
+          const isPasswordValid = await bcrypt.compare(password, user.password)
 
           if (!isPasswordValid) {
-            return null;
+            return null
           }
 
           return {
             id: user.id,
             email: user.email,
             name: user.name,
-          };
+          }
         } catch {
-          return null;
+          return null
         }
-      }
-    })
+      },
+    }),
   ],
-  secret: process.env.NEXTAUTH_SECRET,
-  useSecureCookies: false, // Allow non-HTTPS
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   cookies: {
     sessionToken: {
-      name: 'next-auth.session-token',
+      name: isProduction ? "__Secure-next-auth.session-token" : "next-auth.session-token",
       options: {
         httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false
-      }
+        sameSite: "lax",
+        path: "/",
+        secure: isProduction,
+      },
     },
     csrfToken: {
-      name: 'next-auth.csrf-token', 
+      name: isProduction ? "__Host-next-auth.csrf-token" : "next-auth.csrf-token",
       options: {
         httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false
-      }
-    }
+        sameSite: "lax",
+        path: "/",
+        secure: isProduction,
+      },
+    },
   },
-};
+}
 
+// When using Credentials provider with JWT, do NOT use PrismaAdapter
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
-  adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   ...authConfig,
-});
+})
