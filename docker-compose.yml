@@ -60,10 +60,15 @@ services:
     environment:
       - SERVER_IP=${SERVER_IP}
       - DOMAIN=${DOMAIN}
-      - NEXTAUTH_URL=https://${SERVER_IP}:3000
+      - NEXTAUTH_URL=https://${DOMAIN}
       - NEXTAUTH_URL_INTERNAL=http://localhost:3000
-      - NEXT_PUBLIC_APP_URL=https://${SERVER_IP}:3000
+      - NEXT_PUBLIC_APP_URL=https://${DOMAIN}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - TRAEFIK_DYNAMIC_DIR=/etc/traefik/dynamic
+      - APP_UID=${APP_UID}
+      - DOCKER_GID=${DOCKER_GID}
+      - APP_VERSION=${APP_VERSION}
+      - APP_SHA_SHORT=${APP_SHA_SHORT}
     env_file: .env
     ports:
       - "3000:3000"
@@ -85,8 +90,18 @@ services:
       - "traefik.http.routers.app-ip.entrypoints=web"
       - "traefik.http.routers.app-ip.service=app-service"
       - "traefik.http.services.app-service.loadbalancer.server.port=3000"
-    user: "1000:1000"
-
+    user: "${APP_UID}:${DOCKER_GID}"
+    depends_on:
+      db:
+        condition: service_healthy
+      traefik:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
 
 networks:
   flexibuckets_network:
@@ -96,14 +111,5 @@ volumes:
   postgres_data:
     name: flexibuckets_postgres_data
   app_data:
-    driver: local
-    driver_opts:
-      type: none
-      device: /app/data
-      o: bind
   next_cache:
     driver: local
-    driver_opts:
-      type: none
-      device: /app/.next/cache
-      o: bind

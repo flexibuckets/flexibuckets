@@ -126,7 +126,7 @@ verify_docker() {
     if ! docker info >/dev/null 2>&1; then
         log "ERROR" "Docker is not running properly"
         exit 1
-    fi	
+    fi
 
     log "INFO" "Verifying Docker Compose installation..."
     if ! docker compose version >/dev/null 2>&1; then
@@ -136,22 +136,6 @@ verify_docker() {
 
     log "INFO" "Docker Compose is installed and functional"
 }
-
-create_traefik_middlewares() {
-cat > "${TRAEFIK_DYNAMIC_DIR}/middlewares.yaml" << 'EOF'
-http:
-  middlewares:
-    preserve-host:
-      headers:
-        customRequestHeaders:
-          Host: ""
-    redirect-to-https:
-      redirectScheme:
-        scheme: https
-        permanent: false
-EOF
-}
-
 
 # Function to handle repository
 setup_repository() {
@@ -176,13 +160,6 @@ setup_repository() {
     chown -R root:root "${INSTALL_DIR}/scripts"
 }
 
-generate_email() {
-
-  local random_string=$(openssl rand -hex 8)
-
-  echo "admin-${random_string}@flexib.site"
-
-}
 # Function to create environment file
 create_env_file() {
     log "INFO" "Creating .env file..."
@@ -195,8 +172,6 @@ create_env_file() {
     # Get public IP
     SERVER_IP=$(get_public_ip)
     
-# Detect public IP for NEXTAUTH_URL
-    PUBLIC_URL="http://${SERVER_IP}:3000"
     cat > "$ENV_FILE" << EOL
 # Database Configuration
 POSTGRES_USER=postgres
@@ -204,21 +179,22 @@ POSTGRES_PASSWORD=${DB_PASSWORD}
 POSTGRES_DB=flexibuckets
 DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/flexibuckets
 SERVER_IP=${SERVER_IP}
-NEXT_PUBLIC_SERVER_IP=${SERVER_IP}
+
 # Application Configuration
-NEXTAUTH_URL=https://${SERVER_IP}:3000
-NEXTAUTH_URL_INTERNAL=http://localhost:3000
-NEXT_PUBLIC_APP_URL=https://${SERVER_IP}:3000
+NODE_ENV=production
+NEXTAUTH_URL=https://${SERVER_IP}
+NEXT_PUBLIC_APP_URL=https://${SERVER_IP}
 NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 AUTH_TRUST_HOST=true
 
 # Docker Configuration  
+DOMAIN=${SERVER_IP}
 APP_VERSION=latest
 TRAEFIK_CONFIG_DIR=${TRAEFIK_CONFIG_DIR}
 TRAEFIK_DYNAMIC_DIR=${TRAEFIK_DYNAMIC_DIR}
 
 # Traefik Configuration
-ACME_EMAIL=${generate_email}
+ACME_EMAIL=selfhosted@flexibuckets.com
 
 # System User Configuration
 APP_UID=${APP_UID}
@@ -415,13 +391,12 @@ setup_permissions() {
     mkdir -p /app/data
     chown -R ${APP_UID}:${DOCKER_GID} /app/data
     chmod -R 770 /app/data
-    chmod 600 /etc/traefik/acme/acme.json
-
+    
     # Next.js cache permissions
     mkdir -p /app/.next/cache
     chown -R ${APP_UID}:${DOCKER_GID} /app/.next/cache
     chmod -R 770 /app/.next/cache
-     PUBLIC_URL="http://${SERVER_IP}:3000"
+    
     # Docker socket permissions
     if [ -e /var/run/docker.sock ]; then
         chmod 660 /var/run/docker.sock
@@ -432,6 +407,7 @@ setup_permissions() {
     mkdir -p "${TRAEFIK_DIR}/acme"
     touch "${TRAEFIK_DIR}/acme/acme.json"
     chmod 600 "${TRAEFIK_DIR}/acme/acme.json"
+    chown -R ${APP_UID}:${DOCKER_GID} "${TRAEFIK_DIR}"
     chmod -R 750 "${TRAEFIK_DIR}"
     chmod -R 770 "${TRAEFIK_DYNAMIC_DIR}"  # Need write access for dynamic config
 }
@@ -464,22 +440,21 @@ echo
     setup_system_user
     # Setup Traefik
     setup_traefik_directories
-    create_traefik_middlewares
-
+    
     update_env_file
-        setup_permissions
+    
     # Start services
-  start_services
+    start_services
     
     # Setup database
     setup_database
 
+    setup_permissions
 
-   
     log "INFO" "Installation completed successfully!"
     echo -e "\nAccess your FlexiBuckets instance at:"
-    echo -e "\U0001F310 HTTP:  http://${SERVER_IP}:3000"
-    echo -e "\U0001F512 HTTPS: https://${SERVER_IP}"
+    echo -e "\U0001F310 HTTP:  http://${SERVER_IP:-localhost}:3000"
+    echo -e "\U0001F512 HTTPS: https://${SERVER_IP:-localhost}"
     
     echo -e "\n${YELLOW}Important Notes:${NC}"
     echo "1. Configuration files are in: $INSTALL_DIR"
