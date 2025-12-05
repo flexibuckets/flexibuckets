@@ -111,7 +111,7 @@ export const authConfig: NextAuthConfig = {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: isProduction,
+        secure: false,
       },
     },
     csrfToken: {
@@ -120,7 +120,7 @@ export const authConfig: NextAuthConfig = {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: isProduction,
+        secure: false,
       },
     },
   },
