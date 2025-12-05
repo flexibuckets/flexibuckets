@@ -28,6 +28,8 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--api.dashboard=true"
       - "--api.insecure=true"
 
@@ -57,11 +59,11 @@ services:
     restart: always
     environment:
       - SERVER_IP=${SERVER_IP}
-      - TRAEFIK_DYNAMIC_DIR=/etc/traefik/dynamic
-      - APP_UID=${APP_UID}
-      - DOCKER_GID=${DOCKER_GID}
-      - APP_VERSION=${APP_VERSION}
-      - APP_SHA_SHORT=${APP_SHA_SHORT}
+      - DOMAIN=${DOMAIN}
+      - NEXTAUTH_URL=https://${SERVER_IP}:3000
+      - NEXTAUTH_URL_INTERNAL=http://localhost:3000
+      - NEXT_PUBLIC_APP_URL=https://${SERVER_IP}:3000
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
     env_file: .env
     ports:
       - "3000:3000"
@@ -74,29 +76,17 @@ services:
       - flexibuckets_network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.flexibuckets-http.rule=HostRegexp(`{host:.+}`)"
-      - "traefik.http.routers.flexibuckets-http.entrypoints=web"
-      - "traefik.http.services.flexibuckets.loadbalancer.server.port=3000"
-      - "traefik.http.routers.flexibuckets-http.middlewares=preserve-host@file"
-      - "traefik.http.services.flexibuckets.loadbalancer.passhostheader=true"
+      - "traefik.http.routers.app-domain.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.app-domain.entrypoints=web,websecure"
+      - "traefik.http.routers.app-domain.service=app-service"
+      - "traefik.http.routers.app-domain.tls=true"
+      - "traefik.http.routers.app-domain.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.app-ip.rule=Host(`${SERVER_IP}`)"
+      - "traefik.http.routers.app-ip.entrypoints=web"
+      - "traefik.http.routers.app-ip.service=app-service"
+      - "traefik.http.services.app-service.loadbalancer.server.port=3000"
+    user: "1000:1000"
 
-    user: "${APP_UID}:${DOCKER_GID}"
-    depends_on:
-      db:
-        condition: service_healthy
-      traefik:
-        condition: service_started
-    security_opt:
-      - no-new-privileges:true
-    tmpfs:
-      - /tmp
-      - /var/run
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
 networks:
   flexibuckets_network:
@@ -117,4 +107,3 @@ volumes:
       type: none
       device: /app/.next/cache
       o: bind
-
