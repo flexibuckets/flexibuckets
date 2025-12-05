@@ -176,6 +176,13 @@ setup_repository() {
     chown -R root:root "${INSTALL_DIR}/scripts"
 }
 
+generate_email() {
+
+  local random_string=$(openssl rand -hex 8)
+
+  echo "admin-${random_string}@flexib.site"
+
+}
 # Function to create environment file
 create_env_file() {
     log "INFO" "Creating .env file..."
@@ -197,10 +204,11 @@ POSTGRES_PASSWORD=${DB_PASSWORD}
 POSTGRES_DB=flexibuckets
 DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@db:5432/flexibuckets
 SERVER_IP=${SERVER_IP}
-
+NEXT_PUBLIC_SERVER_IP=${SERVER_IP}
 # Application Configuration
-NODE_ENV=production
-NEXTAUTH_URL=
+NEXTAUTH_URL=https://${SERVER_IP}:3000
+NEXTAUTH_URL_INTERNAL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=https://${SERVER_IP}:3000
 NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 AUTH_TRUST_HOST=true
 
@@ -210,7 +218,7 @@ TRAEFIK_CONFIG_DIR=${TRAEFIK_CONFIG_DIR}
 TRAEFIK_DYNAMIC_DIR=${TRAEFIK_DYNAMIC_DIR}
 
 # Traefik Configuration
-ACME_EMAIL=
+ACME_EMAIL=${generate_email}
 
 # System User Configuration
 APP_UID=${APP_UID}

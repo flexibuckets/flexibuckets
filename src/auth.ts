@@ -101,7 +101,7 @@ export const authConfig: NextAuthConfig = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   trustHost: true, // This is crucial for Traefik support
-  // REMOVED: useSecureCookies and manual cookies object. 
+  useSecureCookies: false,
   // NextAuth will now auto-detect HTTPS via trustHost headers.
 }
 
