@@ -60,7 +60,7 @@ services:
     environment:
       - SERVER_IP=${SERVER_IP}
       - DOMAIN=${DOMAIN}
-      - NEXTAUTH_URL=https://${DOMAIN}
+      - NEXTAUTH_URL=https://${DOMAIN}:3000
       - NEXTAUTH_URL_INTERNAL=http://localhost:3000
       - NEXT_PUBLIC_APP_URL=https://${DOMAIN}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}

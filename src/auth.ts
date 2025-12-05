@@ -19,7 +19,7 @@ const authSchema = z.object({
   password: z.string().min(6),
 })
 
-const isProduction = process.env.NODE_ENV === "production"
+const useSecureCookies = process.env.NEXTAUTH_URL?.startsWith("https://") ?? false
 
 export const authConfig: NextAuthConfig = {
   pages: {
@@ -106,21 +106,30 @@ export const authConfig: NextAuthConfig = {
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   cookies: {
     sessionToken: {
-      name: isProduction ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+      name: useSecureCookies ? "__Secure-next-auth.session-token" : "next-auth.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: false,
+        secure: useSecureCookies,
       },
     },
     csrfToken: {
-      name: isProduction ? "__Host-next-auth.csrf-token" : "next-auth.csrf-token",
+      name: useSecureCookies ? "__Host-next-auth.csrf-token" : "next-auth.csrf-token",
+      options: {
+        httpOnly: false, // Must be false so JS can read CSRF token
+        sameSite: "lax",
+        path: "/",
+        secure: useSecureCookies,
+      },
+    },
+    callbackUrl: {
+      name: useSecureCookies ? "__Secure-next-auth.callback-url" : "next-auth.callback-url",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: false,
+        secure: useSecureCookies,
       },
     },
   },
