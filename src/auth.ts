@@ -1,4 +1,3 @@
-// src/auth.ts
 import NextAuth, { NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
@@ -56,6 +55,7 @@ export const authConfig: NextAuthConfig = {
   },
   providers: [
     Credentials({
+      name: 'credentials',
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
@@ -96,13 +96,32 @@ export const authConfig: NextAuthConfig = {
     })
   ],
   secret: process.env.NEXTAUTH_SECRET,
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+  useSecureCookies: false, // Allow non-HTTPS
+  cookies: {
+    sessionToken: {
+      name: 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false
+      }
+    },
+    csrfToken: {
+      name: 'next-auth.csrf-token', 
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: false
+      }
+    }
   },
-  trustHost: true, // This is crucial for Traefik support
-  useSecureCookies: false,
-  // NextAuth will now auto-detect HTTPS via trustHost headers.
-}
+};
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
+  adapter: PrismaAdapter(prisma),
+  session: { strategy: "jwt" },
+  ...authConfig,
+});
