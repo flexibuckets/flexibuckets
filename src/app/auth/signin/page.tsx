@@ -1,9 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useEffect, Suspense } from "react"
-import { signIn, getCsrfToken } from "next-auth/react"
+import { useState, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,29 +16,24 @@ const SignInContent = () => {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
-  const [csrfToken, setCsrfToken] = useState<string>()
-
-  useEffect(() => {
-    const loadCsrfToken = async () => {
-      const token = await getCsrfToken()
-      setCsrfToken(token)
-    }
-    loadCsrfToken()
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
+      // This bypasses client-side CSRF validation for IP-based access
+      const response = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
       })
 
-      if (result?.error) {
-        throw new Error(result.error)
+      const data = await response.json()
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error || "Authentication failed")
       }
 
       router.push("/dashboard")
@@ -64,7 +57,6 @@ const SignInContent = () => {
           <p className="text-sm text-muted-foreground">Sign in to your account</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input name="csrfToken" type="hidden" defaultValue={csrfToken} />
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
