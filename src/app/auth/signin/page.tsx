@@ -1,18 +1,18 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { useState, Suspense } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
+import { useState, useEffect, Suspense } from 'react'
+import { signIn, getCsrfToken } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Icons } from '@/components/ui/icons'
+import { useToast } from '@/hooks/use-toast'
+import Link from 'next/link'
 
 const SignInContent = () => {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
@@ -22,27 +22,22 @@ const SignInContent = () => {
     setIsLoading(true)
 
     try {
-      // This bypasses client-side CSRF validation for IP-based access
-      const response = await fetch("/api/auth/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
       })
 
-      const data = await response.json()
-
-      if (!response.ok || data.error) {
-        throw new Error(data.error || "Authentication failed")
+      if (result?.error) {
+        throw new Error(result.error)
       }
 
-      router.push("/dashboard")
-      router.refresh()
+      router.push('/dashboard')
     } catch (error) {
-      console.error("Authentication error:", error)
+      console.error('Authentication error:', error)
       toast({
-        title: "Invalid email or password",
-        variant: "destructive",
+        title: 'Invalid email or password',
+        variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
@@ -81,15 +76,15 @@ const SignInContent = () => {
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                 Please wait
               </>
             ) : (
-              "Sign in"
+              'Sign in'
             )}
           </Button>
           <div className="text-center text-sm mt-4">
-            {"Don't have an account?"}{" "}
+            Don't have an account?{' '}
             <Link href="/auth/register" className="text-primary hover:underline">
               Register
             </Link>
@@ -100,9 +95,9 @@ const SignInContent = () => {
   )
 }
 
-export default function SignInPage() {
+export default function AuthPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div>Loading...</div>}>
       <SignInContent />
     </Suspense>
   )
