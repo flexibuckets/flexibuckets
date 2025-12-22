@@ -1,66 +1,62 @@
-import { prisma } from '@/lib/prisma'
-import { NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
-import { z } from 'zod'
-
-const registerSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-}).passthrough()
+import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
+    const { email, password, name } = await req.json();
+
+    // Check if this is the first user
+    const userCount = await prisma.user.count();
+    const isFirstUser = userCount === 0;
+
     // Check if signups are allowed
-    const settings = await prisma.settings.findFirst();
-    if (settings && !settings.allowSignups) {
-      return NextResponse.json(
-        { error: 'Signups are currently disabled. Please contact the administrator.' },
-        { status: 403 }
-      )
+    if (!isFirstUser) {
+      const settings = await prisma.settings.findFirst();
+      if (!settings?.allowSignups) {
+        return NextResponse.json(
+          { message: "Signups are currently disabled" },
+          { status: 403 }
+        );
+      }
     }
 
-    const body = await req.json()
-    const { name, email, password } = registerSchema.parse(body)
-
-    // Check if user already exists
+    // Check if email already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email },
-    })
+      where: { email }
+    });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'User with this email already exists' },
+        { message: "Email already exists" },
         { status: 400 }
-      )
+      );
     }
 
-    // Check if this is the first user
-    const userCount = await prisma.user.count()
-    const isFirstUser = userCount === 0
-
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user with isAdmin set to true if first user
+    // Create user
     const user = await prisma.user.create({
       data: {
-        name,
         email,
         password: hashedPassword,
-        isAdmin: isFirstUser, // Set isAdmin true only for first user
-      },
-    })
+        name,
+        isAdmin: isFirstUser // First user is automatically admin
+      }
+    });
+
+   //? console.log("User created:", { id: user.id, email: user.email }); // Debug log
 
     return NextResponse.json(
-      { message: 'User created successfully' },
+      { message: "User created successfully" },
       { status: 201 }
-    )
+    );
   } catch (error) {
-    console.error('Registration error:', error)
+    console.error("Registration error:", error);
     return NextResponse.json(
-      { error: 'Something went wrong' },
+      { message: "Something went wrong" },
       { status: 500 }
-    )
+    );
   }
-} 
+}

@@ -3,10 +3,7 @@ import { PUBLIC_ROUTES } from './lib/routes';
 
 export default async function middleware(request: NextRequest) {
   const { nextUrl } = request;
-  const isProduction = process.env.NODE_ENV === 'production';
-  const nextAuthTokenName = isProduction
-    ? '__Secure-next-auth.session-token'
-    : 'next-auth.session-token';
+  const nextAuthTokenName = 'next-auth.session-token'
   const cookieExists = request.cookies.has(nextAuthTokenName);
 
   const isPublicRoute = PUBLIC_ROUTES.includes(nextUrl.pathname);
