@@ -57,7 +57,7 @@ const SignInContent = () => {
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="yous@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
