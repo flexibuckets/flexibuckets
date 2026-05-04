@@ -1,22 +1,14 @@
 name: SSH and Run Commands
 on:
-  workflow_run:
-    workflows: ["Build and Push Docker Image"]
-    types:
-      - completed
-    branches:
-      - main
+  workflow_dispatch:
+
 jobs:
   deploy:
     name: Run Remote SSH Command
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Execute SSH commmands
-
+    - name: Execute SSH commands
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.SSH_HOST }}
@@ -33,4 +25,4 @@ jobs:
           sudo rm -rf /opt/flexibuckets
           sudo rm -rf /etc/traefik
           cd
-          curl -fsSL https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/install.sh | sudo bash 
+          curl -fsSL https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/install.sh | sudo bash
