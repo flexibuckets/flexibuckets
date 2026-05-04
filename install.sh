@@ -291,6 +291,12 @@ start_services() {
 
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}Services started successfully${NC}"
+
+        # Fix cache volume permissions — Docker volumes may initialize with root ownership
+        # but the app runs as UID 1001 (flexibuckets user)
+        echo -e "${YELLOW}Fixing cache permissions...${NC}"
+        docker exec flexibuckets_app sh -c 'chown -R 1001:'"${DOCKER_GID}"' /app/.next/cache 2>/dev/null || true' 2>/dev/null || \
+        docker compose exec -T -u root app sh -c 'chown -R 1001:'"${DOCKER_GID}"' /app/.next/cache && chmod -R 775 /app/.next/cache' 2>/dev/null || true
     else
         echo -e "${RED}Failed to start services${NC}"
         exit 1
