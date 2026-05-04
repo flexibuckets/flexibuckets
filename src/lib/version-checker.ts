@@ -198,7 +198,7 @@ export async function executeUpdate(newVersion: string): Promise<boolean> {
     console.log(`[Upgrade] Running database migrations...`);
     try {
       const migrationExec = await newContainer.exec({
-        Cmd: ['sh', '-c', 'cd /app && bunx prisma migrate deploy'],
+        Cmd: ['sh', '-c', 'cd /app && TMPDIR=/tmp ./node_modules/.bin/prisma migrate deploy'],
         AttachStdout: true,
         AttachStderr: true,
       });

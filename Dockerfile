@@ -99,6 +99,17 @@ COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=builder /app/node_modules/semver ./node_modules/semver
 COPY --from=builder /app/node_modules/js-yaml ./node_modules/js-yaml
 
+# Prisma CLI — needed for `prisma migrate deploy` during install/upgrade
+COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
+COPY --from=deps /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
+
+# Create prisma CLI symlink and ensure engine binaries are executable
+RUN mkdir -p ./node_modules/.bin && \
+    ln -sf ../prisma/build/index.js ./node_modules/.bin/prisma && \
+    chmod +x ./node_modules/.bin/prisma && \
+    find ./node_modules/prisma -name "*.node" -exec chmod +x {} \; 2>/dev/null || true && \
+    find ./node_modules/@prisma/engines -type f -exec chmod +x {} \; 2>/dev/null || true
+
 # Copy and set up healthcheck script
 COPY ./scripts/healthcheck.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/healthcheck.sh

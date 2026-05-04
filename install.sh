@@ -357,9 +357,9 @@ setup_database() {
     exit 1
   fi
 
-  # Run Prisma migrations with -T flag
+  # Run Prisma migrations
   echo -e "${YELLOW}Running database migrations...${NC}"
-  docker compose exec -T app sh -c 'cd /app && bunx prisma migrate deploy'
+  docker compose exec -T -e TMPDIR=/tmp app sh -c 'cd /app && ./node_modules/.bin/prisma migrate deploy'
   
   if [ $? -eq 0 ]; then
     echo -e "${GREEN}Database schema setup complete${NC}"
