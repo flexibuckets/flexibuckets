@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       # 1. Checkout code with shallow clone
       - name: Checkout code
@@ -61,5 +63,4 @@ jobs:
           name: v${{ env.version }}
           generate_release_notes: true
           make_latest: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
