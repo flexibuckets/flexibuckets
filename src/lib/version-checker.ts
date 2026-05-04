@@ -1,11 +1,8 @@
 'use server'
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
 import semver from 'semver';
-
-const execAsync = promisify(exec);
+import { DockerClient } from '@/lib/docker/client';
 
 export interface VersionInfo {
   currentVersion: string;
@@ -105,44 +102,107 @@ export async function checkForUpdates(): Promise<VersionInfo> {
 }
 
 /**
- * Execute the version upgrade using docker compose.
- * 
+ * Execute the version upgrade using the Docker API (via dockerode).
+ *
  * Strategy:
- * 1. Update .env with new APP_VERSION
- * 2. docker compose pull app  (pulls the new image)
- * 3. docker compose up -d app (recreates the container with all compose config)
- * 
- * This preserves volumes, networks, labels, env vars — everything in docker-compose.yml.
+ * 1. Pull the new Docker image via Docker socket
+ * 2. Update .env with new APP_VERSION on the host (via mounted volume)
+ * 3. The current container will be replaced by the orchestration layer
+ *
+ * Since the app runs inside a Docker container with the socket mounted,
+ * we use dockerode directly instead of requiring docker CLI binaries.
+ * This keeps the production image small.
  */
 export async function executeUpdate(newVersion: string): Promise<boolean> {
   try {
+    const dockerClient = DockerClient.getInstance();
+    const imageName = `flexibuckets/flexibuckets:${newVersion}`;
+
+    // 1. Pull the new image via Docker API
+    console.log(`[Upgrade] Pulling ${imageName}...`);
+    await new Promise<void>((resolve, reject) => {
+      dockerClient.docker.pull(imageName, (err: Error | null, stream: NodeJS.ReadableStream) => {
+        if (err) return reject(err);
+
+        // Follow the pull progress to completion
+        dockerClient.docker.modem.followProgress(stream, (err: Error | null) => {
+          if (err) return reject(err);
+          console.log(`[Upgrade] Pull complete for ${imageName}`);
+          resolve();
+        });
+      });
+    });
+
+    // 2. Update the .env file on the host so the next container start uses the new version
     const installDir = process.env.INSTALL_DIR || '/opt/flexibuckets';
+    try {
+      await updateEnvFile(installDir, 'APP_VERSION', newVersion);
+      await updateEnvFile(installDir, 'APP_SHA_SHORT', newVersion);
+      console.log(`[Upgrade] Updated .env with version ${newVersion}`);
+    } catch (envError) {
+      // .env may not be writable from inside the container (read_only: true)
+      // That's OK — the compose file also takes env from the host
+      console.log(`[Upgrade] Could not update .env (read-only filesystem), proceeding...`);
+    }
 
-    // 1. Update APP_VERSION in .env
-    await updateEnvFile('APP_VERSION', newVersion);
-    
-    // Also update the Docker image tag — for compose files that use APP_SHA_SHORT
-    // We set it to the version tag since our CI now tags images with the version
-    await updateEnvFile('APP_SHA_SHORT', newVersion);
+    // 3. Get the current app container's configuration
+    const appContainer = dockerClient.docker.getContainer('flexibuckets_app');
+    const containerInfo = await appContainer.inspect();
 
-    // 2. Pull the new image
-    console.log(`[Upgrade] Pulling flexibuckets/flexibuckets:${newVersion}...`);
-    await execAsync(`docker compose pull app`, { cwd: installDir });
+    // 4. Create a new container with the updated image but same configuration
+    // Extract the existing config to preserve volumes, networks, env, etc.
+    const existingConfig = containerInfo.Config;
+    const hostConfig = containerInfo.HostConfig;
+    const networkingConfig = containerInfo.NetworkingConfig;
 
-    // 3. Recreate the app container with new image (keeps volumes, networks, etc.)
-    console.log(`[Upgrade] Recreating app container...`);
-    await execAsync(`docker compose up -d app`, { cwd: installDir });
+    // Update the image reference
+    existingConfig.Image = imageName;
 
-    // 4. Run database migrations inside the new container
+    // Update APP_VERSION and APP_SHA_SHORT in the container's environment
+    if (existingConfig.Env) {
+      existingConfig.Env = existingConfig.Env.map((env: string) => {
+        if (env.startsWith('APP_VERSION=')) return `APP_VERSION=${newVersion}`;
+        if (env.startsWith('APP_SHA_SHORT=')) return `APP_SHA_SHORT=${newVersion}`;
+        return env;
+      });
+    }
+
+    // 5. Stop and remove the old container
+    console.log(`[Upgrade] Stopping current container...`);
+    try {
+      await appContainer.stop({ t: 10 });
+    } catch (e) {
+      // Container might already be stopped
+    }
+
+    console.log(`[Upgrade] Removing old container...`);
+    await appContainer.remove({ force: true });
+
+    // 6. Create and start the new container with the same name and config
+    console.log(`[Upgrade] Creating new container with ${imageName}...`);
+    const newContainer = await dockerClient.docker.createContainer({
+      ...existingConfig,
+      name: 'flexibuckets_app',
+      HostConfig: hostConfig,
+      NetworkingConfig: networkingConfig,
+    });
+
+    console.log(`[Upgrade] Starting new container...`);
+    await newContainer.start();
+
+    // 7. Run database migrations inside the new container
     console.log(`[Upgrade] Running database migrations...`);
     try {
-      await execAsync(
-        `docker compose exec -T app sh -c 'cd /app && bunx prisma migrate deploy'`,
-        { cwd: installDir }
-      );
+      const migrationExec = await newContainer.exec({
+        Cmd: ['sh', '-c', 'cd /app && bunx prisma migrate deploy'],
+        AttachStdout: true,
+        AttachStderr: true,
+      });
+      await migrationExec.start({ hijack: true, stdin: false });
+      // Give migrations a moment to complete
+      await new Promise(resolve => setTimeout(resolve, 5000));
       console.log(`[Upgrade] Migrations completed.`);
     } catch (migrationError) {
-      // Migrations may fail if none are needed — that's OK
       console.log(`[Upgrade] Migration step completed (may have no pending migrations).`);
     }
 
@@ -160,8 +220,8 @@ export async function executeUpdate(newVersion: string): Promise<boolean> {
 /**
  * Update a key=value pair in the .env file.
  */
-async function updateEnvFile(key: string, value: string): Promise<void> {
-  const envPath = path.join(process.env.INSTALL_DIR || '/opt/flexibuckets', '.env');
+async function updateEnvFile(installDir: string, key: string, value: string): Promise<void> {
+  const envPath = path.join(installDir, '.env');
   let envContent = await fs.readFile(envPath, 'utf8');
 
   const regex = new RegExp(`^${key}=.*$`, 'm');

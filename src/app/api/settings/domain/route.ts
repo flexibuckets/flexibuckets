@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { DockerClient } from '@/lib/docker/client';
 import yaml from 'yaml';
 import fs from 'fs/promises';
 
-const execAsync = promisify(exec);
 const TRAEFIK_CONFIG_PATH = '/etc/traefik/dynamic/config.yml';
 
 const domainSchema = z.object({
@@ -19,18 +17,8 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     });
 
-    let ssl = null;
-    if (settings?.domain) {
-      try {
-        const certInfo = await execAsync('certbot certificates');
-        const expiryMatch = certInfo.stdout.match(/Expiry Date: (.*?) /);
-        if (expiryMatch) {
-          ssl = { expiresAt: new Date(expiryMatch[1]).toISOString() };
-        }
-      } catch (error) {
-        console.error('Error checking SSL certificate:', error);
-      }
-    }
+    // SSL is managed automatically by Traefik's Let's Encrypt integration
+    const ssl = settings?.domain ? { managed: true, provider: 'letsencrypt' } : null;
 
     return NextResponse.json({
       domain: settings?.domain || '',
@@ -107,7 +95,9 @@ export async function POST(req: Request) {
 
     try {
       await fs.writeFile(TRAEFIK_CONFIG_PATH, yaml.stringify(config));
-      await execAsync('docker compose restart traefik');
+      // Restart Traefik via Docker API (no CLI binary needed)
+      const dockerClient = DockerClient.getInstance();
+      await dockerClient.docker.getContainer('flexibuckets_traefik').restart();
     } catch (error) {
       console.error('Error updating Traefik configuration:', error);
       // Continue even if Traefik update fails
