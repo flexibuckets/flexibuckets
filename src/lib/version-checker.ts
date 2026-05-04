@@ -153,7 +153,11 @@ export async function executeUpdate(newVersion: string): Promise<boolean> {
     // Extract the existing config to preserve volumes, networks, env, etc.
     const existingConfig = containerInfo.Config;
     const hostConfig = containerInfo.HostConfig;
-    const networkingConfig = containerInfo.NetworkingConfig;
+
+    // NetworkSettings.Networks from inspect → NetworkingConfig.EndpointsConfig for create
+    const networkingConfig = {
+      EndpointsConfig: containerInfo.NetworkSettings?.Networks || {},
+    };
 
     // Update the image reference
     existingConfig.Image = imageName;
@@ -185,7 +189,7 @@ export async function executeUpdate(newVersion: string): Promise<boolean> {
       name: 'flexibuckets_app',
       HostConfig: hostConfig,
       NetworkingConfig: networkingConfig,
-    });
+    } as any);
 
     console.log(`[Upgrade] Starting new container...`);
     await newContainer.start();
