@@ -2,12 +2,13 @@
 
 import * as React from "react"
 import { useQuery, useMutation } from "@tanstack/react-query"
-import { AlertCircle, CheckCircle } from 'lucide-react'
-import { 
-  Alert, 
-  AlertDescription, 
-  AlertTitle,
-} from "@/components/ui/alert"
+import {
+  ArrowUpCircle,
+  CheckCircle,
+  Loader2,
+  ExternalLink,
+  AlertTriangle,
+} from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,32 +22,45 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
+import { useSession } from "next-auth/react"
 
-interface UpdateInfo {
-  version: string
-  changeLog: string
-  requiredMigrations: boolean
+interface VersionInfo {
+  currentVersion: string
+  latestVersion: string
+  updateAvailable: boolean
+  releaseNotes: string
+  publishedAt: string
+  htmlUrl: string
 }
 
 export default function UpdateNotification() {
   const { toast } = useToast()
+  const { data: session } = useSession()
   const [open, setOpen] = React.useState(false)
-  
-  const { data: updateInfo, isLoading, error } = useQuery<UpdateInfo>({
+  const [updateComplete, setUpdateComplete] = React.useState(false)
+  const [reconnectCountdown, setReconnectCountdown] = React.useState(0)
+
+  // Only check for admins
+  const isAdmin = session?.user?.isAdmin
+
+  const {
+    data: updateInfo,
+    isLoading,
+    error,
+  } = useQuery<VersionInfo>({
     queryKey: ["version-check"],
     queryFn: async () => {
       const response = await fetch("/api/check-updates")
-      console.log('Update check response:', response);
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to check for updates");
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to check for updates")
       }
-      const data = await response.json();
-      console.log('Update info:', data);
-      return data;
+      return response.json()
     },
-
+    enabled: !!isAdmin,
+    refetchInterval: 1000 * 60 * 60, // Re-check every hour
+    staleTime: 1000 * 60 * 30, // Consider data stale after 30 min
   })
 
   const updateMutation = useMutation({
@@ -56,25 +70,27 @@ export default function UpdateNotification() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ version }),
       })
-      console.log('Update execution response:', response);
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.message || "Update failed")
+        throw new Error(error.error || "Update failed")
       }
       return response.json()
     },
     onSuccess: () => {
-      toast({
-        title: "Update Successful",
-        description: "The application will restart momentarily.",
-        duration: 4000,
-      })
+      setUpdateComplete(true)
       setOpen(false)
-      setTimeout(() => window.location.reload(), 5000)
+      toast({
+        title: "🚀 Upgrade Initiated",
+        description:
+          "The application is restarting with the new version. This page will refresh automatically.",
+        duration: 15000,
+      })
+      // Start reconnect countdown
+      setReconnectCountdown(30)
     },
     onError: (error) => {
       toast({
-        title: "Update Failed",
+        title: "Upgrade Failed",
         description: error.message,
         variant: "destructive",
         duration: 5000,
@@ -82,80 +98,160 @@ export default function UpdateNotification() {
     },
   })
 
-  if (isLoading) return null;
-  if (error || !updateInfo) return null;
+  // Reconnect polling after update
+  React.useEffect(() => {
+    if (reconnectCountdown <= 0) return
+
+    const timer = setInterval(() => {
+      setReconnectCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          // Try to reconnect
+          window.location.reload()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [reconnectCountdown > 0])
+
+  // Don't render for non-admins
+  if (!isAdmin) return null
+
+  // Don't render while loading or on error
+  if (isLoading || error) return null
+
+  // Don't render if no update available
+  if (!updateInfo?.updateAvailable) return null
+
+  // Show reconnect state
+  if (updateComplete) {
+    return (
+      <div className="mx-2 mb-2">
+        <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm">
+          <Loader2 className="h-4 w-4 animate-spin text-green-500" />
+          <span className="text-green-600 dark:text-green-400">
+            Restarting... ({reconnectCountdown}s)
+          </span>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      <Alert className={cn(
-        "w-96 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-        "border-primary shadow-lg"
-      )}>
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle className="font-semibold">New Update Available</AlertTitle>
-        <AlertDescription className="mt-2">
-          <p className="mb-3">
-            Version {updateInfo.version} is available.
-            {updateInfo.requiredMigrations && (
-              <span className="ml-2 text-yellow-500 dark:text-yellow-400">
-                Database updates required
-              </span>
-            )}
-          </p>
-          <AlertDialog open={open} onOpenChange={setOpen}>
-            <AlertDialogTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="w-full"
-              >
-                View Details & Update
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Update Available</AlertDialogTitle>
-                <AlertDialogDescription asChild>
-                  <div className="space-y-4">
-                    <div className="prose dark:prose-invert max-w-none">
-                      <h4 className="text-sm font-medium leading-none mb-2">Changelog:</h4>
-                      <pre className="text-sm whitespace-pre-wrap bg-muted p-4 rounded-lg">
-                        {updateInfo.changeLog}
+    <div className="mx-2 mb-2">
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-2 border-amber-500/50 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+            id="upgrade-button"
+          >
+            <ArrowUpCircle className="h-4 w-4" />
+            <span>Upgrade Available</span>
+            <Badge
+              variant="secondary"
+              className="ml-auto bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs"
+            >
+              v{updateInfo.latestVersion}
+            </Badge>
+          </Button>
+        </AlertDialogTrigger>
+
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-lg">
+              <ArrowUpCircle className="h-5 w-5 text-amber-500" />
+              Upgrade to v{updateInfo.latestVersion}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 pt-2">
+                {/* Version comparison */}
+                <div className="flex items-center gap-3 rounded-lg bg-muted/50 p-3">
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">Current</p>
+                    <p className="font-mono font-semibold text-foreground">
+                      v{updateInfo.currentVersion}
+                    </p>
+                  </div>
+                  <div className="text-muted-foreground">→</div>
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">Latest</p>
+                    <p className="font-mono font-semibold text-green-600 dark:text-green-400">
+                      v{updateInfo.latestVersion}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Release notes */}
+                {updateInfo.releaseNotes && (
+                  <div>
+                    <h4 className="mb-2 text-sm font-medium text-foreground">
+                      What&apos;s New
+                    </h4>
+                    <div className="max-h-48 overflow-y-auto rounded-lg border bg-muted/30 p-3">
+                      <pre className="whitespace-pre-wrap text-xs text-muted-foreground">
+                        {updateInfo.releaseNotes}
                       </pre>
                     </div>
-                    {updateInfo.requiredMigrations && (
-                      <div className="flex items-center gap-2 text-yellow-500 dark:text-yellow-400 text-sm">
-                        <AlertCircle className="h-4 w-4" />
-                        <span>This update includes database changes and requires migration.</span>
-                      </div>
-                    )}
                   </div>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => updateMutation.mutate(updateInfo.version)}
-                  disabled={updateMutation.isPending}
-                  className="gap-2"
-                >
-                  {updateMutation.isPending ? (
-                    <>
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      <span>Updating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4" />
-                      <span>Update Now</span>
-                    </>
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </AlertDescription>
-      </Alert>
+                )}
+
+                {/* Release link */}
+                {updateInfo.htmlUrl && (
+                  <a
+                    href={updateInfo.htmlUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    View full release on GitHub
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+
+                {/* Warning */}
+                <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    The application will restart during the upgrade. All active
+                    sessions will be briefly interrupted.
+                  </p>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updateMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                updateMutation.mutate(updateInfo.latestVersion)
+              }}
+              disabled={updateMutation.isPending}
+              className="gap-2 bg-green-600 hover:bg-green-700"
+            >
+              {updateMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Upgrading...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Upgrade Now</span>
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
-

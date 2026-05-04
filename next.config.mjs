@@ -4,6 +4,9 @@ import BundleAnalyzer from "@next/bundle-analyzer";
 const nextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  env: {
+    NEXT_PUBLIC_APP_VERSION: process.env.APP_VERSION || '0.0.0',
+  },
   webpack(config, { isServer }) {
     if (isServer) {
       config.module.rules.push({

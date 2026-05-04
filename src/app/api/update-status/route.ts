@@ -1,20 +1,17 @@
+export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { checkForUpdates } from '@/lib/version-checker';
+import { auth } from '@/auth';
 
 export async function GET() {
   try {
-    const updateInfo = await checkForUpdates();
-    
-    if (!updateInfo) {
-      return NextResponse.json({ updateAvailable: false });
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    return NextResponse.json({
-      updateAvailable: true,
-      version: updateInfo.version,
-      requiredMigrations: updateInfo.requiredMigrations,
-      changeLog: updateInfo.changeLog
-    });
+    const updateInfo = await checkForUpdates();
+    return NextResponse.json(updateInfo);
   } catch (error) {
     console.error('Failed to check update status:', error);
     return NextResponse.json(
@@ -22,4 +19,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-} 
+}

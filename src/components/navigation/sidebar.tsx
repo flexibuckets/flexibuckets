@@ -116,6 +116,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
+        <UpdateNotification />
         <UserBox />
       </SidebarFooter>
     </Sidebar>
