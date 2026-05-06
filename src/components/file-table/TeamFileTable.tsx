@@ -9,8 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Check, FolderIcon, Loader2 } from 'lucide-react';
+import { Check, FolderIcon, FolderPlus, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import FileBreadCrumbs from './FileBreadCrumbs';
 import { BreadcrumbPage } from '../ui/breadcrumb';
 import FileIcon from '../file-upload/FileIcon';
@@ -25,10 +26,11 @@ import {
 } from '@/lib/types';
 import AccessDenied from '../dashboard/AccessDenied';
 import { Skeleton } from '../ui/skeleton';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import TeamFolderActions from './TeamFolderActions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileMoreInfo, { MobileMoreInfoRow } from './MobileMoreInfo';
+import { CreateFolderDialog } from './create-folder';
 
 interface TeamFileTableProps {
   bucket: CompleteBucket;
@@ -41,6 +43,7 @@ export default function TeamFileTable({
 }: TeamFileTableProps) {
   const { id: s3CredentialId, name: bucketName, teamBucket } = bucket;
   const isMobile = useIsMobile();
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const {
     data,
     isLoading,
@@ -166,7 +169,7 @@ export default function TeamFileTable({
           </div>
         )}
       </div>
-      <div className="mb-4">
+      <div className="mb-4 flex items-center gap-2">
         <Input
           type="text"
           placeholder="Search in current folder . . ."
@@ -174,6 +177,14 @@ export default function TeamFileTable({
           onChange={(e) => updateSearchQuery(e.target.value)}
           className="max-w-sm"
         />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCreateFolderOpen(true)}
+        >
+          <FolderPlus className="h-4 w-4 mr-2" />
+          New Folder
+        </Button>
       </div>
       <Table>
         <TableHeader>
@@ -208,6 +219,13 @@ export default function TeamFileTable({
           )}
         </TableBody>
       </Table>
+
+      <CreateFolderDialog
+        open={createFolderOpen}
+        onOpenChange={setCreateFolderOpen}
+        s3CredentialId={s3CredentialId}
+        bucketName={bucketName}
+      />
     </>
   );
 }
