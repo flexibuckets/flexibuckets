@@ -12,13 +12,19 @@ import { getBucketFiles } from '@/app/actions';
 import { Skeleton } from '../ui/skeleton';
 
 import { formatBytes } from '@/lib/utils';
-import { Check, FolderIcon, FolderPlus, Loader2 } from 'lucide-react';
+import {
+  Check,
+  FolderIcon,
+  FolderPlus,
+  Loader2,
+  FileIcon as FileIconLucide,
+} from 'lucide-react';
 import FileIcon from '../file-upload/FileIcon';
 import FileActions from './FileActions';
 
 import { format } from 'date-fns';
 
-import {useParentId }from '@/hooks/use-parentId';
+import { useParentId } from '@/hooks/use-parentId';
 import FolderNameButton from './FolderNameButton';
 import FileBreadCrumbs from './FileBreadCrumbs';
 import { BreadcrumbPage } from '../ui/breadcrumb';
@@ -30,6 +36,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import MobileMoreInfo, { MobileMoreInfoRow } from './MobileMoreInfo';
 import { CompleteFile, CompleteFolder } from '@/lib/types';
 import { CreateFolderDialog } from './create-folder';
+import { Badge } from '../ui/badge';
 
 const FileTable = ({
   bucketName,
@@ -69,10 +76,10 @@ const FileTable = ({
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     )
     .map((item) => (
-      <TableRow key={item.id}>
+      <TableRow key={item.id} className="group">
         <TableCell className={`${isMobile ? 'flex items-center gap-x-2' : ''}`}>
           {isMobile && <FileIcon fileType={item.type} />}
-          {item.name}
+          <span className="font-medium">{item.name}</span>
         </TableCell>
         {isMobile ? (
           <TableCell>
@@ -80,12 +87,12 @@ const FileTable = ({
           </TableCell>
         ) : (
           <>
-            <TableCell className="flex items-center gap-x-2 ">
+            <TableCell className="flex items-center gap-x-2">
               <FileIcon fileType={item.type} />
-              <span className="max-w-[16ch] truncate">{item.type}</span>
+              <span className="max-w-[16ch] truncate text-muted-foreground">{item.type}</span>
             </TableCell>
-            <TableCell>{formatBytes(item.size || '0')}</TableCell>
-            <TableCell>
+            <TableCell className="text-muted-foreground">{formatBytes(item.size || '0')}</TableCell>
+            <TableCell className="text-muted-foreground">
               {format(new Date(item.updatedAt), 'dd/MM/yyyy p')}
             </TableCell>
           </>
@@ -102,33 +109,46 @@ const FileTable = ({
       (a, b) =>
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     )
-    .map((item) => (
-      <TableRow key={item.id}>
-        <TableCell className={`${isMobile ? 'flex items-center gap-x-2' : ''}`}>
-          {isMobile && <FolderIcon className="h-4 w-4 text-primary" />}
-          <FolderNameButton folderId={item.id} folderName={item.name} />
-        </TableCell>
-        {isMobile ? (
-          <TableCell>
-            <FileTableMoreInfo item={item} />
+    .map((item) => {
+      const itemCount = (item as CompleteFolder & { _count?: { files: number; children: number } })._count
+        ? (item as CompleteFolder & { _count: { files: number; children: number } })._count.files +
+          (item as CompleteFolder & { _count: { files: number; children: number } })._count.children
+        : 0;
+      return (
+        <TableRow key={item.id} className="group bg-muted/30 hover:bg-muted/50">
+          <TableCell className={`${isMobile ? 'flex items-center gap-x-2' : ''}`}>
+            {isMobile && <FolderIcon className="h-4 w-4 text-primary" />}
+            <div className="flex items-center gap-2">
+              <FolderNameButton folderId={item.id} folderName={item.name} />
+              {itemCount > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                  {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                </Badge>
+              )}
+            </div>
           </TableCell>
-        ) : (
-          <>
-            <TableCell className="flex items-center gap-x-2 ">
-              <FolderIcon className="h-4 w-4" />
-              <span className="max-w-[16ch] truncate">Folder</span>
-            </TableCell>
-            <TableCell>{formatBytes(item.size || '0')}</TableCell>
+          {isMobile ? (
             <TableCell>
-              {format(new Date(item.updatedAt), 'dd/MM/yyyy p')}
+              <FileTableMoreInfo item={item} />
             </TableCell>
-          </>
-        )}
-        <TableCell>
-          <FolderActions folder={{ ...item }} />
-        </TableCell>
-      </TableRow>
-    ));
+          ) : (
+            <>
+              <TableCell className="flex items-center gap-x-2">
+                <FolderIcon className="h-4 w-4 text-primary" />
+                <span className="max-w-[16ch] truncate text-muted-foreground">Folder</span>
+              </TableCell>
+              <TableCell className="text-muted-foreground">{formatBytes(item.size || '0')}</TableCell>
+              <TableCell className="text-muted-foreground">
+                {format(new Date(item.updatedAt), 'dd/MM/yyyy p')}
+              </TableCell>
+            </>
+          )}
+          <TableCell>
+            <FolderActions folder={{ ...item }} />
+          </TableCell>
+        </TableRow>
+      );
+    });
   return (
     <>
       <div className="flex justify-between items-center">
@@ -189,14 +209,20 @@ const FileTable = ({
         <TableBody>
           {isLoading ? (
             <TableLoader count={3} />
-          ) : data ? (
+          ) : data && (data.folders.length > 0 || data.files.length > 0) ? (
             <>
               {folderRows ? folderRows : null}
               {fileRows ? fileRows : null}
             </>
           ) : (
             <TableRow>
-              <TableCell colSpan={5}>No Files or Folders Found.</TableCell>
+              <TableCell colSpan={5} className="h-32 text-center">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <FileIconLucide className="h-8 w-8" />
+                  <p>No files or folders found</p>
+                  <p className="text-xs">Upload files or create a folder to get started</p>
+                </div>
+              </TableCell>
             </TableRow>
           )}
         </TableBody>
