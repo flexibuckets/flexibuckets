@@ -40,6 +40,9 @@ model User {
   addedBuckets        TeamSharedBucket[] @relation("BucketAddedBy")
   teamJoinRequests    TeamJoinRequest[]
 
+  //  API Related
+  apiKeys ApiKey[]
+
   // Timestamps
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
@@ -319,4 +322,17 @@ model TeamInvite {
 
   @@unique([email, teamId])
   @@index([teamId])
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  name      String
+  hashedKey String   @unique // We store a hash, not the key
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime? // Optional: good for tracking
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
