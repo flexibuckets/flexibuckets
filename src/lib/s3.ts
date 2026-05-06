@@ -992,6 +992,7 @@ export async function getTeamBucketFiles({
     },
     include: {
       sharedFolder: true,
+      _count: { select: { files: true, children: true } },
       user: {
         select: { name: true, teamMemberships: { where: { teamId } } },
       },
@@ -1008,6 +1009,7 @@ export async function getTeamBucketFiles({
       userId,
       sharedFolder,
       user,
+      _count,
     }) => ({
       id,
       name,
@@ -1018,6 +1020,7 @@ export async function getTeamBucketFiles({
       userId,
       uploadedBy: user?.name ?? 'Unknown',
       uploadedByRole: user?.teamMemberships[0]?.role ?? 'MEMBER',
+      itemCount: _count.files + _count.children,
     })
   );
   return { files: formattedFiles, folders: formattedFolders };
@@ -1192,6 +1195,7 @@ export async function importExistingBucketObjects({
   let importedFiles = 0;
   let importedFolders = 0;
   const createdFolders = new Set<string>();
+  const folderSizeMap = new Map<string, bigint>();
 
   for (const obj of objectsToImport) {
     const pathSegments = obj.name.split('/').filter(Boolean);
@@ -1209,6 +1213,7 @@ export async function importExistingBucketObjects({
     }
 
     const mimeType = guessMimeType(fileName);
+    const fileSize = BigInt(obj.size);
 
     try {
       await prisma.file.create({
@@ -1223,6 +1228,18 @@ export async function importExistingBucketObjects({
         },
       });
       importedFiles++;
+
+      if (folderId) {
+        let currentPath = folderPath;
+        while (currentPath) {
+          const segments = currentPath.split('/');
+          folderSizeMap.set(
+            currentPath,
+            (folderSizeMap.get(currentPath) || BigInt(0)) + fileSize
+          );
+          currentPath = segments.slice(0, -1).join('/');
+        }
+      }
     } catch (error) {
       if (
         error instanceof Error &&
@@ -1232,6 +1249,17 @@ export async function importExistingBucketObjects({
         continue;
       }
       throw error;
+    }
+  }
+
+  for (const [folderPath, size] of folderSizeMap.entries()) {
+    const cacheKey = `${s3CredentialId}:${folderPath}`;
+    const cachedFolderId = folderCache.get(cacheKey);
+    if (cachedFolderId) {
+      await prisma.folder.update({
+        where: { id: cachedFolderId },
+        data: { size: size.toString() },
+      });
     }
   }
 

@@ -629,7 +629,10 @@ export const getBucketFiles = async ({
         ? { name: { contains: searchQuery, mode: 'insensitive' } }
         : {}),
     },
-    include: { sharedFolder: true },
+    include: {
+      sharedFolder: true,
+      _count: { select: { files: true, children: true } },
+    },
   });
 
   return { files, folders };

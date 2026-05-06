@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Check, FolderIcon, FolderPlus, Loader2 } from 'lucide-react';
+import { Check, FolderIcon, FolderPlus, Loader2, FileIcon as FileIconLucide } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import FileBreadCrumbs from './FileBreadCrumbs';
@@ -31,6 +31,7 @@ import TeamFolderActions from './TeamFolderActions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileMoreInfo, { MobileMoreInfoRow } from './MobileMoreInfo';
 import { CreateFolderDialog } from './create-folder';
+import { Badge } from '../ui/badge';
 
 interface TeamFileTableProps {
   bucket: CompleteBucket;
@@ -74,10 +75,10 @@ export default function TeamFileTable({
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     )
     .map((item) => (
-      <TableRow key={item.id}>
+      <TableRow key={item.id} className="group">
         <TableCell className={`${isMobile ? 'flex items-center gap-x-2' : ''}`}>
           {isMobile && <FileIcon fileType={item.type} />}
-          {item.name}
+          <span className="font-medium">{item.name}</span>
         </TableCell>
         {isMobile ? (
           <TeamFileTableMoreInfo item={item} />
@@ -85,11 +86,11 @@ export default function TeamFileTable({
           <>
             <TableCell className="flex items-center gap-x-2 ">
               <FileIcon fileType={item.type} />
-              <span className="max-w-[16ch] truncate">{item.type}</span>
+              <span className="max-w-[16ch] truncate text-muted-foreground">{item.type}</span>
             </TableCell>
-            <TableCell>{formatBytes(item.size || '0')}</TableCell>
-            <TableCell>{item.uploadedBy}</TableCell>
-            <TableCell>
+            <TableCell className="text-muted-foreground">{formatBytes(item.size || '0')}</TableCell>
+            <TableCell className="text-muted-foreground">{item.uploadedBy}</TableCell>
+            <TableCell className="text-muted-foreground">
               {format(new Date(item.updatedAt), 'dd/MM/yyyy p')}
             </TableCell>
           </>
@@ -112,10 +113,22 @@ export default function TeamFileTable({
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     )
     .map((item) => (
-      <TableRow key={item.id}>
+      <TableRow key={item.id} className="group bg-muted/30 hover:bg-muted/50">
         <TableCell className={`${isMobile ? 'flex items-center gap-x-2' : ''}`}>
           {isMobile && <FolderIcon className="h-4 w-4" />}
-          <FolderNameButton folderId={item.id} folderName={item.name} />
+          <div className="flex items-center gap-2">
+            <FolderNameButton folderId={item.id} folderName={item.name} />
+            {'itemCount' in item && (item as CompleteTeamFolder & { itemCount?: number }).itemCount
+              ? (() => {
+                  const count = (item as CompleteTeamFolder & { itemCount: number }).itemCount;
+                  return (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                      {count} {count === 1 ? 'item' : 'items'}
+                    </Badge>
+                  );
+                })()
+              : null}
+          </div>
         </TableCell>
 
         {isMobile ? (
@@ -123,12 +136,12 @@ export default function TeamFileTable({
         ) : (
           <>
             <TableCell className="flex items-center gap-x-2 ">
-              <FolderIcon className="h-4 w-4" />
-              <span className="max-w-[16ch] truncate">Folder</span>
+              <FolderIcon className="h-4 w-4 text-primary" />
+              <span className="max-w-[16ch] truncate text-muted-foreground">Folder</span>
             </TableCell>
-            <TableCell>{formatBytes(item.size || '0')}</TableCell>
-            <TableCell>{item.uploadedBy}</TableCell>
-            <TableCell>
+            <TableCell className="text-muted-foreground">{formatBytes(item.size || '0')}</TableCell>
+            <TableCell className="text-muted-foreground">{item.uploadedBy}</TableCell>
+            <TableCell className="text-muted-foreground">
               {format(new Date(item.updatedAt), 'dd/MM/yyyy p')}
             </TableCell>
           </>
@@ -214,7 +227,13 @@ export default function TeamFileTable({
             </>
           ) : (
             <TableRow>
-              <TableCell colSpan={5}>No Files or Folders Found.</TableCell>
+              <TableCell colSpan={6} className="h-32 text-center">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <FileIconLucide className="h-8 w-8" />
+                  <p>No files or folders found</p>
+                  <p className="text-xs">Upload files or create a folder to get started</p>
+                </div>
+              </TableCell>
             </TableRow>
           )}
         </TableBody>
