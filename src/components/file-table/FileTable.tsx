@@ -12,7 +12,7 @@ import { getBucketFiles } from '@/app/actions';
 import { Skeleton } from '../ui/skeleton';
 
 import { formatBytes } from '@/lib/utils';
-import { Check, FolderIcon, Loader2 } from 'lucide-react';
+import { Check, FolderIcon, FolderPlus, Loader2 } from 'lucide-react';
 import FileIcon from '../file-upload/FileIcon';
 import FileActions from './FileActions';
 
@@ -25,9 +25,11 @@ import { BreadcrumbPage } from '../ui/breadcrumb';
 import FolderActions from './FolderActions';
 import useDebounce from '@/hooks/useDebounce';
 import { Input } from '../ui/input';
+import { Button } from '../ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import MobileMoreInfo, { MobileMoreInfoRow } from './MobileMoreInfo';
 import { CompleteFile, CompleteFolder } from '@/lib/types';
+import { CreateFolderDialog } from './create-folder';
 
 const FileTable = ({
   bucketName,
@@ -41,6 +43,7 @@ const FileTable = ({
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState('');
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   const { data, isError, isRefetching, isLoading, refetch } = useQuery({
@@ -149,7 +152,7 @@ const FileTable = ({
           </div>
         )}
       </div>
-      <div className="mb-4">
+      <div className="mb-4 flex items-center gap-2">
         <Input
           type="text"
           placeholder="Search in current folder . . ."
@@ -157,6 +160,14 @@ const FileTable = ({
           onChange={(e) => setSearchQuery(e.target.value)}
           className="max-w-sm"
         />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCreateFolderOpen(true)}
+        >
+          <FolderPlus className="h-4 w-4 mr-2" />
+          New Folder
+        </Button>
       </div>
       <Table>
         <TableHeader>
@@ -190,6 +201,13 @@ const FileTable = ({
           )}
         </TableBody>
       </Table>
+
+      <CreateFolderDialog
+        open={createFolderOpen}
+        onOpenChange={setCreateFolderOpen}
+        s3CredentialId={props.s3CredentialId}
+        bucketName={bucketName}
+      />
     </>
   );
 };
