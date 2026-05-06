@@ -1,11 +1,9 @@
-import { getSharedFileInfo } from "@/app/actions";
-import FileIcon from "@/components/file-upload/FileIcon";
-import Footer from "@/components/navigation/Footer";
-import Navbar from "@/components/navigation/Navbar";
-import { Button } from "@/components/ui/button";
-import { formatBytes } from "@/lib/utils";
-import { Download } from "lucide-react";
-import Link from "next/link";
+import { getSharedFileInfo } from '@/app/actions';
+import FileIcon from '@/components/file-upload/FileIcon';
+import Footer from '@/components/navigation/Footer';
+import Navbar from '@/components/navigation/Navbar';
+import { formatBytes } from '@/lib/utils';
+import SharedFilePreview from '@/components/preview/SharedFilePreview';
 
 export default async function SharedFilePage({
   params,
@@ -30,7 +28,7 @@ export default async function SharedFilePage({
   }
 
   const { expiresAt } = fileInfo;
-  const { type, name, size } = fileInfo.file;
+  const { type, name, size, s3CredentialId, s3Key } = fileInfo.file;
 
   return (
     <>
@@ -39,8 +37,8 @@ export default async function SharedFilePage({
         <div className="bg-background border border-border shadow-md rounded-lg p-6 max-w-md w-full">
           <div className="flex items-center mb-4 space-x-4">
             <FileIcon fileType={type} height="h-12" width="w-12" />
-            <div>
-              <h1 className="text-2xl font-bold">{name}</h1>
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold truncate">{name}</h1>
               <p className="text-sm text-gray-500">{type}</p>
             </div>
           </div>
@@ -58,11 +56,14 @@ export default async function SharedFilePage({
               </p>
             )}
           </div>
-          <Button asChild className="w-full">
-            <Link target="_blank" href={`/api/download/${params.shorturl}`}>
-              <Download className="mr-2 h-4 w-4" /> Download File
-            </Link>
-          </Button>
+          <SharedFilePreview
+            fileName={name}
+            fileType={type}
+            fileSize={size}
+            shortUrl={params.shorturl}
+            s3CredentialId={s3CredentialId}
+            s3Key={s3Key}
+          />
         </div>
       </div>
       <Footer />

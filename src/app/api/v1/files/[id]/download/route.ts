@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getRequestUser } from '@/lib/api/index';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getpresignedPutUrl } from '@/app/actions';
+import { getPresignedUrl } from '@/lib/s3';
 
 export async function GET(
   req: NextRequest,
@@ -23,23 +23,20 @@ export async function GET(
   }
 
   try {
-    const cred = file.s3Credential;
-    const downloadUrl = await getpresignedPutUrl({
-      endpointUrl: cred.endpointUrl,
-      accessKey: cred.accessKey,
-      secretKey: cred.secretKey,
-      fileName: file.s3Key,
-      bucketName: cred.bucket,
-      region: cred.region,
-      expiresIn: 3600,
-    });
+    const downloadUrl = await getPresignedUrl(
+      file.s3CredentialId,
+      file.s3Key,
+      3600
+    );
 
     return NextResponse.json({
       downloadUrl,
       fileName: file.name,
     });
-  } catch (error) {
-    console.error('Error generating download URL:', error);
-    return NextResponse.json({ error: 'Failed to generate download URL' }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { error: 'Failed to generate download URL' },
+      { status: 500 }
+    );
   }
 }

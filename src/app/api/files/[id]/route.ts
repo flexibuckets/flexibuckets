@@ -1,16 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getPresignedUrl } from "@/lib/s3";
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getPresignedUrl } from '@/lib/s3';
+import { auth } from '@/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const file = await prisma.file.findUnique({
-      where: {
-        id: params.id,
-      },
+      where: { id: params.id },
       select: {
         id: true,
         name: true,
@@ -18,17 +22,30 @@ export async function GET(
         size: true,
         s3Key: true,
         s3CredentialId: true,
+        userId: true,
       },
     });
 
     if (!file) {
-      return NextResponse.json(
-        { error: "File not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    // Get presigned URL using existing function
+    if (file.userId !== session.user.id) {
+      const teamMember = await prisma.teamMember.findFirst({
+        where: {
+          userId: session.user.id,
+          team: {
+            buckets: {
+              some: { s3CredentialId: file.s3CredentialId },
+            },
+          },
+        },
+      });
+      if (!teamMember) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
     const url = await getPresignedUrl(file.s3CredentialId, file.s3Key);
 
     return NextResponse.json({
@@ -36,13 +53,12 @@ export async function GET(
       name: file.name,
       type: file.type,
       size: file.size,
-      url: url,
+      url,
     });
-  } catch (error) {
-    console.error("Error fetching file:", error);
+  } catch {
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
-} 
+}
