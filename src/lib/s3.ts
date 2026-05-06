@@ -1073,3 +1073,213 @@ export async function deleteS3Bucket(s3CredentialId: string) {
 
   await minioClient.removeBucket(s3Credential.bucket);
 }
+
+export async function listS3Objects(s3CredentialId: string) {
+  const s3Credential = await getSingleCredential(s3CredentialId);
+  if (!s3Credential) {
+    throw new Error('S3 credential not found');
+  }
+
+  const minioClient = await getMinioClient(s3CredentialId);
+  const objects: { name: string; size: number; lastModified?: Date }[] = [];
+
+  const objectsStream = minioClient.listObjects(s3Credential.bucket, '', true);
+
+  for await (const obj of objectsStream) {
+    if (obj.name) {
+      objects.push({
+        name: obj.name,
+        size: obj.size || 0,
+        lastModified: obj.lastModified,
+      });
+    }
+  }
+
+  return objects;
+}
+
+export async function importExistingBucketObjects({
+  userId,
+  s3CredentialId,
+}: {
+  userId: string;
+  s3CredentialId: string;
+}) {
+  const s3Credential = await getSingleCredential(s3CredentialId);
+  if (!s3Credential) {
+    throw new Error('S3 credential not found');
+  }
+  if (s3Credential.userId !== userId) {
+    throw new Error('Unauthorized');
+  }
+
+  const existingFiles = await prisma.file.findMany({
+    where: { s3CredentialId },
+    select: { s3Key: true },
+  });
+  const existingS3Keys = new Set(existingFiles.map((f) => f.s3Key));
+
+  const objects = await listS3Objects(s3CredentialId);
+
+  const objectsToImport = objects.filter(
+    (obj) => !existingS3Keys.has(obj.name) && !obj.name.endsWith('/')
+  );
+
+  if (objectsToImport.length === 0) {
+    return {
+      importedFiles: 0,
+      importedFolders: 0,
+      skipped: existingS3Keys.size,
+    };
+  }
+
+  const folderCache = new Map<string, string>();
+
+  const getOrCreateFolder = async (
+    folderPath: string,
+    pathSegments: string[]
+  ): Promise<string | null> => {
+    if (folderCache.has(folderPath)) {
+      return folderCache.get(folderPath)!;
+    }
+
+    if (pathSegments.length === 0) {
+      return null;
+    }
+
+    const folderName = pathSegments[pathSegments.length - 1];
+    const parentPath = pathSegments.slice(0, -1).join('/');
+    const parentId = parentPath
+      ? await getOrCreateFolder(parentPath, pathSegments.slice(0, -1))
+      : null;
+
+    const cacheKey = `${s3CredentialId}:${folderPath}`;
+
+    if (folderCache.has(cacheKey)) {
+      return folderCache.get(cacheKey)!;
+    }
+
+    const existingFolder = await prisma.folder.findFirst({
+      where: {
+        name: folderName,
+        s3CredentialId,
+        parentId: parentId,
+        userId,
+      },
+      select: { id: true },
+    });
+
+    if (existingFolder) {
+      folderCache.set(cacheKey, existingFolder.id);
+      return existingFolder.id;
+    }
+
+    const newFolder = await prisma.folder.create({
+      data: {
+        name: folderName,
+        userId,
+        s3CredentialId,
+        parentId,
+        size: '0',
+      },
+      select: { id: true },
+    });
+
+    folderCache.set(cacheKey, newFolder.id);
+    return newFolder.id;
+  };
+
+  let importedFiles = 0;
+  let importedFolders = 0;
+  const createdFolders = new Set<string>();
+
+  for (const obj of objectsToImport) {
+    const pathSegments = obj.name.split('/').filter(Boolean);
+    const fileName = pathSegments.pop()!;
+    const folderPath = pathSegments.join('/');
+
+    let folderId: string | null = null;
+
+    if (pathSegments.length > 0) {
+      folderId = await getOrCreateFolder(folderPath, pathSegments);
+      if (folderId && !createdFolders.has(folderPath)) {
+        importedFolders++;
+        createdFolders.add(folderPath);
+      }
+    }
+
+    const mimeType = guessMimeType(fileName);
+
+    try {
+      await prisma.file.create({
+        data: {
+          userId,
+          name: fileName,
+          type: mimeType,
+          size: obj.size.toString(),
+          s3Key: obj.name,
+          s3CredentialId,
+          folderId,
+        },
+      });
+      importedFiles++;
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as any).code === 'P2002'
+      ) {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  return {
+    importedFiles,
+    importedFolders,
+    skipped: existingS3Keys.size,
+  };
+}
+
+function guessMimeType(fileName: string): string {
+  const ext = fileName.lastIndexOf('.') !== -1
+    ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase()
+    : '';
+
+  const mimeMap: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    pdf: 'application/pdf',
+    doc: 'application/msword',
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ppt: 'application/vnd.ms-powerpoint',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    txt: 'text/plain',
+    csv: 'text/csv',
+    json: 'application/json',
+    xml: 'application/xml',
+    html: 'text/html',
+    css: 'text/css',
+    js: 'application/javascript',
+    ts: 'application/typescript',
+    mp4: 'video/mp4',
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    avi: 'video/x-msvideo',
+    mov: 'video/quicktime',
+    zip: 'application/zip',
+    rar: 'application/vnd.rar',
+    '7z': 'application/x-7z-compressed',
+    tar: 'application/x-tar',
+    gz: 'application/gzip',
+  };
+
+  return mimeMap[ext] || 'application/octet-stream';
+}

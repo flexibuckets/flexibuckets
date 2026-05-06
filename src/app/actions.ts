@@ -26,6 +26,8 @@ import {
   deleteTeamFile,
   getTeamBucketFiles,
   handleTeamFileUpload,
+  listS3Objects,
+  importExistingBucketObjects,
 } from '@/lib/s3';
 import {
   getS3Credentials,
@@ -110,6 +112,8 @@ export {
   getTeamSharedFiles,
   isTeamSharingAllowed,
   deleteCompleteBucket,
+  listS3Objects,
+  importExistingBucketObjects,
 };
 
 export async function uploadTeamFileAction(formData: FormData) {
