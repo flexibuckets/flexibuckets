@@ -59,13 +59,13 @@ export function VersionUpgrade() {
   } = useQuery<VersionInfo>({
     queryKey: ['version-check'],
     queryFn: async () => {
-      const response = await fetch('/api/check-updates')
+      const response = await fetch('/api/check-updates?force=true')
       if (!response.ok) {
         throw new Error('Failed to check for updates')
       }
       return response.json()
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   })
 
   const updateMutation = useMutation({
@@ -204,10 +204,7 @@ export function VersionUpgrade() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ['version-check'] })
-              refetch()
-            }}
+            onClick={() => refetch()}
             disabled={isFetching}
             className="gap-2"
           >
