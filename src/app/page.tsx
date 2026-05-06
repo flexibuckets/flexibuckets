@@ -161,7 +161,7 @@ export default function LandingPage() {
                     } transition-all`}
                   >
                     <Link
-                      href="/signup"
+                      href="/register"
                       className="flex items-center justify-center"
                     >
                       Get Started

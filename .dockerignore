@@ -1,0 +1,56 @@
+# Dependencies — installed fresh in the container
+node_modules
+
+# Build output — rebuilt in container
+.next
+
+# Git history — not needed for building
+.git
+.gitignore
+
+# Editor and IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files (secrets — never bake into image)
+.env
+.env.local
+.env.production
+.env.development
+
+# Documentation and metadata
+README.md
+CONTRIBUTIONS.MD
+CODE_OF_CONDUCT.md
+LICENSE
+CHANGELOG.md
+*.md
+!prisma/**/*.md
+
+# CI/CD config
+.github
+Jenkinsfile
+
+# Docker files (prevent recursive context)
+docker-compose.yml
+Dockerfile
+
+# Bun lockfile binary is large but needed for install
+# Don't ignore bun.lockb
+
+# Development scripts
+install.sh
+
+# Editor config
+.editorconfig
+.eslintrc.json
+
+# Misc
+logo.png

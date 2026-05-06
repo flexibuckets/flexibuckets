@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 // Path to version.txt
 const versionFile = path.join(__dirname, '..', 'version.txt');
@@ -44,12 +45,18 @@ function bumpPatch(version) {
 // Main function
 function main() {
     const args = process.argv.slice(2);
-    if (args.length !== 1) {
-        console.log('Usage: node bump-version.js [major|minor|patch]');
+    if (args.length < 1) {
+        console.log('Usage: node bump-version.js [major|minor|patch] [--commit]');
+        console.log('');
+        console.log('Options:');
+        console.log('  --commit    Auto-commit and push the version bump');
+        console.log('');
+        console.log(`Current version: ${getCurrentVersion()}`);
         process.exit(1);
     }
 
     const type = args[0].toLowerCase();
+    const shouldCommit = args.includes('--commit');
     const currentVersion = getCurrentVersion();
 
     let newVersion;
@@ -69,6 +76,22 @@ function main() {
     }
 
     saveVersion(newVersion);
+    console.log(`\n${currentVersion} → ${newVersion}\n`);
+
+    if (shouldCommit) {
+        try {
+            console.log('Committing version bump...');
+            execSync('git add version.txt', { stdio: 'inherit' });
+            execSync(`git commit -m "chore: bump version to ${newVersion}"`, { stdio: 'inherit' });
+            execSync('git push origin main', { stdio: 'inherit' });
+            console.log(`\n✅ Version ${newVersion} pushed! CI will build and create a release.`);
+        } catch (error) {
+            console.error('Error committing:', error.message);
+            process.exit(1);
+        }
+    } else {
+        console.log('Run with --commit to auto-push, or manually commit version.txt');
+    }
 }
 
 main();

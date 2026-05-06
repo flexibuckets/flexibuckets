@@ -126,7 +126,7 @@ verify_docker() {
     if ! docker info >/dev/null 2>&1; then
         log "ERROR" "Docker is not running properly"
         exit 1
-    fi	
+    fi
 
     log "INFO" "Verifying Docker Compose installation..."
     if ! docker compose version >/dev/null 2>&1; then
@@ -291,6 +291,12 @@ start_services() {
 
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}Services started successfully${NC}"
+
+        # Fix cache volume permissions — Docker volumes may initialize with root ownership
+        # but the app runs as UID 1001 (flexibuckets user)
+        echo -e "${YELLOW}Fixing cache permissions...${NC}"
+        docker exec flexibuckets_app sh -c 'chown -R 1001:'"${DOCKER_GID}"' /app/.next/cache 2>/dev/null || true' 2>/dev/null || \
+        docker compose exec -T -u root app sh -c 'chown -R 1001:'"${DOCKER_GID}"' /app/.next/cache && chmod -R 775 /app/.next/cache' 2>/dev/null || true
     else
         echo -e "${RED}Failed to start services${NC}"
         exit 1
@@ -357,9 +363,9 @@ setup_database() {
     exit 1
   fi
 
-  # Run Prisma migrations with -T flag
+  # Run Prisma migrations
   echo -e "${YELLOW}Running database migrations...${NC}"
-  docker compose exec -T app sh -c 'cd /app && bunx prisma migrate deploy'
+  docker compose exec -T -e TMPDIR=/tmp app sh -c 'cd /app && ./node_modules/.bin/prisma migrate deploy'
   
   if [ $? -eq 0 ]; then
     echo -e "${GREEN}Database schema setup complete${NC}"
@@ -442,15 +448,15 @@ echo
     setup_traefik_directories
     
     update_env_file
-        setup_permissions
+    
     # Start services
-  start_services
+    start_services
     
     # Setup database
     setup_database
 
+    setup_permissions
 
-   
     log "INFO" "Installation completed successfully!"
     echo -e "\nAccess your FlexiBuckets instance at:"
     echo -e "\U0001F310 HTTP:  http://${SERVER_IP:-localhost}:3000"

@@ -1,149 +1,212 @@
 'use server'
-import { prisma } from "./prisma";
-import { DockerClient } from "@/lib/docker/client";
-import fs from 'fs/promises';
-import path from 'path';
 import semver from 'semver';
+import { DockerClient } from '@/lib/docker/client';
 
-interface Version {
-  version: string;
-  shaShort: string;
-  requiredMigrations: boolean;
-  changeLog: string;
-  dockerImage: string;
+export interface VersionInfo {
+  currentVersion: string;
+  latestVersion: string;
+  updateAvailable: boolean;
+  releaseNotes: string;
+  publishedAt: string;
+  htmlUrl: string;
 }
 
 let versionCache: {
   timestamp: number;
-  data: Version | null;
+  data: VersionInfo;
 } | null = null;
 
 const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
 
-export async function checkForUpdates(): Promise<Version | null> {
+/**
+ * Check for available updates by comparing local version against
+ * the latest GitHub Release for flexibuckets/flexibuckets.
+ */
+export async function checkForUpdates(): Promise<VersionInfo> {
   try {
+    // Return cached result if still fresh
     if (versionCache && Date.now() - versionCache.timestamp < CACHE_DURATION) {
       return versionCache.data;
     }
 
     const currentVersion = process.env.APP_VERSION || '0.0.0';
-    const currentShaShort = process.env.APP_SHA_SHORT || '000000';
 
-    const [versionResponse, commitResponse] = await Promise.all([
-      fetch('https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/version.txt'),
-      fetch('https://api.github.com/repos/flexibuckets/flexibuckets/commits/main')
-    ]);
+    // Use GitHub Releases API to get the latest release
+    const response = await fetch(
+      'https://api.github.com/repos/flexibuckets/flexibuckets/releases/latest',
+      {
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+        cache: 'no-store',
+      }
+    );
 
-    if (!versionResponse.ok || !commitResponse.ok) {
-      throw new Error('Failed to fetch version information');
+    if (!response.ok) {
+      // If no releases exist yet, return no update
+      if (response.status === 404) {
+        const noUpdate: VersionInfo = {
+          currentVersion,
+          latestVersion: currentVersion,
+          updateAvailable: false,
+          releaseNotes: '',
+          publishedAt: '',
+          htmlUrl: '',
+        };
+        versionCache = { timestamp: Date.now(), data: noUpdate };
+        return noUpdate;
+      }
+      throw new Error(`GitHub API responded with ${response.status}`);
     }
 
-    const latestVersion = (await versionResponse.text()).trim();
-    const commitData = await commitResponse.json();
-    const latestShaShort = commitData.sha.substring(0, 6);
+    const release = await response.json();
 
-    const isNewer = semver.gt(latestVersion, currentVersion);
-    
-    if (!isNewer && latestShaShort === currentShaShort) {
-      versionCache = { timestamp: Date.now(), data: null };
-      return null;
-    }
+    // Strip leading 'v' from tag name (e.g., "v1.0.6" → "1.0.6")
+    const latestVersion = release.tag_name.replace(/^v/, '');
 
-    const migrationsResponse = await fetch(
-      'https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/prisma/migrations/migration_manifest.json'
-    );
-    
-    const migrations = await migrationsResponse.json();
-    const requiredMigrations = migrations.some((migration: any) => 
-      semver.gt(migration.version, currentVersion)
-    );
+    const updateAvailable = semver.valid(latestVersion) && semver.valid(currentVersion)
+      ? semver.gt(latestVersion, currentVersion)
+      : latestVersion !== currentVersion;
 
-    const changelogResponse = await fetch(
-      'https://raw.githubusercontent.com/flexibuckets/flexibuckets/main/CHANGELOG.md'
-    );
-    const changeLog = await changelogResponse.text();
-
-    const versionInfo: Version = {
-      version: latestVersion,
-      shaShort: latestShaShort,
-      requiredMigrations,
-      changeLog,
-      dockerImage: `flexibuckets/flexibuckets:${latestShaShort}`
+    const versionInfo: VersionInfo = {
+      currentVersion,
+      latestVersion,
+      updateAvailable,
+      releaseNotes: release.body || 'No release notes available.',
+      publishedAt: release.published_at || '',
+      htmlUrl: release.html_url || '',
     };
 
     versionCache = { timestamp: Date.now(), data: versionInfo };
     return versionInfo;
   } catch (error) {
     console.error('Error checking for updates:', error);
-    return versionCache?.data || null;
-  }
-}
 
-export async function executeUpdate(newVersion: string): Promise<boolean> {
-  try {
-    await updateEnvFile('APP_VERSION', newVersion);
-    
-    const dockerClient = DockerClient.getInstance();
-    const appContainer = await dockerClient.docker.getContainer('flexibuckets_app');
-
-    // Pull the new image
-    await dockerClient.docker.pull(`flexibuckets/flexibuckets:${newVersion}`);
-
-    // Stop the current container
-    await appContainer.stop();
-
-    // Remove the old container
-    await appContainer.remove();
-
-    // Create and start a new container with the updated image
-    const container = await dockerClient.docker.createContainer({
-      Image: `flexibuckets/flexibuckets:${newVersion}`,
-      name: 'flexibuckets_app',
-      // Add other necessary container options here
-    });
-
-    await container.start();
-
-    // Run migrations if needed
-    if (await checkMigrationsNeeded()) {
-      await runMigrations(container);
+    // Return cached data if available, otherwise return safe default
+    if (versionCache) {
+      return versionCache.data;
     }
 
-    return true;
-  } catch (error) {
-    console.error('Update failed:', error);
-    return false;
+    return {
+      currentVersion: process.env.APP_VERSION || '0.0.0',
+      latestVersion: process.env.APP_VERSION || '0.0.0',
+      updateAvailable: false,
+      releaseNotes: '',
+      publishedAt: '',
+      htmlUrl: '',
+    };
   }
 }
 
-async function updateEnvFile(key: string, value: string): Promise<void> {
-  const envPath = path.join(process.cwd(), '.env');
-  let envContent = await fs.readFile(envPath, 'utf8');
-  
-  const regex = new RegExp(`^${key}=.*$`, 'm');
-  if (regex.test(envContent)) {
-    envContent = envContent.replace(regex, `${key}=${value}`);
-  } else {
-    envContent += `\n${key}=${value}`;
-  }
-  
-  await fs.writeFile(envPath, envContent);
-}
-
-async function checkMigrationsNeeded(): Promise<boolean> {
+/**
+ * Execute the version upgrade using a sidecar updater container.
+ * 
+ * Strategy:
+ * 1. Pull the new Docker image via Docker socket
+ * 2. Spawn a temporary "updater" container (docker:cli) that:
+ *    a. Waits for the HTTP response to reach the client
+ *    b. Updates .env with the new version
+ *    c. Runs `docker compose up -d --no-deps app` to recreate the app container
+ *    d. Runs database migrations in the new container
+ *    e. Auto-removes itself
+ * 
+ * This avoids the fatal flaw of the previous approach: the app container
+ * was trying to stop ITSELF, which killed the upgrade process mid-flight.
+ * The sidecar handles the swap from outside.
+ */
+export async function executeUpdate(newVersion: string): Promise<boolean> {
   try {
-    await prisma.$executeRaw`SELECT 1`;
-    return false;
-  } catch (error) {
+    const dockerClient = DockerClient.getInstance();
+    const imageName = `flexibuckets/flexibuckets:${newVersion}`;
+    const installDir = process.env.INSTALL_DIR || '/opt/flexibuckets';
+
+    // 1. Pull the new app image
+    console.log(`[Upgrade] Pulling ${imageName}...`);
+    await pullImage(dockerClient, imageName);
+    console.log(`[Upgrade] Pull complete for ${imageName}`);
+
+    // 2. Pull the docker:cli image for the updater sidecar
+    console.log(`[Upgrade] Pulling updater image (docker:cli)...`);
+    await pullImage(dockerClient, 'docker:cli');
+    console.log(`[Upgrade] Updater image ready`);
+
+    // 3. Remove any leftover updater container from a previous attempt
+    try {
+      const existing = dockerClient.docker.getContainer('flexibuckets_updater');
+      await existing.remove({ force: true });
+    } catch (e) {
+      // No leftover container — that's expected
+    }
+
+    // 4. Create the updater sidecar container
+    // It will wait, update .env, recreate the app container, run migrations, then self-remove
+    const updateScript = [
+      'set -e',
+      'echo "[Updater] Waiting for HTTP response to reach client..."',
+      'sleep 5',
+      '',
+      '# Update .env with new version',
+      'cd /flexibuckets',
+      `sed -i "s/^APP_SHA_SHORT=.*/APP_SHA_SHORT=${newVersion}/" .env`,
+      `sed -i "s/^APP_VERSION=.*/APP_VERSION=${newVersion}/" .env`,
+      `echo "[Updater] Updated .env to version ${newVersion}"`,
+      '',
+      '# Recreate the app container with the new image',
+      'echo "[Updater] Recreating app container..."',
+      'docker compose up -d --no-deps app',
+      '',
+      '# Wait for the new container to be healthy',
+      'echo "[Updater] Waiting for new container to start..."',
+      'sleep 15',
+      '',
+      '# Run database migrations',
+      'echo "[Updater] Running database migrations..."',
+      `docker exec flexibuckets_app sh -c 'cd /app && TMPDIR=/tmp ./node_modules/.bin/prisma migrate deploy' || echo "[Updater] Migration step done (may have no pending migrations)"`,
+      '',
+      `echo "[Updater] Upgrade to v${newVersion} complete!"`,
+    ].join('\n');
+
+    console.log(`[Upgrade] Creating updater sidecar...`);
+    const updater = await dockerClient.docker.createContainer({
+      Image: 'docker:cli',
+      name: 'flexibuckets_updater',
+      Cmd: ['sh', '-c', updateScript],
+      HostConfig: {
+        Binds: [
+          '/var/run/docker.sock:/var/run/docker.sock',
+          `${installDir}:/flexibuckets:rw`,
+        ],
+        AutoRemove: true,
+      },
+    } as any);
+
+    // 5. Start the updater — it runs in the background
+    console.log(`[Upgrade] Starting updater sidecar...`);
+    await updater.start();
+
+    // Invalidate version cache
+    versionCache = null;
+
+    console.log(`[Upgrade] Updater launched — app will restart in ~5 seconds`);
     return true;
+  } catch (error) {
+    console.error('[Upgrade] Update failed:', error);
+    return false;
   }
 }
 
-async function runMigrations(container: any): Promise<void> {
-  await container.exec({
-    Cmd: ['npx', 'prisma', 'migrate', 'deploy'],
-    AttachStdout: true,
-    AttachStderr: true
+/**
+ * Pull a Docker image and wait for completion.
+ */
+function pullImage(dockerClient: DockerClient, imageName: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    dockerClient.docker.pull(imageName, (err: Error | null, stream: NodeJS.ReadableStream) => {
+      if (err) return reject(err);
+      dockerClient.docker.modem.followProgress(stream, (err: Error | null) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
   });
 }
-

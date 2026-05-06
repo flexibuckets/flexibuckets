@@ -16,15 +16,6 @@ const SignInContent = () => {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
-  const [csrfToken, setCsrfToken] = useState<string>()
-
-  useEffect(() => {
-    const loadCsrfToken = async () => {
-      const token = await getCsrfToken()
-      setCsrfToken(token)
-    }
-    loadCsrfToken()
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,13 +52,12 @@ const SignInContent = () => {
           <p className="text-sm text-muted-foreground">Sign in to your account</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input name="csrfToken" type="hidden" defaultValue={csrfToken} />
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="yous@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required

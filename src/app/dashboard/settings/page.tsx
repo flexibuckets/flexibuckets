@@ -4,6 +4,7 @@ import { DomainSettings } from "@/components/settings/DomainSettings";
 import {SignupToggle} from "@/components/settings/SignUpToggle";
 import NameEdit from "@/components/settings/NameEdit";
 import ApiKeys from "@/components/settings/ApiKeys";
+import { VersionUpgrade } from "@/components/settings/VersionUpgrade";
 import React from "react";
 
 const Page = async () => {
@@ -24,7 +25,7 @@ const Page = async () => {
         {session.user.isAdmin && <>
           <SignupToggle />
           <DomainSettings session={session} />
-
+          <VersionUpgrade />
         </>}
     
       </div>
@@ -33,3 +34,4 @@ const Page = async () => {
 };
 
 export default Page;
+

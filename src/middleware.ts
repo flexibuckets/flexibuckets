@@ -6,26 +6,22 @@ const API_KEY_ROUTES_PREFIX = '/api/v1/';
 
 export default async function middleware(request: NextRequest) {
   const { nextUrl, headers } = request;
-  const requestHeaders = new Headers(request.headers); // We will add to this
+  const requestHeaders = new Headers(request.headers);
 
-  // --- START API KEY HANDLING ---
-  // This block no longer validates. It just extracts.
   const isApiKeyRoute = nextUrl.pathname.startsWith(API_KEY_ROUTES_PREFIX);
   if (isApiKeyRoute) {
     const authHeader = headers.get('Authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const plainTextKey = authHeader.substring(7);
-      // Attach the *plaintext* key to be validated by the API route
       requestHeaders.set('x-api-key', plainTextKey);
     }
   }
-  // --- END API KEY HANDLING ---
 
-  // --- Your existing NextAuth Session Logic ---
   const isProduction = process.env.NODE_ENV === 'production';
   const nextAuthTokenName = isProduction
     ? '__Secure-next-auth.session-token'
     : 'next-auth.session-token';
+
   const cookieExists = request.cookies.has(nextAuthTokenName);
 
   const isPublicRoute = PUBLIC_ROUTES.includes(nextUrl.pathname);
