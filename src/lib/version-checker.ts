@@ -22,10 +22,9 @@ const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
  * Check for available updates by comparing local version against
  * the latest GitHub Release for flexibuckets/flexibuckets.
  */
-export async function checkForUpdates(): Promise<VersionInfo> {
+export async function checkForUpdates(force = false): Promise<VersionInfo> {
   try {
-    // Return cached result if still fresh
-    if (versionCache && Date.now() - versionCache.timestamp < CACHE_DURATION) {
+    if (!force && versionCache && Date.now() - versionCache.timestamp < CACHE_DURATION) {
       return versionCache.data;
     }
 
