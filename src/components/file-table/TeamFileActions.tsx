@@ -1,10 +1,14 @@
-import React, { useCallback, useState } from "react";
-import { CompleteTeamFile } from "@/lib/types";
-import { TeamRole } from "@prisma/client";
-import DeleteFile from "./DeleteFile";
-import ShareFile from "@/components/file-table/share/ShareFile";
-import { DownloadFile } from "./DownloadFile";
-import TableAction from "@/components/TableAction";
+import React, { useCallback, useState } from 'react';
+import { CompleteTeamFile } from '@/lib/types';
+import { TeamRole } from '@prisma/client';
+import DeleteFile from './DeleteFile';
+import ShareFile from '@/components/file-table/share/ShareFile';
+import { DownloadFile } from './DownloadFile';
+import TableAction from '@/components/TableAction';
+import { Button } from '../ui/button';
+import { Eye } from 'lucide-react';
+import FilePreviewDialog, { isPreviewable } from '@/components/preview/FilePreviewDialog';
+
 type TeamFileActionsProps = {
   file: CompleteTeamFile;
   userTeamRole: TeamRole;
@@ -24,8 +28,10 @@ const TeamFileActions = ({
     s3CredentialId,
     userId,
     uploadedByRole,
+    type,
   } = file;
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const updateLoading = useCallback(
     (val: boolean) => {
@@ -34,27 +40,48 @@ const TeamFileActions = ({
     [setIsLoading]
   );
 
-  const isOwner = userTeamRole === "OWNER";
-  const isAdmin = userTeamRole === "ADMIN";
+  const isOwner = userTeamRole === 'OWNER';
+  const isAdmin = userTeamRole === 'ADMIN';
   const isFileOwner = currentUserId === userId;
-  const isMemberUploaded = uploadedByRole === "MEMBER";
+  const isMemberUploaded = uploadedByRole === 'MEMBER';
   const canControl = isOwner || isFileOwner || (isAdmin && isMemberUploaded);
+  const canPreview = isPreviewable(type, fileName);
 
   return (
     <TableAction isLoading={isLoading}>
-      <DownloadFile fileId={fileId} />
+      <>
+        {canPreview && (
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPreviewOpen(true)}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Preview
+            </Button>
+            <FilePreviewDialog
+              fileId={fileId}
+              open={previewOpen}
+              onOpenChange={setPreviewOpen}
+            />
+          </>
+        )}
 
-      {canControl ? (
-        <>
-          <ShareFile file={file} teamId={teamId} />
-          <DeleteFile
-            updateLoading={updateLoading}
-            fileId={fileId}
-            fileName={fileName}
-            s3CredentialId={s3CredentialId}
-          />
-        </>
-      ) : null}
+        <DownloadFile fileId={fileId} />
+
+        {canControl ? (
+          <>
+            <ShareFile file={file} teamId={teamId} />
+            <DeleteFile
+              updateLoading={updateLoading}
+              fileId={fileId}
+              fileName={fileName}
+              s3CredentialId={s3CredentialId}
+            />
+          </>
+        ) : null}
+      </>
     </TableAction>
   );
 };
