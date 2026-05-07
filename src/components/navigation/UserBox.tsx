@@ -9,11 +9,11 @@ import { getUserTotalFileUpload } from '@/app/actions';
 import { formatBytes } from '@/lib/utils';
 import { ThemeSwitcher } from '../ThemeSwitcher';
 import { NameModal } from './NameModal';
-import { useSubscriptionPlan } from '@/context/SubscriptionContext';
+import { useInstanceLimits } from '@/context/SubscriptionContext';
 import { UserAvatar } from '../UserAvatar';
 const UserBox = () => {
   const { data: session, status } = useSession();
-  const subscriptionPlan = useSubscriptionPlan();
+  const instanceLimits = useInstanceLimits();
   const [name, setName] = useState('');
   const [isNameModalOpen, setNameModalOpen] = useState(true);
   const handleNameModalClose = (givenName?: string) => {
@@ -32,7 +32,7 @@ const UserBox = () => {
     queryKey: ['total-file-size'],
     enabled: !!session?.user?.id && status === 'authenticated', // Ensures the query runs only when the session is available and authenticated
   });
-  const totalStorage = subscriptionPlan.storage * 1024 * 1024 * 1024;
+  const totalStorage = instanceLimits.storage * 1024 * 1024 * 1024;
   const usedPercentage = usedStorage
     ? (parseInt(usedStorage) / totalStorage) * 100
     : 0;

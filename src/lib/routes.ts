@@ -3,7 +3,6 @@ import { NavLink, SidebarLinkGroup } from './types';
 import {
   LayoutDashboard,
   Share2,
-  CreditCard,
   Settings,
   Users,
   UserCog2Icon,
@@ -15,7 +14,6 @@ import {
 export const ROOT = '/';
 export const PUBLIC_ROUTES = [
   '/',
-  '/pricing',
   '/docs',
   '/shared',
   '/googlec349a50cd94e1137.html',

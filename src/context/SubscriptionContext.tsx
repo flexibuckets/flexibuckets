@@ -1,30 +1,30 @@
 "use client";
-import { DEFAULT_CONFIG } from "@/config/dodo";
+import { DEFAULT_LIMITS, InstanceLimits } from "@/config/limits";
 import { createContext, ReactNode, useContext } from "react";
 
 type SubscriptionContext = {
-  subscriptionPlan: typeof DEFAULT_CONFIG;
+  instanceLimits: InstanceLimits;
 };
 
 export const subscriptionContext = createContext<SubscriptionContext>({
-  subscriptionPlan: DEFAULT_CONFIG,
+  instanceLimits: DEFAULT_LIMITS,
 });
 
 export const SubscriptionContextProvider = ({
   children,
-  subscriptionPlan,
+  instanceLimits,
 }: {
   children: ReactNode;
-  subscriptionPlan: typeof DEFAULT_CONFIG;
+  instanceLimits: InstanceLimits;
 }) => {
   return (
-    <subscriptionContext.Provider value={{ subscriptionPlan }}>
+    <subscriptionContext.Provider value={{ instanceLimits }}>
       {children}
     </subscriptionContext.Provider>
   );
 };
 
-export const useSubscriptionPlan = () => {
-  const { subscriptionPlan } = useContext(subscriptionContext);
-  return subscriptionPlan;
+export const useInstanceLimits = () => {
+  const { instanceLimits } = useContext(subscriptionContext);
+  return instanceLimits;
 };

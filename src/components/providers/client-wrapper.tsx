@@ -1,6 +1,5 @@
 'use client';
 
-import { PlanConfig } from '@/config/dodo';
 import {
   NextAuthProvider,
   ReactQueryClientProvider,
@@ -10,12 +9,10 @@ import {
 
 interface ProvidersProps {
   children: React.ReactNode;
-  subscriptionPlan: PlanConfig;
 }
 
 export function ClientProviders({
   children,
-  subscriptionPlan,
 }: ProvidersProps) {
   return (
     <ThemeProvider

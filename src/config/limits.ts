@@ -1,4 +1,4 @@
-export interface PlanConfig {
+export interface InstanceLimits {
   storage: number;
   fileShares: number;
   sharedStorageLimit: number;
@@ -9,8 +9,8 @@ export interface PlanConfig {
   addFreeSharing: boolean;
 }
 
-export const DEFAULT_CONFIG: PlanConfig = {
-  storage: 1024, // 1TB
+export const DEFAULT_LIMITS: InstanceLimits = {
+  storage: 1024,
   fileShares: 1000000,
   sharedStorageLimit: 2000000,
   downloadLimit: 2000000,
@@ -19,5 +19,3 @@ export const DEFAULT_CONFIG: PlanConfig = {
   maxFileUploadSize: 2000000,
   addFreeSharing: true,
 };
-
-

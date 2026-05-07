@@ -88,7 +88,7 @@ export function TeamsProvider({ children }: { children: ReactNode }) {
         title: 'Access Denied',
         description:
           access.reason === 'subscription_required'
-            ? 'Teams subscription required to access this team'
+            ? 'You do not have access to this team'
             : "You don't have access to this team",
         variant: 'destructive',
       });

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { UserIcon, KeyRound } from 'lucide-react';
+import { UserIcon, Mail, Settings2, KeyRound } from 'lucide-react';
 
 export default function SettingsLayout({
   children,
@@ -18,11 +18,29 @@ export default function SettingsLayout({
       href: '/dashboard/settings',
       icon: UserIcon,
     },
+    {
+      title: 'Email',
+      href: '/dashboard/settings/email',
+      icon: Mail,
+    },
+    {
+      title: 'General',
+      href: '/dashboard/settings/general',
+      icon: Settings2,
+    },
   ];
 
   return (
     <div className="flex-1 overflow-auto">
       <div className="container mx-auto p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Settings</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Manage your account and instance configuration
+            </p>
+          </div>
+        </div>
         <div className="flex flex-col md:flex-row md:space-x-8">
           <div className="md:w-1/4 mb-8 md:mb-0">
             <nav className="space-y-1">
@@ -51,4 +69,4 @@ export default function SettingsLayout({
       </div>
     </div>
   );
-} 
+}

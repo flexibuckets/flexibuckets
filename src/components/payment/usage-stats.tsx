@@ -1,6 +1,6 @@
 import { formatBytes } from "@/lib/utils";
 import { UsageType } from "@/types/payment.types";
-import { PlanConfig } from "@/config/dodo";
+import { InstanceLimits } from "@/config/limits";
 import { 
   HardDrive, 
   Share2, 
@@ -13,7 +13,7 @@ import StatCard from "@/components/ui/stat-card";
 
 interface UsageStatsProps {
   usageStats: UsageType;
-  config: PlanConfig;
+  config: InstanceLimits;
   bucketCount: number;
   fileCount: number;
   folderCount: number;
