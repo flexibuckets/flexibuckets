@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import AccessDenied from "@/components/dashboard/AccessDenied";
-import NameEdit from "@/components/settings/NameEdit";
-import ApiKeys from "@/components/settings/ApiKeys";
+import { EmailSettings } from "@/components/settings/EmailSettings";
 import React from "react";
 
 const Page = async () => {
@@ -9,10 +8,12 @@ const Page = async () => {
   if (!session || !session.user) {
     return <AccessDenied />;
   }
+  if (!session.user.isAdmin) {
+    return <AccessDenied />;
+  }
   return (
     <div className="space-y-4">
-      <NameEdit session={session} />
-      <ApiKeys session={session} />
+      <EmailSettings />
     </div>
   );
 };

@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { S3Provider } from '@prisma/client';
 import { getBucketDetails, getSharedFolderStructure } from './s3';
-import { DEFAULT_CONFIG } from '@/config/dodo';
+import { DEFAULT_LIMITS } from '@/config/limits';
 import { CompleteBucket } from './types';
 
 // Create a new file entry in the database
@@ -1002,8 +1002,8 @@ export async function isAllowedToShare({
   if (!user) return false;
   const { totalFileShares, totalSharedStorage } = user;
 
-  // Use DEFAULT_CONFIG instead of subscription plan
-  if (totalFileShares >= DEFAULT_CONFIG.fileShares) {
+  // Use DEFAULT_LIMITS instead of subscription plan
+  if (totalFileShares >= DEFAULT_LIMITS.fileShares) {
     return false;
   }
 
@@ -1013,7 +1013,7 @@ export async function isAllowedToShare({
   const totalAfterShare = currentSharedStorage + newFileSize;
 
   const sharedStorageLimitInBytes =
-    BigInt(DEFAULT_CONFIG.sharedStorageLimit) * BigInt(1024 * 1024 * 1024); // GB to bytes
+    BigInt(DEFAULT_LIMITS.sharedStorageLimit) * BigInt(1024 * 1024 * 1024); // GB to bytes
 
   return totalAfterShare <= sharedStorageLimitInBytes;
 }
@@ -1039,16 +1039,16 @@ export async function isAllowedToUpload({
   const fileSizeBigInt = BigInt(fileSize);
   const finUpload = currentUploadSize + fileSizeBigInt;
 
-  // Use DEFAULT_CONFIG for limits
+  // Use DEFAULT_LIMITS for limits
   const uploadStorageLimitInBytes =
-    BigInt(DEFAULT_CONFIG.storage) * BigInt(1024 * 1024 * 1024); // GB to bytes
+    BigInt(DEFAULT_LIMITS.storage) * BigInt(1024 * 1024 * 1024); // GB to bytes
 
   if (finUpload >= uploadStorageLimitInBytes) {
     return false;
   }
 
   // Check file count limit
-  if (fileCount > DEFAULT_CONFIG.maxFileUpload) {
+  if (fileCount > DEFAULT_LIMITS.maxFileUpload) {
     return false;
   }
 
@@ -1092,7 +1092,7 @@ export async function isDownloadAllowed({
   const finDownload = currentDownloadSize + fileSizeBigInt;
 
   const downloadStorageLimitInBytes =
-    BigInt(DEFAULT_CONFIG.downloadLimit) * BigInt(1024 * 1024 * 1024); // GB to bytes
+    BigInt(DEFAULT_LIMITS.downloadLimit) * BigInt(1024 * 1024 * 1024); // GB to bytes
 
   return finDownload < downloadStorageLimitInBytes;
 }
@@ -1239,7 +1239,7 @@ export async function isAllowedToAddBucket(userId: string): Promise<boolean> {
 
   if (!user) return false;
 
-  const plan = DEFAULT_CONFIG;
+  const plan = DEFAULT_LIMITS;
   if (!plan) return false;
 
   return user.s3Credentials.length < plan.buckets;

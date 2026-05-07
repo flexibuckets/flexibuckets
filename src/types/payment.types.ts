@@ -1,9 +1,9 @@
-import { PlanConfig } from '@/config/dodo';
+import { InstanceLimits } from '@/config/limits';
 
 // Simplified billing stats props without subscription
 export type BillingStatsProps = {
   billingStats: UsageType;
-  subscriptionPlan: PlanConfig;
+  instanceLimits: InstanceLimits;
 };
 
 // Simplified usage type
@@ -16,7 +16,7 @@ export type UsageType = {
 
 // Remove all subscription-related types that are no longer needed
 export type ManageSubscriptionProps = {
-  subscriptionPlan: PlanConfig;
+  instanceLimits: InstanceLimits;
 };
 
 // Keep only the basic types needed for file operations

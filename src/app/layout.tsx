@@ -6,7 +6,6 @@ import Providers from '@/components/providers/providers';
 import { constructMetadata } from '@/lib/utils';
 import { WorkspaceResetProvider } from '@/components/providers/WorkspaceResetProvider';
 
-import { DEFAULT_CONFIG } from '@/config/dodo';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = constructMetadata();
@@ -16,8 +15,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const subscriptionPlan = DEFAULT_CONFIG;
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -25,7 +22,7 @@ export default async function RootLayout({
         className="min-h-screen bg-background antialiased"
       >
         <Suspense>
-          <Providers subscriptionPlan={subscriptionPlan}>
+          <Providers>
             <WorkspaceResetProvider>
               <div className="relative flex min-h-screen flex-col">
               <div className="flex-1">{children}</div>

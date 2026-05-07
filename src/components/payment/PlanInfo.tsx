@@ -5,19 +5,19 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { InfoIcon } from 'lucide-react';
-import { DEFAULT_CONFIG } from "@/config/dodo";
+import { DEFAULT_LIMITS } from "@/config/limits";
 import { formatBytes } from "@/lib/utils";
 
 const PlanInfo = () => {
   const features = [
-    `${formatBytes((DEFAULT_CONFIG.storage * 1024 * 1024 * 1024).toString())} Storage`,
-    `${DEFAULT_CONFIG.fileShares.toLocaleString()} File Shares`,
-    `${formatBytes((DEFAULT_CONFIG.sharedStorageLimit * 1024 * 1024 * 1024).toString())} Shared Storage`,
-    `${formatBytes((DEFAULT_CONFIG.downloadLimit * 1024 * 1024 * 1024).toString())} Download Limit`,
-    `${DEFAULT_CONFIG.buckets} Buckets`,
-    `${DEFAULT_CONFIG.maxFileUpload.toLocaleString()} Max Files`,
-    `${formatBytes((DEFAULT_CONFIG.maxFileUploadSize * 1024 * 1024).toString())} Max File Size`,
-    DEFAULT_CONFIG.addFreeSharing ? 'Free Sharing Enabled' : 'Free Sharing Disabled'
+    `${formatBytes((DEFAULT_LIMITS.storage * 1024 * 1024 * 1024).toString())} Storage`,
+    `${DEFAULT_LIMITS.fileShares.toLocaleString()} File Shares`,
+    `${formatBytes((DEFAULT_LIMITS.sharedStorageLimit * 1024 * 1024 * 1024).toString())} Shared Storage`,
+    `${formatBytes((DEFAULT_LIMITS.downloadLimit * 1024 * 1024 * 1024).toString())} Download Limit`,
+    `${DEFAULT_LIMITS.buckets} Buckets`,
+    `${DEFAULT_LIMITS.maxFileUpload.toLocaleString()} Max Files`,
+    `${formatBytes((DEFAULT_LIMITS.maxFileUploadSize * 1024 * 1024).toString())} Max File Size`,
+    DEFAULT_LIMITS.addFreeSharing ? 'Free Sharing Enabled' : 'Free Sharing Disabled'
   ];
 
   return (

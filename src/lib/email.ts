@@ -1,14 +1,65 @@
+import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
+import { prisma } from '@/lib/prisma';
 import { TeamInviteEmail } from '@/emails/TeamInviteEmail';
 import { TeamJoinRequestEmail } from '@/emails/TeamJoinRequestEmail';
 import { TeamJoinResponseEmail } from '@/emails/TeamJoinResponseEmail';
 import { TeamMemberRemovedEmail } from '@/emails/TeamMemberRemovedEmail';
-// Initialize Resend with API key
-const resend = new Resend(process.env.AUTH_RESEND_KEY);
 
-// Base email sending function
-export async function sendEmail({
+type EmailProvider = 'SMTP' | 'RESEND';
+
+interface EmailConfig {
+  provider: EmailProvider;
+  emailFrom: string;
+  smtp?: {
+    host: string;
+    port: number;
+    user: string;
+    password: string;
+    secure: boolean;
+  };
+  resend?: {
+    apiKey: string;
+  };
+}
+
+async function getEmailConfig(): Promise<EmailConfig | null> {
+  const settings = await prisma.settings.findFirst({
+    where: { id: 'default' },
+  });
+
+  if (!settings?.emailProvider || !settings.emailFrom) {
+    return null;
+  }
+
+  const config: EmailConfig = {
+    provider: settings.emailProvider as EmailProvider,
+    emailFrom: settings.emailFrom,
+  };
+
+  if (settings.emailProvider === 'SMTP' && settings.smtpConfig) {
+    const smtp = settings.smtpConfig as Record<string, unknown>;
+    config.smtp = {
+      host: smtp.host as string,
+      port: Number(smtp.port) || 587,
+      user: smtp.user as string,
+      password: smtp.password as string,
+      secure: smtp.secure === true || smtp.secure === 'true',
+    };
+  }
+
+  if (settings.emailProvider === 'RESEND' && settings.resendConfig) {
+    const resend = settings.resendConfig as Record<string, unknown>;
+    config.resend = {
+      apiKey: resend.apiKey as string,
+    };
+  }
+
+  return config;
+}
+
+async function sendEmail({
   to,
   subject,
   htmlContent,
@@ -17,11 +68,42 @@ export async function sendEmail({
   subject: string;
   htmlContent: React.ReactElement;
 }) {
-  try {
-    const html = await render(htmlContent);
+  const config = await getEmailConfig();
+
+  if (!config) {
+    throw new Error(
+      'Email is not configured. Please set up email provider in Settings.'
+    );
+  }
+
+  const html = await render(htmlContent);
+
+  if (config.provider === 'SMTP' && config.smtp) {
+    const transporter = nodemailer.createTransport({
+      host: config.smtp.host,
+      port: config.smtp.port,
+      secure: config.smtp.secure,
+      auth: {
+        user: config.smtp.user,
+        pass: config.smtp.password,
+      },
+    });
+
+    const result = await transporter.sendMail({
+      from: config.emailFrom,
+      to,
+      subject,
+      html,
+    });
+
+    return { messageId: result.messageId };
+  }
+
+  if (config.provider === 'RESEND' && config.resend) {
+    const resend = new Resend(config.resend.apiKey);
 
     const { data, error } = await resend.emails.send({
-      from: 'FlexiBuckets <invite@flexibuckets.com>',
+      from: config.emailFrom,
       to,
       subject,
       html,
@@ -31,13 +113,10 @@ export async function sendEmail({
       throw new Error(error.message);
     }
 
-    return {
-      messageId: data?.id,
-    };
-  } catch (error) {
-    console.error('Error sending email:', error);
-    throw new Error('Failed to send email');
+    return { messageId: data?.id };
   }
+
+  throw new Error(`Unknown email provider: ${config.provider}`);
 }
 
 export async function sendTeamInviteEmail({
@@ -51,11 +130,9 @@ export async function sendTeamInviteEmail({
   inviterName: string;
   inviteLink: string;
 }) {
-  const subject = `You've been invited to join ${teamName}`;
-
   return sendEmail({
     to: inviteeEmail,
-    subject,
+    subject: `You've been invited to join ${teamName}`,
     htmlContent: TeamInviteEmail({
       teamName,
       inviterName,
@@ -64,7 +141,6 @@ export async function sendTeamInviteEmail({
   });
 }
 
-// Team join request email - interface remains unchanged
 export async function sendTeamJoinRequestEmail({
   ownerEmail,
   requesterName,
@@ -76,11 +152,9 @@ export async function sendTeamJoinRequestEmail({
   teamName: string;
   requestLink?: string;
 }) {
-  const subject = `New join request for ${teamName}`;
-
   return sendEmail({
     to: ownerEmail,
-    subject,
+    subject: `New join request for ${teamName}`,
     htmlContent: TeamJoinRequestEmail({
       requesterName,
       teamName,
@@ -90,7 +164,6 @@ export async function sendTeamJoinRequestEmail({
   });
 }
 
-// Team join response email - interface remains unchanged
 export async function sendTeamJoinRequestResponseEmail({
   userEmail,
   teamName,
@@ -100,13 +173,11 @@ export async function sendTeamJoinRequestResponseEmail({
   teamName: string;
   status: string;
 }) {
-  const subject = `Team Join Request ${
-    status.charAt(0).toUpperCase() + status.slice(1)
-  }`;
-
   return sendEmail({
     to: userEmail,
-    subject,
+    subject: `Team Join Request ${
+      status.charAt(0).toUpperCase() + status.slice(1)
+    }`,
     htmlContent: TeamJoinResponseEmail({
       teamName,
       status,
@@ -115,7 +186,6 @@ export async function sendTeamJoinRequestResponseEmail({
   });
 }
 
-// Team member removed notification - interface remains unchanged
 export async function sendTeamMemberRemovedEmail({
   userEmail,
   teamName,
@@ -123,11 +193,9 @@ export async function sendTeamMemberRemovedEmail({
   userEmail: string;
   teamName: string;
 }) {
-  const subject = `You've been removed from ${teamName}`;
-
   return sendEmail({
     to: userEmail,
-    subject,
+    subject: `You've been removed from ${teamName}`,
     htmlContent: TeamMemberRemovedEmail({
       teamName,
     }),

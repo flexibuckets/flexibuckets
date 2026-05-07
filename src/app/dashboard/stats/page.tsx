@@ -6,7 +6,7 @@ import { getUserUsage } from '@/app/actions'
 import UsageStats from '@/components/payment/usage-stats'
 import { Separator } from '@/components/ui/separator'
 import { useRouter } from 'next/navigation'
-import { DEFAULT_CONFIG } from '@/config/dodo'
+import { DEFAULT_LIMITS } from '@/config/limits'
 
 export default function Page() {
   const { data: session, status } = useSession()
@@ -66,7 +66,7 @@ export default function Page() {
           bucketCount={usage.bucketCount || 0}
           fileCount={usage.fileCount || 0}
           folderCount={usage.folderCount || 0}
-          config={DEFAULT_CONFIG}
+          config={DEFAULT_LIMITS}
         />
       )}
     </div>
