@@ -26,7 +26,7 @@ export const DASHBOARD_ROUTE = '/dashboard';
 
 // Keep existing nav links
 export const navLinks: NavLink[] = [
-  { label: 'Docs', href: 'https://docs.flexibuckets.com' },
+  { label: 'Docs', href: '/docs' },
   { label: 'About', href: 'https://github.com/flexibuckets/flexibuckets' },
 ];
 

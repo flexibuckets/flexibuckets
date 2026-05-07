@@ -1,0 +1,98 @@
+---
+title: Building from Source
+description: Build FlexiBuckets from source for development or custom deployments.
+---
+
+Building from source is useful for contributing to FlexiBuckets or making custom modifications.
+
+## Prerequisites
+
+- [Bun](https://bun.sh) >= 1.0
+- [PostgreSQL](https://www.postgresql.org/) >= 14
+- Git
+
+## Clone and Set Up
+
+```bash
+git clone https://github.com/flexibuckets/flexibuckets.git
+cd flexibuckets
+bun install
+```
+
+## Environment Configuration
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your local database connection and secret:
+
+```bash
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/flexibuckets
+AUTH_SECRET=dev-secret-change-in-production
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+## Database Setup
+
+```bash
+# Create the database
+createdb flexibuckets
+
+# Run migrations
+bunx prisma migrate dev
+
+# (Optional) Open Prisma Studio to inspect data
+bun run studio
+```
+
+## Development Server
+
+```bash
+bun run dev
+```
+
+This starts the Next.js dev server with hot reload at `http://localhost:3000`.
+
+## Production Build
+
+```bash
+bun run build
+bun run start
+```
+
+## Analyzing Bundle Size
+
+```bash
+bun run analyze
+```
+
+This opens the Next.js bundle analyzer to help identify large dependencies.
+
+## Project Structure
+
+```text
+flexibuckets/
+├── content/          # Documentation MDX files
+├── prisma/           # Database schema and migrations
+├── public/           # Static assets
+├── scripts/          # Build and utility scripts
+├── src/
+│   ├── app/          # Next.js App Router pages
+│   │   ├── api/      # API routes
+│   │   ├── auth/     # Authentication pages
+│   │   ├── dashboard/# Main application pages
+│   │   └── docs/     # Documentation pages
+│   ├── components/   # React components
+│   ├── config/       # App configuration
+│   ├── context/      # React context providers
+│   ├── hooks/        # Custom React hooks
+│   ├── lib/          # Utility functions and services
+│   ├── middleware/    # Next.js middleware
+│   ├── store/        # Zustand state management
+│   ├── styles/       # CSS styles
+│   └── types/        # TypeScript type definitions
+├── docker-compose.yml
+├── Dockerfile
+└── package.json
+```

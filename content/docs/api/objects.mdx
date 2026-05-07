@@ -1,0 +1,164 @@
+---
+title: Objects API
+description: API endpoints for managing files (objects) in your S3 buckets.
+---
+
+## List Objects
+
+```text
+GET /api/buckets/:bucketId/objects?prefix=&delimiter=/
+```
+
+**Query Parameters:**
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `prefix` | Folder prefix to list | `""` (root) |
+| `delimiter` | Delimiter for grouping | `/` |
+| `maxKeys` | Maximum objects to return | `1000` |
+| `continuationToken` | Token for pagination | — |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "objects": [
+      {
+        "key": "images/photo.jpg",
+        "size": 1048576,
+        "lastModified": "2026-03-15T08:30:00Z",
+        "etag": "\"d41d8cd98f00b204e9800998ecf8427e\""
+      }
+    ],
+    "prefixes": ["images/", "documents/"],
+    "isTruncated": false
+  },
+  "error": null
+}
+```
+
+## Get Object Info
+
+```text
+GET /api/buckets/:bucketId/objects/:key
+```
+
+Returns metadata for a specific object.
+
+**Response:**
+
+```json
+{
+  "data": {
+    "key": "images/photo.jpg",
+    "size": 1048576,
+    "lastModified": "2026-03-15T08:30:00Z",
+    "etag": "\"d41d8cd98f00b204e9800998ecf8427e\"",
+    "contentType": "image/jpeg"
+  },
+  "error": null
+}
+```
+
+## Upload Object
+
+```text
+POST /api/buckets/:bucketId/objects
+```
+
+Upload a file using multipart/form-data.
+
+**Request:**
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer fbk_your_token" \
+  -F "file=@/path/to/file.txt" \
+  -F "key=uploads/file.txt" \
+  https://your-instance.com/api/buckets/clxxx/objects
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "data": {
+    "key": "uploads/file.txt",
+    "size": 2048,
+    "etag": "\"abc123...\""
+  },
+  "error": null
+}
+```
+
+## Download Object
+
+```text
+GET /api/buckets/:bucketId/objects/:key/download
+```
+
+Downloads the object. Returns the raw file content with appropriate Content-Type and Content-Disposition headers.
+
+## Generate Presigned URL
+
+```text
+POST /api/buckets/:bucketId/objects/:key/presign
+```
+
+**Request Body:**
+
+```json
+{
+  "expiresIn": 3600,
+  "operation": "get"
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "url": "https://s3.us-east-1.amazonaws.com/my-bucket/photo.jpg?X-Amz-Algorithm=...",
+    "expiresAt": "2026-05-08T02:40:00Z"
+  },
+  "error": null
+}
+```
+
+## Delete Object
+
+```text
+DELETE /api/buckets/:bucketId/objects/:key
+```
+
+Deletes the object from the S3 bucket. This action is irreversible.
+
+**Response:** `204 No Content`
+
+## Delete Multiple Objects
+
+```text
+POST /api/buckets/:bucketId/objects/delete
+```
+
+**Request Body:**
+
+```json
+{
+  "keys": ["file1.txt", "file2.txt", "folder/file3.txt"]
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "deleted": ["file1.txt", "file2.txt", "folder/file3.txt"],
+    "errors": []
+  },
+  "error": null
+}
+```

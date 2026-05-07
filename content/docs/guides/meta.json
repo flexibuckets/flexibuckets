@@ -1,0 +1,5 @@
+{
+  "title": "Guides",
+  "icon": "BookOpen",
+  "pages": ["adding-buckets", "file-management", "sharing-files", "teams", "backups"]
+}

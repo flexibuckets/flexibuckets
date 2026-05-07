@@ -1,0 +1,82 @@
+---
+title: SSL / TLS
+description: Configure automatic HTTPS with Let's Encrypt via Traefik.
+---
+
+FlexiBuckets uses Traefik as a reverse proxy with built-in Let's Encrypt support for automatic TLS certificate provisioning.
+
+## Automatic TLS (Recommended)
+
+If you set the `DOMAIN` environment variable, FlexiBuckets automatically:
+
+1. Provisions a Let's Encrypt TLS certificate
+2. Redirects all HTTP traffic to HTTPS
+3. Auto-renews certificates before expiry
+
+### Configuration
+
+Set these in your `.env`:
+
+```bash
+DOMAIN=flexibuckets.example.com
+ACME_EMAIL=you@example.com
+SERVER_IP=203.0.113.50
+```
+
+### DNS Setup
+
+Create an A record pointing your domain to your server's IP:
+
+```text
+flexibuckets.example.com.  A  203.0.113.50
+```
+
+Traefik will handle the TLS certificate request automatically when traffic first hits the domain.
+
+## How It Works
+
+The Docker Compose configuration includes Traefik labels that:
+
+- Listen on ports 80 (HTTP) and 443 (HTTPS)
+- Redirect HTTP → HTTPS
+- Use the Let's Encrypt HTTP-01 challenge for certificate provisioning
+- Store certificates in `/etc/traefik/acme/acme.json`
+
+## Certificate Storage
+
+Certificates are stored in the Traefik configuration volume. Ensure this path is persisted:
+
+```yaml
+volumes:
+  - /etc/traefik:/etc/traefik:rw
+```
+
+## Troubleshooting
+
+### Certificate not provisioning
+
+1. Ensure port 80 is open on your firewall — Let's Encrypt requires HTTP access for the challenge
+2. Verify DNS is correctly pointing to your server IP
+3. Check Traefik logs: `docker compose logs traefik`
+
+### Mixed content warnings
+
+Ensure `NEXT_PUBLIC_APP_URL` uses `https://`:
+
+```bash
+NEXT_PUBLIC_APP_URL=https://flexibuckets.example.com
+```
+
+## Using Custom Certificates
+
+If you have your own TLS certificate, configure Traefik with a file provider:
+
+1. Place your certificate and key in `/etc/traefik/certs/`
+2. Create a Traefik dynamic configuration in `/etc/traefik/dynamic/certs.yml`:
+
+```yaml
+tls:
+  certificates:
+    - certFile: /etc/traefik/certs/fullchain.pem
+      keyFile: /etc/traefik/certs/privkey.pem
+```

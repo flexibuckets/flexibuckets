@@ -1,0 +1,79 @@
+---
+title: Email Configuration
+description: Set up email for password resets and notifications.
+---
+
+FlexiBuckets can send emails for password resets, invitations, and notifications. Email is optional but recommended.
+
+## SMTP Configuration
+
+Add these variables to your `.env`:
+
+```bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM=FlexiBuckets <noreply@example.com>
+```
+
+## Common SMTP Providers
+
+### Gmail
+
+```bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASSWORD=your-app-password
+```
+
+You must use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular Gmail password.
+
+### SendGrid
+
+```bash
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASSWORD=your-sendgrid-api-key
+```
+
+### Amazon SES
+
+```bash
+SMTP_HOST=email-smtp.us-east-1.amazonaws.com
+SMTP_PORT=587
+SMTP_USER=your-ses-username
+SMTP_PASSWORD=your-ses-password
+```
+
+### Mailgun
+
+```bash
+SMTP_HOST=smtp.mailgun.org
+SMTP_PORT=587
+SMTP_USER=postmaster@your-domain.mailgun.org
+SMTP_PASSWORD=your-mailgun-password
+```
+
+## Testing Email
+
+After configuring SMTP, test by triggering a password reset from the login page. If email is not configured, password reset functionality will be unavailable.
+
+## Troubleshooting
+
+### Emails not sending
+
+1. Check that `SMTP_HOST` and `SMTP_PORT` are correct
+2. Verify credentials (use an app-specific password for Gmail)
+3. Check Docker logs: `docker compose logs app | grep -i mail`
+4. Ensure port 587 (or 465 for SSL) is not blocked by your firewall
+
+### Connection timeout
+
+Some SMTP providers require SSL on port 465 instead of STARTTLS on port 587. Try switching:
+
+```bash
+SMTP_PORT=465
+```

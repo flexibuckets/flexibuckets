@@ -1,0 +1,54 @@
+---
+title: Sharing Files
+description: Generate temporary links to share files without granting bucket access.
+---
+
+FlexiBuckets uses S3 presigned URLs to share files securely. Recipients can access the file using the link without needing S3 credentials or a FlexiBuckets account.
+
+## How Presigned URLs Work
+
+A presigned URL is a time-limited URL that grants temporary access to an S3 object. The URL contains a cryptographic signature that:
+
+- Is generated using your S3 credentials
+- Expires after a configurable time period
+- Only allows the specific operation (typically GET/download)
+- Does not expose your access key or secret key
+
+## Sharing a File
+
+1. Navigate to the file in the bucket browser
+2. Click the **Share** icon
+3. Configure the share settings:
+   - **Expiry** — How long the link remains valid (1 hour, 6 hours, 1 day, 7 days, custom)
+   - **Access** — Download only (read)
+4. Click **Generate Link**
+5. Copy the link and share it
+
+## Expiry Times
+
+| Duration | Use Case |
+|----------|----------|
+| 1 hour | Quick one-time shares |
+| 6 hours | Sharing within a workday |
+| 1 day | Standard file sharing |
+| 7 days | Long-term access |
+| Custom | Specific time requirements |
+
+## Security Considerations
+
+- **Links are bearer tokens** — Anyone with the link can access the file. Share links through secure channels
+- **Links expire** — After the expiry time, the link returns an access denied error
+- **No revocation** — Once generated, a presigned URL cannot be revoked before expiry. If you need to revoke access, you must change the object's permissions or delete the object
+- **URL length** — Presigned URLs can be long. Use a URL shortener if needed
+
+## Sharing Folders
+
+To share an entire folder, FlexiBuckets can generate a ZIP archive and create a presigned URL for the archive. This is useful for sharing multiple files at once.
+
+## Programmatic Access
+
+You can also generate presigned URLs programmatically using the AWS SDK or CLI, independent of FlexiBuckets:
+
+```bash
+aws s3 presign s3://my-bucket/my-file.txt --expires-in 3600
+```

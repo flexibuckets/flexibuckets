@@ -1,0 +1,96 @@
+---
+title: Manual Installation
+description: Install FlexiBuckets manually without Docker.
+---
+
+For environments where Docker is not available or desired, you can run FlexiBuckets directly with Bun.
+
+## Prerequisites
+
+- [Bun](https://bun.sh) >= 1.0
+- [PostgreSQL](https://www.postgresql.org/) >= 14
+- Node.js >= 18 (for compatibility)
+
+## Steps
+
+### 1. Clone and Install
+
+```bash
+git clone https://github.com/flexibuckets/flexibuckets.git
+cd flexibuckets
+bun install
+```
+
+### 2. Configure Environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+
+```bash
+DATABASE_URL=postgresql://postgres:your_password@localhost:5432/flexibuckets
+AUTH_SECRET=your-random-secret-key
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### 3. Set Up Database
+
+Create the database:
+
+```bash
+createdb flexibuckets
+```
+
+Run migrations:
+
+```bash
+bunx prisma migrate deploy
+```
+
+### 4. Build and Run
+
+```bash
+bun run build
+bun run start
+```
+
+FlexiBuckets will be available at `http://localhost:3000`.
+
+## Running as a Systemd Service
+
+Create `/etc/systemd/system/flexibuckets.service`:
+
+```ini
+[Unit]
+Description=FlexiBuckets
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=flexibuckets
+WorkingDirectory=/opt/flexibuckets
+ExecStart=/usr/bin/bun run start
+Restart=on-failure
+EnvironmentFile=/opt/flexibuckets/.env
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then:
+
+```bash
+sudo systemctl enable flexibuckets
+sudo systemctl start flexibuckets
+```
+
+## Using PM2
+
+```bash
+bun add -g pm2
+pm2 start "bun run start" --name flexibuckets
+pm2 save
+pm2 startup
+```

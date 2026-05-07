@@ -1,0 +1,138 @@
+---
+title: Buckets API
+description: API endpoints for managing S3 bucket connections.
+---
+
+## List Buckets
+
+```text
+GET /api/buckets
+```
+
+Returns all buckets the authenticated user has access to.
+
+**Response:**
+
+```json
+{
+  "data": [
+    {
+      "id": "clxxx...",
+      "name": "Production Assets",
+      "provider": "aws-s3",
+      "bucketName": "my-production-assets",
+      "region": "us-east-1",
+      "createdAt": "2026-01-15T10:30:00Z"
+    }
+  ],
+  "error": null
+}
+```
+
+## Get Bucket
+
+```text
+GET /api/buckets/:id
+```
+
+Returns details for a specific bucket.
+
+**Response:**
+
+```json
+{
+  "data": {
+    "id": "clxxx...",
+    "name": "Production Assets",
+    "provider": "aws-s3",
+    "endpoint": "https://s3.us-east-1.amazonaws.com",
+    "bucketName": "my-production-assets",
+    "region": "us-east-1",
+    "createdAt": "2026-01-15T10:30:00Z",
+    "updatedAt": "2026-02-01T14:20:00Z"
+  },
+  "error": null
+}
+```
+
+## Create Bucket
+
+```text
+POST /api/buckets
+```
+
+Add a new S3 bucket connection.
+
+**Request Body:**
+
+```json
+{
+  "name": "My Bucket",
+  "provider": "aws-s3",
+  "endpoint": "https://s3.us-east-1.amazonaws.com",
+  "accessKey": "AKIAIOSFODNN7EXAMPLE",
+  "secretKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  "bucketName": "my-bucket",
+  "region": "us-east-1"
+}
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "data": {
+    "id": "clxxx...",
+    "name": "My Bucket",
+    "provider": "aws-s3"
+  },
+  "error": null
+}
+```
+
+## Update Bucket
+
+```text
+PATCH /api/buckets/:id
+```
+
+Update bucket configuration. Only included fields are updated.
+
+**Request Body:**
+
+```json
+{
+  "name": "Updated Name",
+  "accessKey": "AKIAIOSFODNN7NEWKEY"
+}
+```
+
+## Delete Bucket
+
+```text
+DELETE /api/buckets/:id
+```
+
+Removes the bucket connection from FlexiBuckets. Does not delete the actual S3 bucket or its contents.
+
+**Response:** `204 No Content`
+
+## Test Connection
+
+```text
+POST /api/buckets/:id/test
+```
+
+Tests the connection to the S3 bucket using the stored credentials.
+
+**Response:**
+
+```json
+{
+  "data": {
+    "connected": true,
+    "permissions": ["list", "read", "write"]
+  },
+  "error": null
+}
+```

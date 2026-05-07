@@ -1,0 +1,70 @@
+---
+title: API Overview
+description: FlexiBuckets REST API for programmatic access to your buckets and files.
+---
+
+FlexiBuckets provides a REST API for programmatic access. All API endpoints are prefixed with `/api`.
+
+## Base URL
+
+```text
+https://your-flexibuckets-instance.com/api
+```
+
+## Authentication
+
+All API requests require authentication via a session cookie or Bearer token. See [Authentication](./authentication) for details.
+
+## Rate Limiting
+
+API requests are rate-limited to prevent abuse. Default limits:
+
+| Endpoint Type | Rate Limit |
+|---------------|------------|
+| General | 100 requests/minute |
+| File operations | 30 requests/minute |
+| Auth | 10 requests/minute |
+
+Rate limit headers are included in responses:
+
+```text
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1715232000
+```
+
+## Response Format
+
+All API responses are JSON:
+
+```json
+{
+  "data": { ... },
+  "error": null
+}
+```
+
+Error responses:
+
+```json
+{
+  "data": null,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Bucket not found"
+  }
+}
+```
+
+## Common HTTP Status Codes
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success |
+| 201 | Created |
+| 400 | Bad Request — Invalid parameters |
+| 401 | Unauthorized — Missing or invalid authentication |
+| 403 | Forbidden — Insufficient permissions |
+| 404 | Not Found |
+| 429 | Too Many Requests — Rate limited |
+| 500 | Internal Server Error |

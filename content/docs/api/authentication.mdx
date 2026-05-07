@@ -1,0 +1,81 @@
+---
+title: Authentication
+description: Authenticate API requests to FlexiBuckets.
+---
+
+## Session-Based Authentication
+
+FlexiBuckets uses NextAuth.js for authentication. When you log in through the web UI, a session cookie is set that authenticates subsequent API requests.
+
+### Login
+
+```text
+POST /api/auth/signin
+```
+
+```json
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
+
+### Session Info
+
+```text
+GET /api/auth/session
+```
+
+Returns the current session:
+
+```json
+{
+  "user": {
+    "id": "clxxx...",
+    "email": "user@example.com",
+    "name": "User Name"
+  },
+  "expires": "2026-06-01T00:00:00.000Z"
+}
+```
+
+## API Tokens
+
+For programmatic access, you can create API tokens from the dashboard:
+
+1. Go to **Dashboard → Settings → API Tokens**
+2. Click **Create Token**
+3. Give it a name and select permissions
+4. Copy the token (it's shown only once)
+
+### Using API Tokens
+
+Include the token in the `Authorization` header:
+
+```bash
+curl -H "Authorization: Bearer fbk_your_api_token" \
+  https://your-instance.com/api/buckets
+```
+
+## Token Permissions
+
+| Permission | Description |
+|------------|-------------|
+| `buckets:read` | List and view buckets |
+| `buckets:write` | Add and configure buckets |
+| `objects:read` | Read and download objects |
+| `objects:write` | Upload and delete objects |
+| `admin` | Full access to all resources |
+
+## Token Expiry
+
+API tokens can be configured with an expiry date. Expired tokens return a `401 Unauthorized` response.
+
+## Revoking Tokens
+
+To revoke an API token:
+
+1. Go to **Dashboard → Settings → API Tokens**
+2. Find the token and click **Revoke**
+
+Revocation takes effect immediately.

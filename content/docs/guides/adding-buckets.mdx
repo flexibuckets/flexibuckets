@@ -1,0 +1,103 @@
+---
+title: Adding Buckets
+description: Connect S3-compatible storage buckets to FlexiBuckets.
+---
+
+FlexiBuckets supports any S3-compatible storage provider. This guide covers adding and configuring buckets.
+
+## Adding a New Bucket
+
+1. Navigate to **Dashboard** → **Add Bucket**
+2. Fill in the bucket configuration
+3. Click **Connect** to verify and save
+
+## Configuration Fields
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| Name | A friendly label for this bucket | Yes |
+| Provider | Your storage provider (or Custom) | Yes |
+| Endpoint | S3 API endpoint URL | Yes |
+| Access Key | Access key ID | Yes |
+| Secret Key | Secret access key | Yes |
+| Bucket Name | Name of the S3 bucket | Yes |
+| Region | AWS region (if applicable) | For AWS only |
+
+## Provider-Specific Configuration
+
+### AWS S3
+
+```text
+Provider:  AWS S3
+Endpoint:  (auto-filled)
+Region:    us-east-1
+```
+
+The endpoint is automatically set based on the region. You only need your access key, secret key, bucket name, and region.
+
+### DigitalOcean Spaces
+
+```text
+Provider:  DigitalOcean Spaces
+Endpoint:  https://nyc3.digitaloceanspaces.com
+Region:    nyc3
+```
+
+The endpoint follows the pattern `https://<region>.digitaloceanspaces.com`.
+
+### MinIO
+
+```text
+Provider:  Custom
+Endpoint:  http://localhost:9000
+Region:    (leave empty or use default)
+```
+
+For MinIO, select "Custom" as the provider and enter your MinIO server endpoint.
+
+### Backblaze B2
+
+```text
+Provider:  Backblaze B2
+Endpoint:  https://s3.us-west-002.backblazeb2.com
+Region:    us-west-002
+```
+
+The endpoint and region depend on your B2 bucket's region.
+
+### Wasabi
+
+```text
+Provider:  Wasabi
+Endpoint:  https://s3.us-east-1.wasabisys.com
+Region:    us-east-1
+```
+
+## Verifying Connection
+
+After clicking **Connect**, FlexiBuckets will:
+
+1. Attempt to authenticate with the provider
+2. List objects in the bucket (to verify read access)
+3. Save the connection configuration if successful
+
+If the connection fails, check:
+
+- Endpoint URL format (include `https://` for remote endpoints)
+- Access key and secret key are correct
+- Bucket name is spelled correctly
+- Network connectivity between your FlexiBuckets instance and the storage provider
+- IAM permissions include `s3:ListBucket` and `s3:GetObject` at minimum
+
+## Multiple Buckets
+
+You can add as many buckets as you need from any combination of providers. Each bucket appears as a separate entry in your dashboard with its own file browser.
+
+## Editing Bucket Configuration
+
+To update a bucket's credentials or settings:
+
+1. Navigate to **Dashboard** → Select the bucket
+2. Click **Settings** (gear icon)
+3. Update the configuration
+4. Click **Save** to re-verify
