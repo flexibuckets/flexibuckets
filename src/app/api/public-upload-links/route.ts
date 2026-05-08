@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   try {
     const {
       s3CredentialId,
-      folderId,
+      folderName,
       maxFileSize,
       maxFileCount,
       allowedTypes,
@@ -51,22 +51,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Bucket not found or not owned by you' }, { status: 404 });
     }
 
-    if (folderId) {
-      const folder = await prisma.folder.findUnique({
-        where: { id: folderId, userId: session.user.id },
-      });
-      if (!folder) {
-        return NextResponse.json({ error: 'Folder not found' }, { status: 404 });
-      }
-    }
-
     const token = nanoid(24);
+    const sanitizedFolderName = (folderName || 'public-uploads').replace(/[^\w\-. ]/g, '').trim() || 'public-uploads';
 
     const link = await prisma.publicUploadLink.create({
       data: {
         userId: session.user.id,
         s3CredentialId,
-        folderId: folderId || null,
+        folderName: sanitizedFolderName,
         token,
         maxFileSize: maxFileSize || 104857600,
         maxFileCount: maxFileCount || null,

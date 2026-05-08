@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getMinioClient } from '@/lib/s3';
 import { createAuditLog } from '@/lib/audit';
 import { Readable } from 'stream';
+import { nanoid } from 'nanoid';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,12 +78,33 @@ export async function POST(
 
     const minioClient = await getMinioClient(uploadLink.s3CredentialId);
     const bucket = uploadLink.s3Credential.bucket;
+    const folderPrefix = uploadLink.folderName || 'public-uploads';
     const uploadedFiles: string[] = [];
 
+    let folder = await prisma.folder.findFirst({
+      where: {
+        userId: uploadLink.userId,
+        s3CredentialId: uploadLink.s3CredentialId,
+        name: folderPrefix,
+        parentId: null,
+      },
+    });
+
+    if (!folder) {
+      const folderId = nanoid();
+      folder = await prisma.folder.create({
+        data: {
+          id: folderId,
+          name: folderPrefix,
+          userId: uploadLink.userId,
+          s3CredentialId: uploadLink.s3CredentialId,
+          size: '0',
+        },
+      });
+    }
+
     for (const file of files) {
-      const objectName = uploadLink.folderId
-        ? `${uploadLink.folderId}/${file.name}`
-        : file.name || `upload_${Date.now()}`;
+      const objectName = `${folderPrefix}/${file.name}`;
 
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
@@ -95,16 +117,23 @@ export async function POST(
       await prisma.file.create({
         data: {
           userId: uploadLink.userId,
-          name: file.name || objectName,
+          name: file.name,
           type: file.type || 'application/octet-stream',
           size: buffer.length.toString(),
           s3Key: objectName,
           s3CredentialId: uploadLink.s3CredentialId,
-          folderId: uploadLink.folderId,
+          folderId: folder.id,
         },
       });
 
-      uploadedFiles.push(file.name || objectName);
+      const folderSize: bigint = BigInt(folder.size) + BigInt(buffer.length);
+      await prisma.folder.update({
+        where: { id: folder.id },
+        data: { size: folderSize.toString() },
+      });
+      folder = { ...folder, size: folderSize.toString() };
+
+      uploadedFiles.push(file.name);
     }
 
     await prisma.publicUploadLink.update({
@@ -117,7 +146,7 @@ export async function POST(
       action: 'PUBLIC_UPLOAD_RECEIVED',
       resourceType: 'publicUploadLink',
       resourceId: uploadLink.id,
-      details: { fileCount: files.length, totalSize, fileNames: uploadedFiles },
+      details: { fileCount: files.length, totalSize, fileNames: uploadedFiles, folder: folderPrefix },
     });
 
     return NextResponse.json({ success: true, uploaded: uploadedFiles.length }, { status: 200 });

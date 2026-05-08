@@ -359,7 +359,7 @@ model PublicUploadLink {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   s3CredentialId  String
   s3Credential    S3Credential @relation(fields: [s3CredentialId], references: [id], onDelete: Cascade)
-  folderId        String?
+  folderName      String   @default("public-uploads")
   token           String   @unique
   maxFileSize     Int      @default(104857600)
   maxFileCount    Int?
