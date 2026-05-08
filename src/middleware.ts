@@ -10,7 +10,9 @@ export default async function middleware(request: NextRequest) {
 
   const isSharedResource = nextUrl.pathname.includes('/shared/');
 
-  if (isPublicRoute || isSharedResource) return NextResponse.next();
+  const isPublicUpload = nextUrl.pathname.includes('/upload/');
+
+  if (isPublicRoute || isSharedResource || isPublicUpload) return NextResponse.next();
 
   const isAuthPage = nextUrl.pathname.includes('/auth/');
 

@@ -9,6 +9,8 @@ import {
   ChartPie,
   Heart,
   ScrollText,
+  Zap,
+  Upload,
 } from 'lucide-react';
 
 // Keep existing route constants
@@ -45,6 +47,12 @@ const applicationLinks: SidebarLinkGroup = {
       label: 'Shared',
       activeOnRoutes: [],
     },
+    {
+      Icon: Upload,
+      href: '/dashboard/upload-links',
+      label: 'Upload Links',
+      activeOnRoutes: ['/upload-links'],
+    },
   ],
 };
 
@@ -62,6 +70,12 @@ const accountLinks: SidebarLinkGroup = {
       href: '/dashboard/audit-logs',
       label: 'Audit Logs',
       activeOnRoutes: ['/audit-logs'],
+    },
+    {
+      Icon: Zap,
+      href: '/dashboard/webhooks',
+      label: 'Webhooks',
+      activeOnRoutes: ['/webhooks'],
     },
     {
       Icon: Settings,
