@@ -45,7 +45,7 @@ interface UploadLinkEntry {
   id: string
   token: string
   s3CredentialId: string
-  s3Credential: { bucket: string; endpointUrl: string }
+  s3Credential?: { bucket: string; endpointUrl: string } | null
   folderId: string | null
   maxFileSize: number
   maxFileCount: number | null
@@ -82,10 +82,7 @@ export default function UploadLinksPage() {
     if (!session?.user?.id) return
     setLoading(true)
     try {
-      const [linksRes, credsRes] = await Promise.all([
-        fetch('/api/public-upload-links'),
-        fetch('/api/v1/buckets', { headers: { Authorization: '' } }).catch(() => null),
-      ])
+      const linksRes = await fetch('/api/public-upload-links')
 
       if (linksRes.ok) {
         const data = await linksRes.json()
@@ -123,6 +120,8 @@ export default function UploadLinksPage() {
     return null
   }
 
+  const buildUploadUrl = (token: string) => `${window.location.origin}/upload/${token}`
+
   const handleCreate = async () => {
     if (!selectedBucket) {
       toast.error('Please select a bucket')
@@ -152,8 +151,10 @@ export default function UploadLinksPage() {
 
       if (res.ok) {
         const data = await res.json()
-        setNewUploadUrl(data.uploadUrl)
-        setLinks((prev) => [data, ...prev])
+        const url = buildUploadUrl(data.token)
+        setNewUploadUrl(url)
+        const selectedBucketObj = buckets.find((b) => b.id === selectedBucket)
+        setLinks((prev) => [{ ...data, s3Credential: data.s3Credential || (selectedBucketObj ? { bucket: selectedBucketObj.bucket, endpointUrl: selectedBucketObj.endpointUrl } : null) }, ...prev])
         toast.success('Upload link created')
       } else {
         const data = await res.json()
@@ -179,7 +180,7 @@ export default function UploadLinksPage() {
   }
 
   const copyLink = (token: string) => {
-    const url = `${window.location.origin}/upload/${token}`
+    const url = buildUploadUrl(token)
     navigator.clipboard.writeText(url)
     toast.success('Link copied to clipboard')
   }
@@ -332,7 +333,7 @@ export default function UploadLinksPage() {
                 <TableRow key={link.id}>
                   <TableCell>
                     <div>
-                      <span className="font-medium text-sm">{link.s3Credential.bucket}</span>
+                      <span className="font-medium text-sm">{link.s3Credential?.bucket || 'Unknown'}</span>
                     </div>
                   </TableCell>
                   <TableCell>

@@ -2,39 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getMinioClient } from '@/lib/s3';
 import { createAuditLog } from '@/lib/audit';
-import formidable from 'formidable';
-import { IncomingMessage } from 'http';
 import { Readable } from 'stream';
-import fs from 'fs';
 
 export const dynamic = 'force-dynamic';
-
-function requestToIncomingMessage(req: Request): IncomingMessage {
-  //@ts-expect-error Argument of type 'Readable' is not assignable to parameter of type 'Socket'.
-  const message = new IncomingMessage(new Readable());
-  if (req.body instanceof ReadableStream) {
-    const reader = req.body.getReader();
-    const push = async () => {
-      const { done, value } = await reader.read();
-      if (done) {
-        message.push(null);
-      } else {
-        message.push(Buffer.from(value));
-        push();
-      }
-    };
-    push();
-  } else {
-    message.push(req.body);
-    message.push(null);
-  }
-  return message;
-}
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { token: string } }
-) {
+): Promise<NextResponse> {
   try {
     const uploadLink = await prisma.publicUploadLink.findUnique({
       where: { token: params.token },
@@ -61,102 +36,91 @@ export async function POST(
       return NextResponse.json({ error: 'Upload limit reached for this link' }, { status: 403 });
     }
 
-    const incomingReq = requestToIncomingMessage(request);
-    const form = new formidable.IncomingForm();
+    const formData = await request.formData();
+    const fileEntries = formData.getAll('file');
 
-    return new Promise<NextResponse>((resolve) => {
-      form.parse(incomingReq, async (err, fields, files) => {
-        if (err) {
-          return resolve(NextResponse.json({ error: 'Error parsing form data' }, { status: 500 }));
-        }
+    if (!fileEntries || fileEntries.length === 0) {
+      return NextResponse.json({ error: 'No files provided' }, { status: 400 });
+    }
 
-        const fileArray = files.file as formidable.File[] | formidable.File;
-        const filesArray = Array.isArray(fileArray) ? fileArray : [fileArray];
+    const files: File[] = fileEntries.filter((f): f is File => f instanceof File);
 
-        if (filesArray.length === 0) {
-          return resolve(NextResponse.json({ error: 'No files provided' }, { status: 400 }));
-        }
+    if (files.length === 0) {
+      return NextResponse.json({ error: 'No files provided' }, { status: 400 });
+    }
 
-        const totalSize = filesArray.reduce((sum, f) => sum + f.size, 0);
+    const totalSize = files.reduce((sum, f) => sum + f.size, 0);
 
-        if (totalSize > uploadLink.maxFileSize) {
-          return resolve(
-            NextResponse.json(
-              { error: `Total file size exceeds the limit of ${uploadLink.maxFileSize} bytes` },
-              { status: 413 }
-            )
+    if (totalSize > uploadLink.maxFileSize) {
+      return NextResponse.json(
+        { error: `Total file size exceeds the limit of ${uploadLink.maxFileSize} bytes` },
+        { status: 413 }
+      );
+    }
+
+    if (uploadLink.allowedTypes) {
+      const allowed = uploadLink.allowedTypes.split(',').map((t) => t.trim().toLowerCase());
+      for (const file of files) {
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        const mime = file.type.toLowerCase();
+        const isAllowed = allowed.some(
+          (type) => mime.includes(type) || ext === type.replace('.', '')
+        );
+        if (!isAllowed) {
+          return NextResponse.json(
+            { error: `File type not allowed: ${file.name}` },
+            { status: 415 }
           );
         }
+      }
+    }
 
-        if (uploadLink.allowedTypes) {
-          const allowed = uploadLink.allowedTypes.split(',').map((t) => t.trim().toLowerCase());
-          for (const file of filesArray) {
-            const ext = file.originalFilename?.split('.').pop()?.toLowerCase() || '';
-            const mime = file.mimetype?.toLowerCase() || '';
-            const isAllowed = allowed.some(
-              (type) => mime.includes(type) || ext === type.replace('.', '')
-            );
-            if (!isAllowed) {
-              return resolve(
-                NextResponse.json(
-                  { error: `File type not allowed: ${file.originalFilename}` },
-                  { status: 415 }
-                )
-              );
-            }
-          }
-        }
+    const minioClient = await getMinioClient(uploadLink.s3CredentialId);
+    const bucket = uploadLink.s3Credential.bucket;
+    const uploadedFiles: string[] = [];
 
-        try {
-          const minioClient = await getMinioClient(uploadLink.s3CredentialId);
-          const bucket = uploadLink.s3Credential.bucket;
-          const uploadedFiles: string[] = [];
+    for (const file of files) {
+      const objectName = uploadLink.folderId
+        ? `${uploadLink.folderId}/${file.name}`
+        : file.name || `upload_${Date.now()}`;
 
-          for (const file of filesArray) {
-            const fileStream = fs.createReadStream(file.filepath);
-            const objectName = uploadLink.folderId
-              ? `${uploadLink.folderId}/${file.originalFilename}`
-              : file.originalFilename || `upload_${Date.now()}`;
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const stream = Readable.from(buffer);
 
-            await minioClient.putObject(bucket, objectName, fileStream, file.size, {
-              'Content-Type': file.mimetype || 'application/octet-stream',
-            });
-
-            await prisma.file.create({
-              data: {
-                userId: uploadLink.userId,
-                name: file.originalFilename || objectName,
-                type: file.mimetype || 'application/octet-stream',
-                size: file.size.toString(),
-                s3Key: objectName,
-                s3CredentialId: uploadLink.s3CredentialId,
-                folderId: uploadLink.folderId,
-              },
-            });
-
-            uploadedFiles.push(file.originalFilename || objectName);
-          }
-
-          await prisma.publicUploadLink.update({
-            where: { id: uploadLink.id },
-            data: { currentFileCount: { increment: filesArray.length } },
-          });
-
-          await createAuditLog({
-            userId: uploadLink.userId,
-            action: 'PUBLIC_UPLOAD_RECEIVED',
-            resourceType: 'publicUploadLink',
-            resourceId: uploadLink.id,
-            details: { fileCount: filesArray.length, totalSize, fileNames: uploadedFiles },
-          });
-
-          resolve(NextResponse.json({ success: true, uploaded: uploadedFiles.length }, { status: 200 }));
-        } catch (error) {
-          console.error('Public upload failed:', error);
-          resolve(NextResponse.json({ error: 'Upload failed' }, { status: 500 }));
-        }
+      await minioClient.putObject(bucket, objectName, stream, buffer.length, {
+        'Content-Type': file.type || 'application/octet-stream',
       });
+
+      await prisma.file.create({
+        data: {
+          userId: uploadLink.userId,
+          name: file.name || objectName,
+          type: file.type || 'application/octet-stream',
+          size: buffer.length.toString(),
+          s3Key: objectName,
+          s3CredentialId: uploadLink.s3CredentialId,
+          folderId: uploadLink.folderId,
+        },
+      });
+
+      uploadedFiles.push(file.name || objectName);
+    }
+
+    await prisma.publicUploadLink.update({
+      where: { id: uploadLink.id },
+      data: { currentFileCount: { increment: files.length } },
     });
+
+    await createAuditLog({
+      userId: uploadLink.userId,
+      action: 'PUBLIC_UPLOAD_RECEIVED',
+      resourceType: 'publicUploadLink',
+      resourceId: uploadLink.id,
+      details: { fileCount: files.length, totalSize, fileNames: uploadedFiles },
+    });
+
+    return NextResponse.json({ success: true, uploaded: uploadedFiles.length }, { status: 200 });
   } catch (error) {
     console.error('Public upload error:', error);
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });

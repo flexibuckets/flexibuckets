@@ -73,11 +73,10 @@ export async function POST(req: Request) {
         allowedTypes: allowedTypes || null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
       },
+      include: { s3Credential: { select: { bucket: true, endpointUrl: true } } },
     });
 
-    const uploadUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}/upload/${token}`;
-
-    return NextResponse.json({ ...link, uploadUrl }, { status: 201 });
+    return NextResponse.json({ ...link, token }, { status: 201 });
   } catch (error) {
     console.error('Error creating public upload link:', error);
     return NextResponse.json({ error: 'Failed to create upload link' }, { status: 500 });
