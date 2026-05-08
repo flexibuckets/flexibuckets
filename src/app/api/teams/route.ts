@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
 import { createTeam, getUserTeams } from '@/lib/db/teams';
 import { NextRequest } from 'next/server';
+import { createAuditLog } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -26,6 +27,14 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'TEAM_CREATE',
+      resourceType: 'team',
+      resourceId: team.id,
+      resourceName: name,
+    });
 
     return Response.json(team);
   } catch (error: any) {

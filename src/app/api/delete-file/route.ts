@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { deleteFile } from '@/lib/s3';
 import { auth } from '@/auth';
+import { createAuditLog } from '@/lib/audit';
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -19,6 +20,14 @@ export async function POST(request: Request) {
       userId: session.user.id,
       fileId,
       s3CredentialId,
+    });
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'FILE_DELETE',
+      resourceType: 'file',
+      resourceId: fileId,
+      details: { s3CredentialId },
     });
 
     return NextResponse.json({ message: "File deleted successfully" }, { status: 200 });

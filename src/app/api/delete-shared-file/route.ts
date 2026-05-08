@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { createAuditLog } from "@/lib/audit";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -35,6 +36,14 @@ export async function POST(request: Request) {
       });
 
       return updatedFile;
+    });
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'FILE_UNSHARE',
+      resourceType: 'file',
+      resourceId: fileId,
+      resourceName: result.name,
     });
 
     return NextResponse.json({

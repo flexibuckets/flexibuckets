@@ -3,6 +3,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { nanoid } from "nanoid"
 import { hashKey } from "@/lib/api/hash"
+import { createAuditLog } from "@/lib/audit"
 
 export async function GET() {
   const session = await auth()
@@ -44,6 +45,14 @@ export async function POST(req: Request) {
         name,
         hashedKey: hashed,
       },
+    })
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'API_KEY_CREATE',
+      resourceType: 'apiKey',
+      resourceId: createdKey.id,
+      resourceName: name,
     })
 
     return NextResponse.json({

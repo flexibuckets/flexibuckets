@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { createAuditLog } from "@/lib/audit"
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   const session = await auth()
@@ -23,6 +24,14 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
     await prisma.apiKey.delete({
       where: { id: params.id },
+    })
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'API_KEY_DELETE',
+      resourceType: 'apiKey',
+      resourceId: params.id,
+      resourceName: key.name,
     })
 
     return NextResponse.json({ status: "success", message: "Key revoked" })

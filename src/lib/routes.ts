@@ -8,6 +8,7 @@ import {
   UserCog2Icon,
   ChartPie,
   Heart,
+  ScrollText,
 } from 'lucide-react';
 
 // Keep existing route constants
@@ -55,6 +56,12 @@ const accountLinks: SidebarLinkGroup = {
       href: '/dashboard/stats',
       label: 'Stats',
       activeOnRoutes: [],
+    },
+    {
+      Icon: ScrollText,
+      href: '/dashboard/audit-logs',
+      label: 'Audit Logs',
+      activeOnRoutes: ['/audit-logs'],
     },
     {
       Icon: Settings,
