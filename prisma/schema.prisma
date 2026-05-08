@@ -46,6 +46,12 @@ model User {
   // Audit Related
   auditLogs AuditLog[]
 
+  // Webhook Related
+  webhooks Webhook[]
+
+  // Public Upload Related
+  publicUploadLinks PublicUploadLink[]
+
   // Timestamps
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
@@ -135,6 +141,7 @@ model S3Credential {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   teamBuckets TeamSharedBucket[]
+  publicUploadLinks PublicUploadLink[]
   @@unique([bucket,accessKey,secretKey])
   @@index([userId, bucket])
 }
@@ -315,6 +322,59 @@ model TeamJoinRequest {
   @@index([userId])
 }
 
+enum WebhookEvent {
+  FILE_UPLOAD
+  FILE_DELETE
+  FILE_SHARE
+  FILE_UNSHARE
+  FOLDER_CREATE
+  FOLDER_DELETE
+  FOLDER_SHARE
+  BUCKET_ADD
+  BUCKET_DELETE
+  PUBLIC_UPLOAD_RECEIVED
+}
+
+model Webhook {
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url         String
+  secret      String
+  events      WebhookEvent[]
+  description String?
+  enabled     Boolean        @default(true)
+  lastTriggeredAt DateTime?
+  failureCount   Int        @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([events])
+}
+
+model PublicUploadLink {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  s3CredentialId  String
+  s3Credential    S3Credential @relation(fields: [s3CredentialId], references: [id], onDelete: Cascade)
+  folderId        String?
+  token           String   @unique
+  maxFileSize     Int      @default(104857600)
+  maxFileCount    Int?
+  currentFileCount Int     @default(0)
+  allowedTypes    String?
+  expiresAt       DateTime?
+  isExpired       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([token])
+  @@index([s3CredentialId])
+}
+
 enum AuditAction {
   FILE_UPLOAD
   FILE_DOWNLOAD
@@ -346,6 +406,9 @@ enum AuditAction {
   USER_SIGNUP
   USER_SETTINGS_UPDATE
   SHARE_DOWNLOAD
+  PUBLIC_UPLOAD_RECEIVED
+  WEBHOOK_CREATED
+  WEBHOOK_DELETED
 }
 
 model AuditLog {

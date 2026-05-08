@@ -1,6 +1,19 @@
-import { AuditAction } from '@prisma/client';
+import { AuditAction, WebhookEvent } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { headers } from 'next/headers';
+
+const AUDIT_TO_WEBHOOK_MAP: Partial<Record<AuditAction, WebhookEvent>> = {
+  FILE_UPLOAD: 'FILE_UPLOAD',
+  FILE_DELETE: 'FILE_DELETE',
+  FILE_SHARE: 'FILE_SHARE',
+  FILE_UNSHARE: 'FILE_UNSHARE',
+  FOLDER_CREATE: 'FOLDER_CREATE',
+  FOLDER_DELETE: 'FOLDER_DELETE',
+  FOLDER_SHARE: 'FOLDER_SHARE',
+  BUCKET_ADD: 'BUCKET_ADD',
+  BUCKET_DELETE: 'BUCKET_DELETE',
+  PUBLIC_UPLOAD_RECEIVED: 'PUBLIC_UPLOAD_RECEIVED',
+};
 
 interface CreateAuditLogParams {
   userId: string;
@@ -21,7 +34,7 @@ export async function createAuditLog(params: CreateAuditLogParams) {
       null;
     const userAgent = headersList.get('user-agent') || null;
 
-    return await prisma.auditLog.create({
+    const auditLog = await prisma.auditLog.create({
       data: {
         userId: params.userId,
         action: params.action,
@@ -34,6 +47,27 @@ export async function createAuditLog(params: CreateAuditLogParams) {
         teamId: params.teamId ?? null,
       },
     });
+
+    const webhookEvent = AUDIT_TO_WEBHOOK_MAP[params.action];
+    if (webhookEvent) {
+      const { dispatchWebhooks } = await import('@/lib/webhook');
+      dispatchWebhooks({
+        userId: params.userId,
+        event: webhookEvent,
+        payload: {
+          action: params.action,
+          resourceType: params.resourceType ?? null,
+          resourceId: params.resourceId ?? null,
+          resourceName: params.resourceName ?? null,
+          details: params.details ?? null,
+          timestamp: auditLog.createdAt,
+        },
+      }).catch((err) => {
+        console.error('Webhook dispatch error:', err);
+      });
+    }
+
+    return auditLog;
   } catch (error) {
     console.error('Failed to create audit log:', error);
   }
