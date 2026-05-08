@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getMinioClient } from "@/lib/s3";
+import { createAuditLog } from "@/lib/audit";
 
 export async function DELETE(
   request: Request,
@@ -52,6 +53,15 @@ export async function DELETE(
     // Delete the bucket from the database
     await prisma.s3Credential.delete({
       where: { id: bucketId },
+    });
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'BUCKET_DELETE',
+      resourceType: 'bucket',
+      resourceId: bucketId,
+      resourceName: bucket.bucket,
+      details: { endpointUrl: bucket.endpointUrl, region: bucket.region },
     });
 
     return NextResponse.json({ message: "Bucket deleted successfully" });

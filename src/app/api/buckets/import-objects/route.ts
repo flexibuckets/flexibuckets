@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listS3Objects, importExistingBucketObjects } from '@/lib/s3';
 import { auth } from '@/auth';
+import { createAuditLog } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,6 +74,14 @@ export async function POST(request: NextRequest) {
     const result = await importExistingBucketObjects({
       userId: session.user.id,
       s3CredentialId,
+    });
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'BUCKET_IMPORT_OBJECTS',
+      resourceType: 'bucket',
+      resourceId: s3CredentialId,
+      details: { importedFiles: result.importedFiles, importedFolders: result.importedFolders, skipped: result.skipped },
     });
 
     return NextResponse.json(result);

@@ -5,6 +5,7 @@ import { getBucketDetails } from "@/lib/s3";
 import { Bucket } from "@/lib/types";
 import { BucketPermission } from "@prisma/client";
 import { NextRequest } from "next/server";
+import { createAuditLog } from "@/lib/audit";
 
 export async function POST(
   req: NextRequest,
@@ -39,6 +40,15 @@ export async function POST(
       permissions,
     });
 
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'TEAM_BUCKET_ADD',
+      resourceType: 'team',
+      resourceId: teamId,
+      details: { s3CredentialId, name, permissions },
+      teamId,
+    });
+
     return Response.json(bucket);
   } catch (error) {
     console.error("Error adding team bucket:", error);
@@ -70,6 +80,15 @@ export async function DELETE(
   try {
     await prisma.teamSharedBucket.delete({
       where: { id: bucketId },
+    });
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'TEAM_BUCKET_REMOVE',
+      resourceType: 'team',
+      resourceId: teamId,
+      details: { bucketId },
+      teamId,
     });
 
     return Response.json({ success: true });

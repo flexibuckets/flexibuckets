@@ -3,6 +3,7 @@ import { addTeamMember, canManageTeam } from '@/lib/db/teams';
 import { prisma } from '@/lib/prisma';
 import { TeamRole } from '@prisma/client';
 import { NextRequest } from 'next/server';
+import { createAuditLog } from '@/lib/audit';
 
 export async function POST(
   req: NextRequest,
@@ -38,6 +39,15 @@ export async function POST(
       userId: user.id,
       teamId,
       role,
+    });
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'TEAM_MEMBER_ADD',
+      resourceType: 'team',
+      resourceId: teamId,
+      details: { addedUserId: user.id, addedUserEmail: email, role },
+      teamId,
     });
 
     return Response.json(member);

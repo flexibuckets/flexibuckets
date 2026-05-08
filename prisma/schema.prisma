@@ -43,6 +43,9 @@ model User {
   //  API Related
   apiKeys ApiKey[]
 
+  // Audit Related
+  auditLogs AuditLog[]
+
   // Timestamps
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
@@ -310,6 +313,59 @@ model TeamJoinRequest {
   @@unique([teamId, userId,status])
   @@index([teamId])
   @@index([userId])
+}
+
+enum AuditAction {
+  FILE_UPLOAD
+  FILE_DOWNLOAD
+  FILE_DELETE
+  FILE_RENAME
+  FILE_MOVE
+  FILE_SHARE
+  FILE_UNSHARE
+  FOLDER_CREATE
+  FOLDER_DELETE
+  FOLDER_RENAME
+  FOLDER_SHARE
+  FOLDER_UNSHARE
+  BUCKET_ADD
+  BUCKET_DELETE
+  BUCKET_CORS_UPDATE
+  BUCKET_IMPORT_OBJECTS
+  TEAM_CREATE
+  TEAM_JOIN
+  TEAM_LEAVE
+  TEAM_MEMBER_ADD
+  TEAM_MEMBER_REMOVE
+  TEAM_MEMBER_ROLE_UPDATE
+  TEAM_BUCKET_ADD
+  TEAM_BUCKET_REMOVE
+  API_KEY_CREATE
+  API_KEY_DELETE
+  USER_SIGNIN
+  USER_SIGNUP
+  USER_SETTINGS_UPDATE
+  SHARE_DOWNLOAD
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      AuditAction
+  resourceType String?
+  resourceId  String?
+  resourceName String?
+  details     Json?
+  ipAddress   String?
+  userAgent   String?
+  teamId      String?
+  createdAt   DateTime    @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
 }
 model TeamInvite {
   id        String   @id @default(cuid())

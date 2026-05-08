@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { setS3CompatibleCors } from "@/lib/s3cors";
+import { createAuditLog } from "@/lib/audit";
 
 export async function POST(req: Request) {
   try {
@@ -11,6 +12,14 @@ export async function POST(req: Request) {
     const { s3CredentialId, origins } = await req.json();
 
     await setS3CompatibleCors(s3CredentialId, origins);
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'BUCKET_CORS_UPDATE',
+      resourceType: 'bucket',
+      resourceId: s3CredentialId,
+      details: { origins },
+    });
 
     return Response.json({ success: true });
   } catch (error) {

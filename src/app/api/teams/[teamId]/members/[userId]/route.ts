@@ -3,6 +3,7 @@ import { canManageTeam, removeTeamMember } from "@/lib/db/teams";
 import { prisma } from "@/lib/prisma";
 import { TeamRole } from "@prisma/client";
 import { NextRequest } from "next/server";
+import { createAuditLog } from "@/lib/audit";
 
 export async function PUT(
   req: NextRequest,
@@ -51,6 +52,15 @@ export async function PUT(
       },
     });
 
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'TEAM_MEMBER_ROLE_UPDATE',
+      resourceType: 'team',
+      resourceId: teamId,
+      details: { targetUserId: userId, newRole: role },
+      teamId,
+    });
+
     return Response.json(updatedMember);
   } catch (error) {
     console.error("Error updating member role:", error);
@@ -81,6 +91,16 @@ export async function DELETE(
 
   try {
     await removeTeamMember(teamId, userId);
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'TEAM_MEMBER_REMOVE',
+      resourceType: 'team',
+      resourceId: teamId,
+      details: { removedUserId: userId },
+      teamId,
+    });
+
     return Response.json({ success: true });
   } catch (error) {
     console.error("Error removing team member:", error);

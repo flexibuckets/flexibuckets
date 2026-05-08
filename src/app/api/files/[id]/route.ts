@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getPresignedUrl } from '@/lib/s3';
 import { auth } from '@/auth';
+import { createAuditLog } from '@/lib/audit';
 
 export async function GET(
   request: NextRequest,
@@ -47,6 +48,15 @@ export async function GET(
     }
 
     const url = await getPresignedUrl(file.s3CredentialId, file.s3Key);
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'FILE_DOWNLOAD',
+      resourceType: 'file',
+      resourceId: file.id,
+      resourceName: file.name,
+      details: { size: file.size, type: file.type },
+    });
 
     return NextResponse.json({
       id: file.id,

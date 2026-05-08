@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { nanoid } from "nanoid";
+import { createAuditLog } from "@/lib/audit";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -23,6 +24,14 @@ export async function POST(request: NextRequest) {
         downloadUrl,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
       },
+    });
+
+    await createAuditLog({
+      userId: session.user.id,
+      action: 'FOLDER_SHARE',
+      resourceType: 'folder',
+      resourceId: folderId,
+      details: { downloadUrl, expiresAt },
     });
 
     return NextResponse.json(sharedFolder);

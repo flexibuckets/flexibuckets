@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadFile } from '@/lib/s3'; // Your existing uploadFile function
+import { uploadFile } from '@/lib/s3';
 import formidable from 'formidable';
 import { IncomingMessage } from 'http';
 import { Readable } from 'stream';
 import fs from 'fs';
 import { isAllowedToUpload } from '@/lib/dboperations';
 import {prisma} from '@/lib/prisma'
+import { createAuditLog } from '@/lib/audit';
 
 
 // New configuration method
@@ -113,6 +114,17 @@ export const POST: (request: NextRequest) => Promise<NextResponse> = async (requ
         });
 
         const fileRecords = await Promise.all(uploadPromises);
+
+        for (const record of fileRecords) {
+          await createAuditLog({
+            userId: userId as unknown as string,
+            action: 'FILE_UPLOAD',
+            resourceType: 'file',
+            resourceId: record.id,
+            resourceName: record.name,
+            details: { size: record.size, type: record.type, s3CredentialId: s3CredentialId as unknown as string },
+          });
+        }
 
         // Update the user's total upload size
         const user = await prisma.user.findUnique({
