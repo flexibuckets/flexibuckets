@@ -38,6 +38,7 @@ import {
   Loader2,
   Clock,
   ShieldCheck,
+  FolderOpen,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -46,7 +47,7 @@ interface UploadLinkEntry {
   token: string
   s3CredentialId: string
   s3Credential?: { bucket: string; endpointUrl: string } | null
-  folderId: string | null
+  folderName: string
   maxFileSize: number
   maxFileCount: number | null
   currentFileCount: number
@@ -72,6 +73,7 @@ export default function UploadLinksPage() {
   const [creating, setCreating] = useState(false)
 
   const [selectedBucket, setSelectedBucket] = useState('')
+  const [folderName, setFolderName] = useState('public-uploads')
   const [maxFileSize, setMaxFileSize] = useState('100')
   const [maxFileCount, setMaxFileCount] = useState('')
   const [allowedTypes, setAllowedTypes] = useState('')
@@ -133,6 +135,7 @@ export default function UploadLinksPage() {
       const maxFileSizeBytes = parseInt(maxFileSize || '100') * 1024 * 1024
       const body: Record<string, unknown> = {
         s3CredentialId: selectedBucket,
+        folderName: folderName || 'public-uploads',
         maxFileSize: maxFileSizeBytes,
         allowedTypes: allowedTypes || null,
         maxFileCount: maxFileCount ? parseInt(maxFileCount) : null,
@@ -229,6 +232,18 @@ export default function UploadLinksPage() {
               </div>
 
               <div>
+                <label className="text-sm font-medium">Folder name</label>
+                <Input
+                  value={folderName}
+                  onChange={(e) => setFolderName(e.target.value)}
+                  placeholder="public-uploads"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Files will be stored in this folder inside the bucket. Defaults to &quot;public-uploads&quot;.
+                </p>
+              </div>
+
+              <div>
                 <label className="text-sm font-medium">Max file size (MB)</label>
                 <Input
                   type="number"
@@ -303,6 +318,7 @@ export default function UploadLinksPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Bucket</TableHead>
+              <TableHead>Folder</TableHead>
               <TableHead>Limits</TableHead>
               <TableHead>Uploads</TableHead>
               <TableHead>Expires</TableHead>
@@ -314,7 +330,7 @@ export default function UploadLinksPage() {
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 6 }).map((_, j) => (
+                  {Array.from({ length: 7 }).map((_, j) => (
                     <TableCell key={j}>
                       <div className="h-4 bg-muted rounded animate-pulse" />
                     </TableCell>
@@ -323,7 +339,7 @@ export default function UploadLinksPage() {
               ))
             ) : links.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   No upload links created yet.
                 </TableCell>
@@ -332,8 +348,12 @@ export default function UploadLinksPage() {
               links.map((link) => (
                 <TableRow key={link.id}>
                   <TableCell>
-                    <div>
-                      <span className="font-medium text-sm">{link.s3Credential?.bucket || 'Unknown'}</span>
+                    <span className="font-medium text-sm">{link.s3Credential?.bucket || 'Unknown'}</span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <FolderOpen className="h-3.5 w-3.5" />
+                      {link.folderName}
                     </div>
                   </TableCell>
                   <TableCell>
