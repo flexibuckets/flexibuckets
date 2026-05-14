@@ -21,6 +21,7 @@ export type S3Credential = {
   region: string;
   provider: string;
   endpointUrl: string;
+  credentialHash: string | null;
 };
 
 export type Bucket = {
@@ -175,6 +176,7 @@ export interface CompleteBucket extends S3Credential {
   filesCount: number;
   size: number;
   userId: string;
+  credentialHash: string | null;
   teamAccess?: {
     id: string;
     permissions: BucketPermission;

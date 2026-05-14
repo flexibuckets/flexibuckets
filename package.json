@@ -12,6 +12,7 @@
     "analyze": "ANALYZE=true next build",
     "studio": "bunx prisma studio",
     "migrate": "bunx prisma migrate dev",
+    "encrypt:migrate": "bunx tsx scripts/encrypt-existing-data.ts",
     "pull:main": "git pull origin main",
     "push:main": "node ./scripts/push.js",
     "bump:version": "node ./scripts/bump-version.js"

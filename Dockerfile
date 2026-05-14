@@ -46,6 +46,11 @@ RUN bunx prisma generate
 FROM oven/bun:1 AS builder
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
 COPY . .

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
+import { decryptJsonField } from '@/lib/encryption';
 
 const testEmailSchema = z.object({
   to: z.string().email(),
@@ -30,14 +31,16 @@ export async function POST(req: Request) {
       );
     }
 
-    if (settings.emailProvider === 'SMTP') {
-      const smtpConfig = settings.smtpConfig as Record<string, string> | null;
-      if (!smtpConfig?.host || !smtpConfig?.user || !smtpConfig?.password) {
+if (settings.emailProvider === 'SMTP') {
+      const rawSmtpConfig = settings.smtpConfig as Record<string, string> | null;
+      if (!rawSmtpConfig?.host || !rawSmtpConfig?.user || !rawSmtpConfig?.password) {
         return NextResponse.json(
           { error: 'SMTP configuration is incomplete' },
           { status: 400 }
         );
       }
+
+      const smtpConfig = decryptJsonField(rawSmtpConfig, ['password']) as Record<string, string>;
 
       const transporter = nodemailer.createTransport({
         host: smtpConfig.host,
@@ -68,14 +71,15 @@ export async function POST(req: Request) {
     }
 
     if (settings.emailProvider === 'RESEND') {
-      const resendConfig = settings.resendConfig as Record<string, string> | null;
-      if (!resendConfig?.apiKey) {
+      const rawResendConfig = settings.resendConfig as Record<string, string> | null;
+      if (!rawResendConfig?.apiKey) {
         return NextResponse.json(
           { error: 'Resend API key is not configured' },
           { status: 400 }
         );
       }
 
+      const resendConfig = decryptJsonField(rawResendConfig, ['apiKey']) as Record<string, string>;
       const resend = new Resend(resendConfig.apiKey);
 
       const { error } = await resend.emails.send({

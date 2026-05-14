@@ -10,9 +10,18 @@ export async function GET(req: NextRequest) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 
-  // Now you have user.id, regardless of how they authenticated!
   const buckets = await prisma.s3Credential.findMany({
     where: { userId: user.id },
+    select: {
+      id: true,
+      bucket: true,
+      region: true,
+      provider: true,
+      endpointUrl: true,
+      createdAt: true,
+      updatedAt: true,
+      userId: true,
+    },
   });
 
   return NextResponse.json(buckets);

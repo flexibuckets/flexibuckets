@@ -134,15 +134,15 @@ model S3Credential {
   secretKey    String
   bucket       String   
   region       String      @default("auto")
-  provider     S3Provider? // Change to use the enum
+  provider     S3Provider?
   endpointUrl  String
+  credentialHash String?  @unique
   files        File[]
   folders      Folder[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   teamBuckets TeamSharedBucket[]
   publicUploadLinks PublicUploadLink[]
-  @@unique([bucket,accessKey,secretKey])
   @@index([userId, bucket])
 }
 

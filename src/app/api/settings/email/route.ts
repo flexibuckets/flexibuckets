@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { auth } from '@/auth';
+import { encryptJsonField, decryptJsonField } from '@/lib/encryption';
 
 const smtpSchema = z.object({
   host: z.string().min(1),
@@ -35,12 +36,22 @@ export async function GET() {
       where: { id: 'default' },
     });
 
+    let smtpConfig = settings?.smtpConfig as Record<string, unknown> | null;
+    if (smtpConfig) {
+      smtpConfig = decryptJsonField(smtpConfig, ['password']);
+    }
+
+    let resendConfig = settings?.resendConfig as Record<string, unknown> | null;
+    if (resendConfig) {
+      resendConfig = decryptJsonField(resendConfig, ['apiKey']);
+    }
+
     return NextResponse.json({
       provider: settings?.emailProvider || null,
       emailFrom: settings?.emailFrom || null,
-      smtp: settings?.smtpConfig as Record<string, string> | null,
-      resend: settings?.resendConfig
-        ? { from: (settings.resendConfig as Record<string, string>).from || '' }
+      smtp: smtpConfig,
+      resend: resendConfig
+        ? { from: resendConfig.from || '', apiKey: resendConfig.apiKey || '' }
         : null,
     });
   } catch (error) {
@@ -70,19 +81,19 @@ export async function POST(req: Request) {
     };
 
     if (provider === 'SMTP' && smtp) {
-      data.smtpConfig = {
+      data.smtpConfig = encryptJsonField({
         host: smtp.host,
         port: smtp.port,
         user: smtp.user,
         password: smtp.password,
         secure: smtp.secure,
-      } as any;
+      }, ['password']) as any;
       data.emailFrom = smtp.from;
     } else if (provider === 'RESEND' && resend) {
-      data.resendConfig = {
+      data.resendConfig = encryptJsonField({
         apiKey: resend.apiKey,
         from: resend.from,
-      } as any;
+      }, ['apiKey']) as any;
       data.emailFrom = resend.from;
     }
 
