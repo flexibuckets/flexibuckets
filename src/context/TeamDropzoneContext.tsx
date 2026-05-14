@@ -49,6 +49,7 @@ const defaultBucket: CompleteBucket = {
   region: '',
   provider: null,
   endpointUrl: '',
+  credentialHash: null,
   teamBucket: null,
   createdAt: new Date(),
   updatedAt: new Date(),
