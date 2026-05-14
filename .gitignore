@@ -44,3 +44,4 @@ yarn.lock
 
 .VSCodeCounter
 ./src/lib/paddle.ts
+.openapi-gen
