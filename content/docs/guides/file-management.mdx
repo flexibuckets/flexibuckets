@@ -1,0 +1,70 @@
+---
+title: File Management
+description: Upload, download, and manage files across your S3 buckets.
+---
+
+FlexiBuckets provides a file-browser-like interface for managing objects in your S3 buckets.
+
+## Browsing Files
+
+Click on any bucket in the dashboard to open its file browser. The interface shows:
+
+- **Folders** — Represented by S3 key prefixes (delimited by `/`)
+- **Files** — Individual objects with size and last modified date
+- **Breadcrumbs** — Navigate between folder levels
+
+## Uploading Files
+
+### Single File Upload
+
+1. Navigate to the folder where you want to upload
+2. Click **Upload** or drag and drop a file
+3. The file uploads directly to your S3 bucket
+
+### Multi-File Upload
+
+Drag and drop multiple files or use the upload button to select multiple files. Each file uploads in parallel.
+
+### Large Files
+
+FlexiBuckets supports multipart uploads for large files. The upload progress is shown per-file.
+
+## Downloading Files
+
+Click the download icon on any file to download it. For folders, FlexiBuckets can create a ZIP archive of the folder's contents.
+
+## Creating Folders
+
+1. Navigate to the parent location
+2. Click **New Folder**
+3. Enter the folder name
+
+Folders in S3 are virtual — they're created as zero-byte objects with a trailing `/`.
+
+## Deleting Files and Folders
+
+1. Select one or more items using the checkboxes
+2. Click **Delete**
+3. Confirm the deletion
+
+> **Warning**: Deletion is permanent. S3 does not have a trash or recycle bin. Consider enabling versioning on your S3 bucket for protection against accidental deletes.
+
+## Renaming and Moving
+
+S3 does not natively support rename or move operations. FlexiBuckets handles this by:
+
+1. Copying the object to the new key
+2. Deleting the original object
+
+This is transparent in the UI — just right-click a file and select **Rename** or **Move**.
+
+## File Preview
+
+FlexiBuckets can preview certain file types directly in the browser:
+
+- **Images** — JPG, PNG, GIF, WebP, SVG
+- **Documents** — PDF
+- **Text** — TXT, JSON, CSV, log files
+- **Code** — With syntax highlighting
+
+Click on a file to open the preview pane.

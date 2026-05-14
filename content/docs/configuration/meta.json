@@ -1,0 +1,5 @@
+{
+  "title": "Configuration",
+  "icon": "Settings",
+  "pages": ["environment-variables", "ssl-tls", "reverse-proxy", "email"]
+}

@@ -1,0 +1,143 @@
+---
+title: Upload Links
+description: Create public upload links to receive files from external users without requiring them to log in.
+---
+
+Public Upload Links allow external users to upload files directly to a bucket in your FlexiBuckets account — no login required. This is useful for collecting files from clients, receiving submissions, or any scenario where you need files from people outside your team.
+
+## How Upload Links Work
+
+1. You create an upload link configured with a destination bucket, folder, and restrictions
+2. FlexiBuckets generates a unique URL with a token
+3. You share the URL with the external user
+4. The user visits the link and uploads files through a simple web interface
+5. Files are stored directly in your S3 bucket in the specified folder
+
+## Creating an Upload Link
+
+1. Navigate to **Dashboard → Upload Links**
+2. Click **Create Upload Link**
+3. Configure the link:
+   - **Bucket** — Which S3 bucket to receive files into
+   - **Folder** — The destination folder (default: `public-uploads`)
+   - **Max File Size** — Maximum size per file in bytes (default: 100MB)
+   - **Max File Count** — Maximum number of files per upload (optional, unlimited by default)
+   - **Allowed Types** — Restrict file extensions or MIME types (optional)
+   - **Expires At** — Set an expiration date for the link (optional, never expires by default)
+
+### Allowed Types Format
+
+Specify file restrictions as a comma-separated list of extensions or MIME types:
+
+```text
+.pdf, .png, .jpg, image/*, .docx
+```
+
+- **Extensions** — Use dot-prefixed extensions (e.g. `.pdf`, `.png`)
+- **MIME types** — Use standard MIME patterns (e.g. `image/*`, `application/pdf`)
+
+## Sharing the Upload Link
+
+After creating a link, the upload URL is displayed in the format:
+
+```text
+https://your-instance.com/upload/<token>
+```
+
+Copy this URL and share it with the person who needs to upload files. They will see a simple upload interface with:
+
+- A drag-and-drop or file picker area
+- The allowed file types and size limits displayed
+- Upload progress for each file
+
+## Managing Upload Links
+
+From **Dashboard → Upload Links**, you can:
+
+- **View all links** — See each link's bucket, folder, status, and creation date
+- **Copy link URL** — Quickly copy the shareable URL
+- **Delete a link** — Remove the link so it no longer accepts uploads
+- **Check expiration** — Links show whether they're active or expired
+
+## Expiration and Limits
+
+- **Expiration** — If you set an `expiresAt` date, the link stops accepting uploads after that time
+- **File count** — If you set a `maxFileCount`, uploads are blocked once the limit is reached
+- **File size** — Each individual file is checked against the `maxFileSize` limit
+
+Expired or limit-reached links show an informational message to visitors instead of the upload form.
+
+## Audit and Webhooks
+
+When a file is received via an upload link, two things happen automatically:
+
+- An **audit log** entry is created with the action `PUBLIC_UPLOAD_RECEIVED`
+- A **webhook event** `PUBLIC_UPLOAD_RECEIVED` is triggered (if you have webhooks configured for this event)
+
+This lets you track and react to incoming uploads.
+
+## Upload Link API
+
+### List Upload Links
+
+```text
+GET /api/public-upload-links
+```
+
+### Create Upload Link
+
+```text
+POST /api/public-upload-links
+```
+
+```json
+{
+  "s3CredentialId": "clxxx...",
+  "folderName": "client-submissions",
+  "maxFileSize": 52428800,
+  "maxFileCount": 5,
+  "allowedTypes": ".pdf, .docx",
+  "expiresAt": "2026-06-01T00:00:00.000Z"
+}
+```
+
+### Delete Upload Link
+
+```text
+DELETE /api/public-upload-links/:linkId
+```
+
+### Get Link Info (Public)
+
+```text
+GET /api/public-upload/info/:token
+```
+
+Returns upload constraints for the upload page (no authentication required):
+
+```json
+{
+  "maxFileSize": 104857600,
+  "maxFileCount": null,
+  "currentFileCount": 3,
+  "allowedTypes": ".pdf, .docx",
+  "isExpired": false,
+  "expiresAt": "2026-06-01T00:00:00.000Z"
+}
+```
+
+### Submit Files (Public)
+
+```text
+POST /api/public-upload/submit/:token
+```
+
+Accepts `multipart/form-data` with `file` fields. No authentication required.
+
+## Security Considerations
+
+- **No authentication required** — Anyone with the link URL can upload files. Treat upload links like bearer tokens
+- **Restrict file types** — Always set `allowedTypes` to limit what can be uploaded
+- **Set size limits** — Use `maxFileSize` to prevent excessively large uploads
+- **Use expiration** — Set `expiresAt` for time-limited collection periods
+- **Monitor uploads** — Use audit logs and webhooks to track incoming files

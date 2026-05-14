@@ -1,0 +1,93 @@
+---
+title: Reverse Proxy
+description: Running FlexiBuckets behind a reverse proxy like Nginx or Caddy.
+---
+
+FlexiBuckets includes Traefik in its default Docker Compose setup, but you can use any reverse proxy.
+
+## Using the Built-in Traefik
+
+The default configuration already includes Traefik. No additional setup is needed — it handles:
+
+- SSL/TLS termination
+- HTTP → HTTPS redirection
+- Automatic Let's Encrypt certificates
+- Routing traffic to the FlexiBuckets container
+
+## Running Behind Nginx
+
+If you have an existing Nginx setup, you can disable Traefik and expose the app directly:
+
+### 1. Modify docker-compose.yml
+
+Remove the Traefik service and labels from the app service. Expose port 3000:
+
+```yaml
+app:
+  # ... existing config
+  ports:
+    - "127.0.0.1:3000:3000"
+  # Remove all traefik labels
+```
+
+Binding to `127.0.0.1` ensures the app is only accessible locally through Nginx.
+
+### 2. Configure Nginx
+
+Create `/etc/nginx/sites-available/flexibuckets`:
+
+```nginx
+server {
+    listen 80;
+    server_name flexibuckets.example.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name flexibuckets.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/flexibuckets.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/flexibuckets.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    client_max_body_size 0;
+}
+```
+
+> **Note**: `client_max_body_size 0` disables Nginx's upload size limit, allowing large file uploads to pass through to FlexiBuckets.
+
+## Running Behind Caddy
+
+Caddy provides automatic HTTPS like Traefik. Use this Caddyfile:
+
+```text
+flexibuckets.example.com {
+    reverse_proxy localhost:3000
+}
+```
+
+## Important Headers
+
+Your reverse proxy must forward these headers for FlexiBuckets to work correctly:
+
+| Header | Purpose |
+|--------|---------|
+| `Host` | Original host header |
+| `X-Real-IP` | Client's real IP address |
+| `X-Forwarded-For` | Proxy chain IPs |
+| `X-Forwarded-Proto` | Original protocol (http/https) |
+
+## WebSocket Support
+
+FlexiBuckets uses WebSockets for real-time updates. Ensure your reverse proxy supports the `Upgrade` header as shown in the Nginx configuration above.

@@ -1,0 +1,116 @@
+---
+title: Docker Installation
+description: Install FlexiBuckets using Docker Compose with full configuration options.
+---
+
+FlexiBuckets is designed to run as a set of Docker containers managed by Docker Compose. This is the recommended installation method.
+
+## System Requirements
+
+| Requirement | Minimum | Recommended |
+|------------|---------|-------------|
+| CPU | 1 core | 2+ cores |
+| RAM | 1 GB | 2+ GB |
+| Disk | 5 GB | 20+ GB |
+| OS | Linux (x86_64) | Ubuntu 22.04+ |
+
+## Quick Install
+
+```bash
+curl -fsSL https://cdn.flexibuckets.com/install.sh | sudo bash
+```
+
+## Manual Docker Setup
+
+If you prefer full control over the installation:
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/flexibuckets/flexibuckets.git
+cd flexibuckets
+```
+
+### 2. Configure Environment
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your settings. At minimum, set:
+
+```bash
+DATABASE_URL=postgresql://postgres:your_password@db:5432/flexibuckets
+AUTH_SECRET=your-random-secret-key
+NEXT_PUBLIC_APP_URL=https://your-domain.com
+```
+
+Generate a secure `AUTH_SECRET`:
+
+```bash
+openssl rand -base64 32
+```
+
+### 3. Start Services
+
+```bash
+docker compose up -d
+```
+
+### 4. Verify
+
+```bash
+docker compose ps
+```
+
+All three services (`flexibuckets_traefik`, `flexibuckets_postgres`, `flexibuckets_app`) should show status `running`.
+
+## Container Architecture
+
+FlexiBuckets runs three containers:
+
+| Container | Image | Purpose |
+|-----------|-------|---------|
+| `flexibuckets_traefik` | traefik:v2.10 | Reverse proxy & automatic TLS |
+| `flexibuckets_postgres` | postgres:16-alpine | Database |
+| `flexibuckets_app` | flexibuckets/flexibuckets | Application |
+
+## Data Persistence
+
+Docker volumes are used for data persistence:
+
+- `flexibuckets_postgres_data` — Database data
+- `app_data` — Application data
+- `next_cache` — Next.js build cache
+
+These volumes survive container restarts and updates.
+
+## Updating
+
+```bash
+docker compose pull app
+docker compose up -d app
+```
+
+## Troubleshooting
+
+### Port 3000 already in use
+
+Edit `docker-compose.yml` and change the port mapping:
+
+```yaml
+ports:
+  - "8080:3000"
+```
+
+### Database connection errors
+
+Ensure the `db` service is healthy before the app starts:
+
+```bash
+docker compose logs db
+```
+
+### Permission errors
+
+The app container runs as a non-root user. Ensure the `APP_UID` and `DOCKER_GID` environment variables match your system.

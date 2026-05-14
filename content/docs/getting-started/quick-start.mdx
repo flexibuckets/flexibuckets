@@ -1,0 +1,55 @@
+---
+title: Quick Start
+description: Get FlexiBuckets running in under 5 minutes.
+---
+
+The fastest way to get started is using the one-line install script on a fresh Linux server.
+
+## Prerequisites
+
+- A Linux server (Ubuntu 22.04+ recommended) with a public IP
+- Docker and Docker Compose installed (the script handles this if missing)
+- A domain name pointed to your server (optional, but recommended for TLS)
+
+## One-Line Install
+
+```bash
+curl -fsSL https://cdn.flexibuckets.com/install.sh | sudo bash
+```
+
+The script will:
+
+1. Install Docker and Docker Compose if not already present
+2. Pull the FlexiBuckets Docker image
+3. Set up PostgreSQL
+4. Generate environment variables and secrets
+5. Start all services
+
+## Access Your Instance
+
+Once the installation completes:
+
+1. Visit `http://your-server-ip:3000` (or your domain if configured)
+2. Create your admin account
+3. Start adding your S3 buckets
+
+## Add Your First Bucket
+
+After signing in:
+
+1. Go to **Dashboard → Add Bucket**
+2. Enter your bucket details:
+   - **Name** — A friendly label for this bucket
+   - **Provider** — Select your storage provider (or "Custom" for generic S3)
+   - **Endpoint** — The S3 endpoint URL
+   - **Access Key** — Your access key ID
+   - **Secret Key** — Your secret access key
+   - **Bucket Name** — The name of the bucket
+   - **Region** — The region of your bucket (if applicable)
+3. Click **Connect** — FlexiBuckets will verify the connection and start listing your files
+
+## Next Steps
+
+- [Docker Installation](../installation/docker) — Detailed Docker setup options
+- [Environment Variables](../configuration/environment-variables) — Full configuration reference
+- [Adding Buckets](../guides/adding-buckets) — Advanced bucket configuration

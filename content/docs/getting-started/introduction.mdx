@@ -1,0 +1,42 @@
+---
+title: Introduction
+description: FlexiBuckets is an open-source, self-hosted solution for managing multiple S3-compatible storage buckets in one unified interface.
+---
+
+FlexiBuckets gives you a single dashboard to connect, browse, upload, and manage files across all your S3-compatible storage providers — whether that's AWS S3, DigitalOcean Spaces, MinIO, Backblaze B2, Wasabi, or any other S3-compatible service.
+
+## Why FlexiBuckets?
+
+- **Multi-bucket, multi-provider** — Connect buckets from different providers and switch between them instantly
+- **Self-hosted** — Your credentials and data stay on your infrastructure. No third-party has access
+- **Unified interface** — One consistent UI for all your storage, regardless of provider
+- **File sharing** — Generate temporary presigned URLs for sharing files without granting bucket-level access
+- **Public upload links** — Receive files from external users without requiring them to log in
+- **Team support** — Collaborate with team members on shared buckets
+- **Audit logs** — Track every action across your account for compliance and accountability
+- **Webhooks** — Receive real-time event notifications for integrations and automations
+- **API keys** — Programmatic access with Bearer token authentication
+- **Email notifications** — SMTP or Resend integration for password resets and team invitations
+- **Open source** — MIT licensed, fully auditable, community-driven
+
+## Architecture
+
+FlexiBuckets is a Next.js application backed by PostgreSQL, deployed via Docker with Traefik as the reverse proxy and automatic TLS via Let's Encrypt.
+
+```text
+┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+│   Browser    │────▶│   Traefik    │────▶│   FlexiBuckets   │
+│              │     │  (reverse    │     │   (Next.js)      │
+│              │◀────│   proxy)     │◀────│                  │
+└─────────────┘     └──────────────┘     └────────┬─────────┘
+                                                   │
+                                          ┌────────▼─────────┐
+                                          │   PostgreSQL      │
+                                          └──────────────────┘
+```
+
+FlexiBuckets communicates with your S3-compatible storage providers using the standard S3 API — it does not store your files, only metadata and connection configuration.
+
+## What's Next?
+
+Head to [Quick Start](./quick-start) to get FlexiBuckets running in under 5 minutes.

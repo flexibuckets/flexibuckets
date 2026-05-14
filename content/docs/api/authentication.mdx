@@ -1,0 +1,74 @@
+---
+title: Authentication
+description: Authenticate API requests to FlexiBuckets.
+---
+
+## Session-Based Authentication
+
+FlexiBuckets uses NextAuth.js for authentication. When you log in through the web UI, a session cookie is set that authenticates subsequent API requests.
+
+### Login
+
+```text
+POST /api/auth/signin
+```
+
+```json
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
+
+### Session Info
+
+```text
+GET /api/auth/session
+```
+
+Returns the current session:
+
+```json
+{
+  "user": {
+    "id": "clxxx...",
+    "email": "user@example.com",
+    "name": "User Name"
+  },
+  "expires": "2026-06-01T00:00:00.000Z"
+}
+```
+
+## API Keys
+
+For programmatic access, you can create API keys from the dashboard or via the API. See [API Keys](./api-keys) for the full API reference.
+
+1. Navigate to **Dashboard → API Keys**
+2. Click **Create API Key**
+3. Give it a name (e.g. "CI Pipeline")
+4. Copy the key — it's shown only once and cannot be retrieved later
+
+### Using API Keys
+
+Include the key in the `Authorization` header as a Bearer token:
+
+```bash
+curl -H "Authorization: Bearer flex_your_api_key" \
+  https://your-instance.com/api/buckets
+```
+
+Keys use the `flex_` prefix format: `flex_<32-character-string>`
+
+### Key Management
+
+- **Create** — `POST /api/api-keys` with `{ "name": "My Key" }`
+- **List** — `GET /api/api-keys` — returns key metadata (not the actual key values)
+- **Regenerate** — `POST /api/api-keys/:id/regenerate` — generates a new key, old one immediately stops working
+- **Revoke** — `DELETE /api/api-keys/:id` — permanently deletes the key
+
+### Security
+
+- Keys are stored as SHA-256 hashes — the plaintext is never stored in the database
+- Keys are shown only once at creation (or regeneration)
+- Creating and deleting keys generates audit log entries (`API_KEY_CREATE`, `API_KEY_DELETE`)
+- Keys inherit the permissions of the user who created them

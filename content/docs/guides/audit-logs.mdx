@@ -1,0 +1,130 @@
+---
+title: Audit Logs
+description: Track and review all actions performed in your FlexiBuckets account.
+---
+
+FlexiBuckets automatically logs all significant actions across your account, giving you a complete audit trail of who did what and when.
+
+## Accessing Audit Logs
+
+Navigate to **Dashboard → Audit Logs** to view all logged actions. The audit logs page shows:
+
+- **Action** — The type of operation performed
+- **Resource** — What was affected (file, bucket, team, etc.)
+- **User** — Who performed the action
+- **Timestamp** — When the action occurred
+- **IP Address** — The source IP of the request
+
+## Filterable Actions
+
+You can filter audit logs by action type. FlexiBuckets tracks the following categories:
+
+### File Operations
+
+| Action | Description |
+|--------|-------------|
+| `FILE_UPLOAD` | A file was uploaded |
+| `FILE_DELETE` | A file was deleted |
+| `FILE_SHARE` | A file was shared via presigned URL |
+| `FILE_UNSHARE` | A file share was revoked |
+| `FILE_DOWNLOAD` | A shared file was downloaded |
+
+### Folder Operations
+
+| Action | Description |
+|--------|-------------|
+| `FOLDER_CREATE` | A folder was created |
+| `FOLDER_DELETE` | A folder was deleted |
+| `FOLDER_SHARE` | A folder was shared |
+
+### Bucket Operations
+
+| Action | Description |
+|--------|-------------|
+| `BUCKET_ADD` | A new S3 bucket was connected |
+| `BUCKET_DELETE` | A bucket connection was removed |
+
+### Team Operations
+
+| Action | Description |
+|--------|-------------|
+| `TEAM_CREATE` | A new team was created |
+| `TEAM_JOIN` | A user joined a team |
+| `TEAM_LEAVE` | A user left a team |
+| `TEAM_MEMBER_ADD` | A member was added to a team |
+| `TEAM_MEMBER_REMOVE` | A member was removed from a team |
+
+### Authentication & API Keys
+
+| Action | Description |
+|--------|-------------|
+| `USER_LOGIN` | A user logged in |
+| `USER_SIGNUP` | A new account was created |
+| `API_KEY_CREATE` | An API key was created |
+| `API_KEY_DELETE` | An API key was deleted |
+
+### Public Uploads & Webhooks
+
+| Action | Description |
+|--------|-------------|
+| `PUBLIC_UPLOAD_RECEIVED` | A file was received via a public upload link |
+| `WEBHOOK_CREATE` | A webhook was created |
+| `WEBHOOK_DELETE` | A webhook was deleted |
+| `WEBHOOK_UPDATE` | A webhook was updated |
+
+## Searching Logs
+
+Use the search bar to filter by action name, resource name, or resource ID. You can also combine filters:
+
+- Select an **action type** from the dropdown
+- Enter a **search term** for the resource
+- Results are paginated (50 per page)
+
+## Audit Log API
+
+You can also query audit logs programmatically:
+
+```text
+GET /api/audit-logs
+```
+
+### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `action` | string | Filter by action type |
+| `resourceType` | string | Filter by resource type |
+| `resourceId` | string | Filter by specific resource ID |
+| `teamId` | string | Filter by team |
+| `limit` | number | Max results (max 100) |
+| `offset` | number | Pagination offset |
+| `startDate` | string | Start date (ISO format) |
+| `endDate` | string | End date (ISO format) |
+
+### Example
+
+```bash
+curl -H "Authorization: Bearer flex_your_api_key" \
+  "https://your-instance.com/api/audit-logs?action=FILE_UPLOAD&limit=20"
+```
+
+### Response
+
+```json
+{
+  "logs": [
+    {
+      "id": "clxxx...",
+      "userId": "clxxx...",
+      "action": "FILE_UPLOAD",
+      "resourceType": "file",
+      "resourceId": "my-file.txt",
+      "resourceName": "my-file.txt",
+      "details": {},
+      "ipAddress": "192.168.1.1",
+      "createdAt": "2026-05-01T10:00:00.000Z"
+    }
+  ],
+  "total": 45
+}
+```

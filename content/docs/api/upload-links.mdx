@@ -1,0 +1,96 @@
+---
+title: Upload Links API
+description: Manage public upload links for receiving files from external users.
+---
+
+Create, list, and delete public upload links. These endpoints require authentication. The public upload endpoints (`/api/public-upload/info` and `/api/public-upload/submit`) do not.
+
+## List Upload Links
+
+```text
+GET /api/public-upload-links
+```
+
+Returns all upload links for the authenticated user:
+
+```json
+[
+  {
+    "id": "clxxx...",
+    "token": "abc123def456ghi789",
+    "s3CredentialId": "clxxx...",
+    "folderName": "client-submissions",
+    "maxFileSize": 52428800,
+    "maxFileCount": 5,
+    "allowedTypes": ".pdf, .docx",
+    "expiresAt": "2026-06-01T00:00:00.000Z",
+    "createdAt": "2026-05-01T10:00:00.000Z"
+  }
+]
+```
+
+## Create Upload Link
+
+```text
+POST /api/public-upload-links
+```
+
+```json
+{
+  "s3CredentialId": "clxxx...",
+  "folderName": "client-submissions",
+  "maxFileSize": 52428800,
+  "maxFileCount": 5,
+  "allowedTypes": ".pdf, .docx",
+  "expiresAt": "2026-06-01T00:00:00.000Z"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `s3CredentialId` | string | Yes | The S3 credential/bucket to upload into |
+| `folderName` | string | No | Destination folder (default: `public-uploads`) |
+| `maxFileSize` | number | No | Max file size in bytes (default: 104857600 / 100MB) |
+| `maxFileCount` | number | No | Max number of files (null = unlimited) |
+| `allowedTypes` | string | No | Comma-separated allowed extensions/MIME types |
+| `expiresAt` | string | No | Expiration date (null = never expires) |
+
+## Delete Upload Link
+
+```text
+DELETE /api/public-upload-links/:linkId
+```
+
+## Get Link Info (Public, No Auth)
+
+```text
+GET /api/public-upload/info/:token
+```
+
+Returns the upload constraints for a given token. No authentication required — this is used by the public upload page:
+
+```json
+{
+  "maxFileSize": 52428800,
+  "maxFileCount": 5,
+  "currentFileCount": 3,
+  "allowedTypes": ".pdf, .docx",
+  "isExpired": false,
+  "expiresAt": "2026-06-01T00:00:00.000Z"
+}
+```
+
+## Submit Files (Public, No Auth)
+
+```text
+POST /api/public-upload/submit/:token
+```
+
+Accepts `multipart/form-data` with `file` fields. No authentication required.
+
+```bash
+curl -F "file=@document.pdf" \
+  "https://your-instance.com/api/public-upload/submit/abc123def456ghi789"
+```
+
+On success, returns a confirmation and triggers a `PUBLIC_UPLOAD_RECEIVED` audit log entry and webhook event.

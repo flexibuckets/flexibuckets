@@ -1,0 +1,363 @@
+{
+  "configPath": "F:\\opensource\\flexibuckets\\next.openapi.json",
+  "outputFile": "F:\\opensource\\flexibuckets\\public\\openapi.json",
+  "diagnostics": [
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /api-keys/{id}/regenerate contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\api-keys\\[id]\\regenerate\\route.ts",
+      "routePath": "/api-keys/{id}/regenerate"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /api-keys/{id} contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\api-keys\\[id]\\route.ts",
+      "routePath": "/api-keys/{id}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /auth/{nextauth} contains path parameters nextauth but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\auth\\[...nextauth]\\route.ts",
+      "routePath": "/auth/{nextauth}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /auth/{nextauth} contains path parameters nextauth but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\auth\\[...nextauth]\\route.ts",
+      "routePath": "/auth/{nextauth}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /buckets/{id} contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\buckets\\[id]\\route.ts",
+      "routePath": "/buckets/{id}"
+    },
+    {
+      "code": "response-inference-unresolved",
+      "severity": "warning",
+      "message": "Could not fully infer a response schema from a return statement. Add an explicit @response tag to make the output deterministic.",
+      "filePath": "F:/opensource/flexibuckets/src/app/api/download/[shortUrl]/route.ts",
+      "routePath": "/download/{shortUrl}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /download/{shortUrl} contains path parameters shortUrl but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\download\\[shortUrl]\\route.ts",
+      "routePath": "/download/{shortUrl}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /download/user-file/{fileid} contains path parameters fileid but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\download\\user-file\\[fileid]\\route.ts",
+      "routePath": "/download/user-file/{fileid}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /download-folder/{folderId} contains path parameters folderId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\download-folder\\[folderId]\\route.ts",
+      "routePath": "/download-folder/{folderId}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /files/{id} contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\files\\[id]\\route.ts",
+      "routePath": "/files/{id}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /public-upload/info/{token} contains path parameters token but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\public-upload\\info\\[token]\\route.ts",
+      "routePath": "/public-upload/info/{token}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /public-upload/submit/{token} contains path parameters token but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\public-upload\\submit\\[token]\\route.ts",
+      "routePath": "/public-upload/submit/{token}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /public-upload-links/{linkId} contains path parameters linkId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\public-upload-links\\[linkId]\\route.ts",
+      "routePath": "/public-upload-links/{linkId}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /shared/preview/{shortUrl} contains path parameters shortUrl but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\shared\\preview\\[shortUrl]\\route.ts",
+      "routePath": "/shared/preview/{shortUrl}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /shared-folder-structure/{sharedFolderId} contains path parameters sharedFolderId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\shared-folder-structure\\[sharedFolderId]\\route.ts",
+      "routePath": "/shared-folder-structure/{sharedFolderId}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /teams/{teamId}/access contains path parameters teamId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\teams\\[teamId]\\access\\route.ts",
+      "routePath": "/teams/{teamId}/access"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /teams/{teamId}/buckets contains path parameters teamId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\teams\\[teamId]\\buckets\\route.ts",
+      "routePath": "/teams/{teamId}/buckets"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /teams/{teamId}/buckets contains path parameters teamId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\teams\\[teamId]\\buckets\\route.ts",
+      "routePath": "/teams/{teamId}/buckets"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /teams/{teamId}/buckets contains path parameters teamId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\teams\\[teamId]\\buckets\\route.ts",
+      "routePath": "/teams/{teamId}/buckets"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /teams/{teamId}/members/{userId} contains path parameters teamId, userId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\teams\\[teamId]\\members\\[userId]\\route.ts",
+      "routePath": "/teams/{teamId}/members/{userId}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /teams/{teamId}/members/{userId} contains path parameters teamId, userId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\teams\\[teamId]\\members\\[userId]\\route.ts",
+      "routePath": "/teams/{teamId}/members/{userId}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /teams/{teamId}/members contains path parameters teamId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\teams\\[teamId]\\members\\route.ts",
+      "routePath": "/teams/{teamId}/members"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /teams/{teamId} contains path parameters teamId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\teams\\[teamId]\\route.ts",
+      "routePath": "/teams/{teamId}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /teams/{teamId} contains path parameters teamId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\teams\\[teamId]\\route.ts",
+      "routePath": "/teams/{teamId}"
+    },
+    {
+      "code": "response-inference-unresolved",
+      "severity": "warning",
+      "message": "Could not fully infer a response schema from a return statement. Add an explicit @response tag to make the output deterministic.",
+      "filePath": "F:/opensource/flexibuckets/src/app/api/upload-file/get-presigned-url/route.ts",
+      "routePath": "/upload-file/get-presigned-url"
+    },
+    {
+      "code": "response-inference-unresolved",
+      "severity": "warning",
+      "message": "Could not fully infer a response schema from a return statement. Add an explicit @response tag to make the output deterministic.",
+      "filePath": "F:/opensource/flexibuckets/src/app/api/upload-file/get-presigned-url/route.ts",
+      "routePath": "/upload-file/get-presigned-url"
+    },
+    {
+      "code": "response-inference-unresolved",
+      "severity": "warning",
+      "message": "Could not fully infer a response schema from a return statement. Add an explicit @response tag to make the output deterministic.",
+      "filePath": "F:/opensource/flexibuckets/src/app/api/upload-file/get-presigned-url/route.ts",
+      "routePath": "/upload-file/get-presigned-url"
+    },
+    {
+      "code": "response-inference-unresolved",
+      "severity": "warning",
+      "message": "Could not fully infer a response schema from a return statement. Add an explicit @response tag to make the output deterministic.",
+      "filePath": "F:/opensource/flexibuckets/src/app/api/upload-file/get-presigned-url/route.ts",
+      "routePath": "/upload-file/get-presigned-url"
+    },
+    {
+      "code": "response-inference-unresolved",
+      "severity": "warning",
+      "message": "Could not fully infer a response schema from a return statement. Add an explicit @response tag to make the output deterministic.",
+      "filePath": "F:/opensource/flexibuckets/src/app/api/upload-file/get-presigned-url/route.ts",
+      "routePath": "/upload-file/get-presigned-url"
+    },
+    {
+      "code": "response-inference-unresolved",
+      "severity": "warning",
+      "message": "Could not fully infer a response schema from a return statement. Add an explicit @response tag to make the output deterministic.",
+      "filePath": "F:/opensource/flexibuckets/src/app/api/upload-file/team-presigned-url/route.ts",
+      "routePath": "/upload-file/team-presigned-url"
+    },
+    {
+      "code": "response-inference-unresolved",
+      "severity": "warning",
+      "message": "Could not fully infer a response schema from a return statement. Add an explicit @response tag to make the output deterministic.",
+      "filePath": "F:/opensource/flexibuckets/src/app/api/upload-file/team-presigned-url/route.ts",
+      "routePath": "/upload-file/team-presigned-url"
+    },
+    {
+      "code": "response-inference-unresolved",
+      "severity": "warning",
+      "message": "Could not fully infer a response schema from a return statement. Add an explicit @response tag to make the output deterministic.",
+      "filePath": "F:/opensource/flexibuckets/src/app/api/upload-file/team-presigned-url/route.ts",
+      "routePath": "/upload-file/team-presigned-url"
+    },
+    {
+      "code": "response-inference-unresolved",
+      "severity": "warning",
+      "message": "Could not fully infer a response schema from a return statement. Add an explicit @response tag to make the output deterministic.",
+      "filePath": "F:/opensource/flexibuckets/src/app/api/upload-file/team-presigned-url/route.ts",
+      "routePath": "/upload-file/team-presigned-url"
+    },
+    {
+      "code": "response-inference-unresolved",
+      "severity": "warning",
+      "message": "Could not fully infer a response schema from a return statement. Add an explicit @response tag to make the output deterministic.",
+      "filePath": "F:/opensource/flexibuckets/src/app/api/upload-file/team-presigned-url/route.ts",
+      "routePath": "/upload-file/team-presigned-url"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /v1/buckets/{id}/files contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\v1\\buckets\\[id]\\files\\route.ts",
+      "routePath": "/v1/buckets/{id}/files"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /v1/buckets/{id} contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\v1\\buckets\\[id]\\route.ts",
+      "routePath": "/v1/buckets/{id}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /v1/files/{id}/download contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\v1\\files\\[id]\\download\\route.ts",
+      "routePath": "/v1/files/{id}/download"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /v1/files/{id} contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\v1\\files\\[id]\\route.ts",
+      "routePath": "/v1/files/{id}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /v1/files/{id} contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\v1\\files\\[id]\\route.ts",
+      "routePath": "/v1/files/{id}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /v1/files/{id}/share contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\v1\\files\\[id]\\share\\route.ts",
+      "routePath": "/v1/files/{id}/share"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /v1/folders/{id} contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\v1\\folders\\[id]\\route.ts",
+      "routePath": "/v1/folders/{id}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /v1/folders/{id} contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\v1\\folders\\[id]\\route.ts",
+      "routePath": "/v1/folders/{id}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /v1/folders/{id}/share contains path parameters id but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\v1\\folders\\[id]\\share\\route.ts",
+      "routePath": "/v1/folders/{id}/share"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /v1/shared/{shortUrl} contains path parameters shortUrl but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\v1\\shared\\[shortUrl]\\route.ts",
+      "routePath": "/v1/shared/{shortUrl}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /webhooks/{webhookId} contains path parameters webhookId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\webhooks\\[webhookId]\\route.ts",
+      "routePath": "/webhooks/{webhookId}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /webhooks/{webhookId} contains path parameters webhookId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\webhooks\\[webhookId]\\route.ts",
+      "routePath": "/webhooks/{webhookId}"
+    },
+    {
+      "code": "missing-path-params-type",
+      "severity": "warning",
+      "message": "Route /webhooks/{webhookId}/test contains path parameters webhookId but no @pathParams type is defined.",
+      "filePath": "src\\app\\api\\webhooks\\[webhookId]\\test\\route.ts",
+      "routePath": "/webhooks/{webhookId}/test"
+    }
+  ],
+  "performance": {
+    "prepareTemplateMs": 1.150600000000054,
+    "loadCustomFragmentsMs": 0.001099999999951251,
+    "prepareDocumentMs": 1.1517000000000053,
+    "scanRouteFilesMs": 7.015300000000025,
+    "deriveRoutePathMs": 1.220899999999915,
+    "filterRouteCandidatesMs": 0.11059999999361025,
+    "sourcePrecheckMs": 12.902900000001068,
+    "readRouteFilesMs": 12.15249999999969,
+    "parseRouteFilesMs": 67.2119999999934,
+    "analyzeRouteFilesMs": 76.07380000000558,
+    "typescriptResponseInferenceMs": 3751.2208000000005,
+    "processRouteFilesMs": 3895.932499999999,
+    "registerRouteMs": 1659.1617999999976,
+    "getSchemaContentMs": 0,
+    "createRequestParamsMs": 0.3904000000001133,
+    "createRequestBodyMs": 0,
+    "processResponsesMs": 1653.898700000001,
+    "createResponseSchemaMs": 0,
+    "buildOperationsMs": 1659.386099999997,
+    "sortAndMergePathsMs": 2.40270000000055,
+    "buildPathsMs": 2.40270000000055,
+    "defaultComponentsAndErrorsMs": 0.704899999999725,
+    "mergeSchemasMs": 0.8411999999998443,
+    "finalizeDocumentMs": 37.94520000000011,
+    "totalMs": 5621.491,
+    "scanRoutesMs": 5562.333899999996
+  }
+}

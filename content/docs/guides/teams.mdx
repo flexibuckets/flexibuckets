@@ -1,0 +1,59 @@
+---
+title: Teams
+description: Collaborate with team members on shared buckets.
+---
+
+FlexiBuckets supports team collaboration, allowing multiple users to access shared buckets with controlled permissions.
+
+## Creating a Team
+
+1. Navigate to **Dashboard → Teams**
+2. Click **Create Team**
+3. Enter a team name and description
+4. Select the buckets to share with the team
+
+## Inviting Members
+
+1. Open the team settings
+2. Click **Invite Member**
+3. Enter the email address of the person you want to invite
+4. Select their role
+
+If the person doesn't have a FlexiBuckets account yet, they'll receive an invitation email to create one.
+
+## Team Roles
+
+| Role | Permissions |
+|------|------------|
+| **Owner** | Full control: manage members, delete team, all bucket operations |
+| **Admin** | Manage members, all bucket operations |
+| **Member** | Browse, upload, download, and delete files |
+| **Viewer** | Browse and download files only |
+
+## Managing Shared Buckets
+
+Buckets shared with a team are visible to all team members based on their role:
+
+- **Owners and Admins** can add or remove buckets from the team
+- **Members** can perform file operations on shared buckets
+- **Viewers** can browse and download but not upload or delete
+
+## Team Activity
+
+FlexiBuckets tracks team activity in the centralized [Audit Logs](./audit-logs) system, including:
+
+- File uploads and downloads
+- Bucket additions and removals
+- Member joins and leaves (`TEAM_CREATE`, `TEAM_JOIN`, `TEAM_LEAVE`, `TEAM_MEMBER_ADD`, `TEAM_MEMBER_REMOVE`)
+
+Audit logs are visible to Owners and Admins at **Dashboard → Audit Logs**.
+
+## Email for Team Invitations
+
+Team invitation emails require email to be configured. See [Email Configuration](../configuration/email) to set up SMTP or Resend. Without email configuration, invitation links are generated but not delivered via email.
+
+## Leaving or Deleting a Team
+
+- **Members** can leave a team at any time from the team settings
+- **Owners** can delete a team, which removes all member associations (but does not affect the underlying S3 buckets or files)
+- Transferring ownership requires the current owner to assign a new owner before leaving

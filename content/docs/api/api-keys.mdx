@@ -1,0 +1,98 @@
+---
+title: API Keys
+description: Create and manage API keys for programmatic access to FlexiBuckets.
+---
+
+API keys provide an alternative to session-based authentication for programmatic access. They use a simple Bearer token format and are useful for scripts, CI/CD pipelines, and integrations.
+
+## Creating an API Key
+
+1. Navigate to **Dashboard → API Keys** (or use the API)
+2. Provide a **name** for the key (e.g. "CI Pipeline", "Backup Script")
+3. The key is generated and displayed **only once** — copy and store it immediately
+
+Key format: `flex_<32-character-string>`
+
+### Via API
+
+```text
+POST /api/api-keys
+```
+
+```json
+{
+  "name": "CI Pipeline"
+}
+```
+
+Response:
+
+```json
+{
+  "status": "success",
+  "key": "flex_abc123def456ghi789jkl012mno345pqr678",
+  "keyObject": {
+    "id": "clxxx...",
+    "name": "CI Pipeline",
+    "createdAt": "2026-05-01T10:00:00.000Z",
+    "lastUsedAt": null
+  }
+}
+```
+
+## Using API Keys
+
+Include the key in the `Authorization` header as a Bearer token:
+
+```bash
+curl -H "Authorization: Bearer flex_your_api_key" \
+  https://your-instance.com/api/buckets
+```
+
+All API endpoints accept API key authentication in addition to session cookies.
+
+## Managing API Keys
+
+### List Keys
+
+```text
+GET /api/api-keys
+```
+
+Returns all keys for the authenticated user (key values are not included — only metadata):
+
+```json
+[
+  {
+    "id": "clxxx...",
+    "name": "CI Pipeline",
+    "createdAt": "2026-05-01T10:00:00.000Z",
+    "lastUsedAt": "2026-05-10T08:30:00.000Z"
+  }
+]
+```
+
+### Regenerate a Key
+
+If a key is compromised or you need a new one without deleting the existing record:
+
+```text
+POST /api/api-keys/:id/regenerate
+```
+
+A new key is generated and returned (again, shown only once). The old key immediately stops working.
+
+### Delete/Revoke a Key
+
+```text
+DELETE /api/api-keys/:id
+```
+
+The key is permanently deleted and immediately stops working.
+
+## Security
+
+- **Keys are hashed** — FlexiBuckets stores only the SHA-256 hash of your key, never the plaintext. This means keys cannot be retrieved after creation
+- **Shown only once** — The full key is returned only at creation and regeneration. Store it securely
+- **Per-user** — API keys are tied to your user account and inherit your permissions
+- **Audit logged** — Creating and deleting API keys generates `API_KEY_CREATE` and `API_KEY_DELETE` audit log entries

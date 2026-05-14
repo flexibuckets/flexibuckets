@@ -110,7 +110,7 @@ FlexiBuckets is MIT licensed, as found in the [LICENSE](LICENSE) file.
 
 ## 🤝 Support
 
-- 📝 [Documentation](https://docs.flexibuckets.com)
+- 📝 [Documentation](https://docs.flexibuckets.thebrainfry.com)
 - 🐛 [Issue Tracker](https://github.com/flexibuckets/flexibuckets/issues)
 
 

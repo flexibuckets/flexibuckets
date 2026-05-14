@@ -1,0 +1,5 @@
+{
+  "title": "API Reference",
+  "icon": "Code",
+  "pages": ["overview", "authentication", "api-keys", "buckets", "objects", "audit-logs", "webhooks", "upload-links"]
+}

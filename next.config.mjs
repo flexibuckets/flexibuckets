@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 import BundleAnalyzer from "@next/bundle-analyzer";
+import { createMDX } from "fumadocs-mdx/next";
 
 const nextConfig = {
   output: "standalone",
@@ -39,8 +40,11 @@ const nextConfig = {
   },
   pageExtensions: ["ts", "tsx", "mdx"],
 };
+
 const withBundleAnalyzer = BundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
-export default withBundleAnalyzer(nextConfig);
+const withMDX = createMDX();
+
+export default withBundleAnalyzer(withMDX(nextConfig));

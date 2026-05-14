@@ -1,0 +1,54 @@
+---
+title: Environment Variables
+description: Complete reference for all FlexiBuckets environment variables.
+---
+
+FlexiBuckets is configured through environment variables. These can be set in your `.env` file or directly in your Docker Compose configuration.
+
+## Required Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:postgres@db:5432/flexibuckets` |
+| `AUTH_SECRET` | Secret key for NextAuth.js session encryption | `openssl rand -base64 32` |
+| `NEXT_PUBLIC_APP_URL` | Public URL of your FlexiBuckets instance | `https://flexibuckets.example.com` |
+
+## Database Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `POSTGRES_USER` | PostgreSQL username | `postgres` |
+| `POSTGRES_PASSWORD` | PostgreSQL password | `postgres` |
+| `POSTGRES_DB` | PostgreSQL database name | `flexibuckets` |
+
+> **Warning**: Change the default PostgreSQL credentials in production.
+
+## Application Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `NEXT_PUBLIC_APP_URL` | Public-facing URL | `http://localhost:3000` |
+| `APP_VERSION` | Application version (set by Docker) | `0.0.0` |
+| `APP_SHA_SHORT` | Git commit SHA (set by Docker) | — |
+
+## Docker & Traefik Configuration
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `SERVER_IP` | Your server's public IP address | Yes |
+| `DOMAIN` | Your domain name for TLS | No |
+| `ACME_EMAIL` | Email for Let's Encrypt certificates | If using TLS |
+| `APP_UID` | User ID for the app container | Yes |
+| `DOCKER_GID` | Docker group ID for socket access | Yes |
+
+## Email Configuration
+
+Email is now configured through the dashboard at **Dashboard → Settings → Email**, not via environment variables. See [Email Configuration](./email) for setup instructions.
+
+> The `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM` environment variables are no longer used. Email configuration is stored in the database and managed through the dashboard UI or API.
+
+## Setting Variables in Docker
+
+Add variables to your `.env` file in the project root. Docker Compose automatically reads this file.
+
+For sensitive values, consider using Docker secrets or a secrets manager in production.

@@ -1,0 +1,59 @@
+---
+title: Audit Logs API
+description: Query audit log entries programmatically.
+---
+
+Retrieve audit log entries for tracking and analysis of actions in your FlexiBuckets account.
+
+## List Audit Logs
+
+```text
+GET /api/audit-logs
+```
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | string | No | Filter by specific action type |
+| `resourceType` | string | No | Filter by resource type (file, folder, bucket, team, etc.) |
+| `resourceId` | string | No | Filter by specific resource ID |
+| `teamId` | string | No | Filter by team ID |
+| `limit` | number | No | Maximum results to return (max 100) |
+| `offset` | number | No | Pagination offset |
+| `startDate` | string | No | Start of date range (ISO 8601) |
+| `endDate` | string | No | End of date range (ISO 8601) |
+
+### Example
+
+```bash
+curl -H "Authorization: Bearer flex_your_api_key" \
+  "https://your-instance.com/api/audit-logs?action=FILE_UPLOAD&limit=20&offset=0"
+```
+
+### Response
+
+```json
+{
+  "logs": [
+    {
+      "id": "clxxx...",
+      "userId": "clxxx...",
+      "action": "FILE_UPLOAD",
+      "resourceType": "file",
+      "resourceId": "my-file.txt",
+      "resourceName": "my-file.txt",
+      "details": {},
+      "ipAddress": "192.168.1.1",
+      "userAgent": "Mozilla/5.0...",
+      "teamId": null,
+      "createdAt": "2026-05-01T10:00:00.000Z"
+    }
+  ],
+  "total": 45
+}
+```
+
+## Action Types
+
+See the [Audit Logs guide](../guides/audit-logs) for a complete list of tracked actions.

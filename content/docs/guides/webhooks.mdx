@@ -1,0 +1,161 @@
+---
+title: Webhooks
+description: Receive real-time event notifications when actions occur in your FlexiBuckets account.
+---
+
+Webhooks let you receive real-time HTTP callbacks when specific events happen in FlexiBuckets. Use them to integrate with external services, trigger workflows, or build automations.
+
+## Creating a Webhook
+
+1. Navigate to **Dashboard → Webhooks**
+2. Click **Create Webhook**
+3. Fill in the details:
+   - **URL** — The endpoint that will receive the webhook payloads
+   - **Events** — Select which events to subscribe to
+   - **Description** — A label for the webhook (optional)
+4. Save the webhook
+
+Your **signing secret** is displayed once after creation. Store it securely — it cannot be retrieved later.
+
+## Available Events
+
+| Event | Trigger |
+|-------|---------|
+| `FILE_UPLOAD` | A file is uploaded to a bucket |
+| `FILE_DELETE` | A file is deleted from a bucket |
+| `FILE_SHARE` | A file is shared via presigned URL |
+| `FILE_UNSHARE` | A file share is revoked |
+| `FOLDER_CREATE` | A folder is created |
+| `FOLDER_DELETE` | A folder is deleted |
+| `FOLDER_SHARE` | A folder is shared |
+| `BUCKET_ADD` | A new S3 bucket is connected |
+| `BUCKET_DELETE` | A bucket connection is removed |
+| `PUBLIC_UPLOAD_RECEIVED` | A file is received via a public upload link |
+
+## Webhook Payload
+
+When an event triggers, FlexiBuckets sends a POST request to your URL with the following payload:
+
+```json
+{
+  "event": "FILE_UPLOAD",
+  "timestamp": 1715232000,
+  "data": {
+    "resourceId": "my-file.txt",
+    "resourceName": "my-file.txt",
+    "userId": "clxxx...",
+    "details": {}
+  }
+}
+```
+
+## Signature Verification
+
+Every webhook delivery includes a signature header so you can verify the payload is genuinely from FlexiBuckets.
+
+### Headers
+
+| Header | Value |
+|--------|-------|
+| `X-FlexiBuckets-Signature` | `sha256=<hex-digest>` |
+| `X-FlexiBuckets-Event` | The event name (e.g. `FILE_UPLOAD`) |
+| `X-FlexiBuckets-Timestamp` | Unix timestamp of the delivery |
+
+### Verifying the Signature
+
+1. Get the raw request body
+2. Compute HMAC-SHA256 using your signing secret as the key and the raw body as the message
+3. Compare the computed hex digest to the value in `X-FlexiBuckets-Signature`
+
+```javascript
+const crypto = require('crypto');
+
+function verifySignature(body, signature, secret) {
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(body)
+    .digest('hex');
+  return signature === `sha256=${expected}`;
+}
+```
+
+## Testing a Webhook
+
+Use the **Test** button on any webhook to send a test payload:
+
+```json
+{
+  "event": "test",
+  "timestamp": 1715232000,
+  "data": {
+    "message": "Test webhook from FlexiBuckets"
+  }
+}
+```
+
+This helps you verify your endpoint is receiving payloads correctly before enabling real events.
+
+## Managing Webhooks
+
+- **Enable/Disable** — Toggle a webhook on or off without deleting it. Disabled webhooks do not receive deliveries
+- **Delete** — Permanently remove a webhook
+- **Failure Tracking** — Each webhook tracks its `failureCount`, which increments on delivery failure and resets to 0 on success
+
+### Delivery Behavior
+
+- Webhook deliveries have a **10-second timeout**
+- If your endpoint doesn't respond within 10 seconds, the delivery is marked as failed
+- FlexiBuckets does not currently retry failed deliveries
+
+## Webhook API
+
+### List Webhooks
+
+```text
+GET /api/webhooks
+```
+
+### Create Webhook
+
+```text
+POST /api/webhooks
+```
+
+```json
+{
+  "url": "https://your-server.com/webhook",
+  "events": ["FILE_UPLOAD", "FILE_DELETE"],
+  "description": "Upload and delete notifications"
+}
+```
+
+### Delete Webhook
+
+```text
+DELETE /api/webhooks/:webhookId
+```
+
+### Toggle Webhook
+
+```text
+PATCH /api/webhooks/:webhookId
+```
+
+```json
+{
+  "enabled": false
+}
+```
+
+### Test Webhook
+
+```text
+POST /api/webhooks/:webhookId/test
+```
+
+## Security Considerations
+
+- **Always verify signatures** — Never process webhook payloads without verifying the HMAC-SHA256 signature
+- **Signing secrets** — Secrets follow the format `whsec_<32-char-string>` and are shown only once at creation
+- **Use HTTPS endpoints** — Webhook URLs should always use HTTPS to prevent payload interception
+- **Respond quickly** — Your endpoint should respond within 10 seconds to avoid delivery failures

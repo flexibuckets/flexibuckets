@@ -1,0 +1,103 @@
+---
+title: Webhooks API
+description: Manage webhooks and webhook deliveries programmatically.
+---
+
+Create, list, delete, and test webhooks for receiving event notifications.
+
+## List Webhooks
+
+```text
+GET /api/webhooks
+```
+
+Returns all webhooks for the authenticated user:
+
+```json
+[
+  {
+    "id": "clxxx...",
+    "url": "https://your-server.com/webhook",
+    "events": ["FILE_UPLOAD", "FILE_DELETE"],
+    "description": "Upload and delete notifications",
+    "enabled": true,
+    "signingSecret": "whsec_...",
+    "lastTriggeredAt": "2026-05-10T08:30:00.000Z",
+    "failureCount": 0,
+    "createdAt": "2026-05-01T10:00:00.000Z"
+  }
+]
+```
+
+## Create Webhook
+
+```text
+POST /api/webhooks
+```
+
+```json
+{
+  "url": "https://your-server.com/webhook",
+  "events": ["FILE_UPLOAD", "FILE_DELETE"],
+  "description": "Upload and delete notifications"
+}
+```
+
+Response includes the signing secret (shown only once):
+
+```json
+{
+  "id": "clxxx...",
+  "url": "https://your-server.com/webhook",
+  "events": ["FILE_UPLOAD", "FILE_DELETE"],
+  "signingSecret": "whsec_abc123def456ghi789jkl012mno345",
+  "enabled": true,
+  "createdAt": "2026-05-01T10:00:00.000Z"
+}
+```
+
+## Delete Webhook
+
+```text
+DELETE /api/webhooks/:webhookId
+```
+
+Permanently removes the webhook.
+
+## Toggle Webhook
+
+```text
+PATCH /api/webhooks/:webhookId
+```
+
+```json
+{
+  "enabled": false
+}
+```
+
+Enables or disables the webhook. Disabled webhooks do not receive event deliveries.
+
+## Test Webhook
+
+```text
+POST /api/webhooks/:webhookId/test
+```
+
+Sends a test payload to the webhook URL:
+
+```json
+{
+  "event": "test",
+  "timestamp": 1715232000,
+  "data": {
+    "message": "Test webhook from FlexiBuckets"
+  }
+}
+```
+
+Returns the HTTP status code and response from your endpoint.
+
+## Available Events
+
+See the [Webhooks guide](../guides/webhooks) for a complete list of available events and payload format details.

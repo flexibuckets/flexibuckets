@@ -1,0 +1,159 @@
+---
+title: Email Configuration
+description: Set up email for password resets, team invitations, and notifications using SMTP or Resend.
+---
+
+FlexiBuckets can send emails for password resets, team invitations, and notifications. Email is configured through the dashboard — no environment variables needed.
+
+## Configuring Email
+
+1. Navigate to **Dashboard → Settings → Email** (admin-only access)
+2. Choose your email **Provider**:
+   - **SMTP** — Works with any SMTP server (Gmail, SendGrid, SES, Mailgun, etc.)
+   - **Resend** — Modern email API by Resend (no SMTP configuration needed)
+
+## SMTP Provider
+
+Enter your SMTP server details in the dashboard:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| **Host** | SMTP server hostname | `smtp.gmail.com` |
+| **Port** | SMTP server port | `587` (STARTTLS) or `465` (SSL) |
+| **Secure** | Enable SSL/TLS (use for port 465) | `true` for 465, `false` for 587 |
+| **User** | SMTP username | `you@gmail.com` |
+| **Password** | SMTP password | App-specific password for Gmail |
+| **From** | Sender email address | `noreply@example.com` |
+
+### Common SMTP Providers
+
+#### Gmail
+
+| Field | Value |
+|-------|-------|
+| Host | `smtp.gmail.com` |
+| Port | `587` |
+| Secure | `false` |
+| User | Your Gmail address |
+| Password | An [App Password](https://support.google.com/accounts/answer/185833) (not your regular password) |
+
+#### SendGrid
+
+| Field | Value |
+|-------|-------|
+| Host | `smtp.sendgrid.net` |
+| Port | `587` |
+| Secure | `false` |
+| User | `apikey` |
+| Password | Your SendGrid API key |
+
+#### Amazon SES
+
+| Field | Value |
+|-------|-------|
+| Host | `email-smtp.us-east-1.amazonaws.com` |
+| Port | `587` |
+| Secure | `false` |
+| User | Your SES SMTP username |
+| Password | Your SES SMTP password |
+
+#### Mailgun
+
+| Field | Value |
+|-------|-------|
+| Host | `smtp.mailgun.org` |
+| Port | `587` |
+| Secure | `false` |
+| User | `postmaster@your-domain.mailgun.org` |
+| Password | Your Mailgun password |
+
+## Resend Provider
+
+Resend is a modern email API that's simpler to configure than SMTP:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| **API Key** | Your Resend API key | `re_xxxxxxxxxxxx` |
+| **From** | Verified sender email | `noreply@your-domain.com` |
+
+1. Create an API key at [resend.com/api-keys](https://resend.com/api-keys)
+2. Verify your sender domain in Resend's dashboard
+3. Enter the API key and from address in FlexiBuckets' email settings
+
+## Testing Email
+
+After configuring either provider, use the **Send Test Email** button in the dashboard to verify your setup. Enter a recipient email and click send — FlexiBuckets will attempt to deliver a test message.
+
+You can also test programmatically:
+
+```text
+POST /api/settings/email/test
+```
+
+```json
+{
+  "to": "test@example.com"
+}
+```
+
+## Email Settings API
+
+### Save Email Configuration
+
+```text
+POST /api/settings/email
+```
+
+For SMTP:
+
+```json
+{
+  "provider": "SMTP",
+  "smtpConfig": {
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "secure": false,
+    "user": "you@gmail.com",
+    "password": "your-app-password",
+    "from": "noreply@example.com"
+  }
+}
+```
+
+For Resend:
+
+```json
+{
+  "provider": "RESEND",
+  "resendConfig": {
+    "apiKey": "re_xxxxxxxxxxxx",
+    "from": "noreply@your-domain.com"
+  }
+}
+```
+
+### Get Current Configuration
+
+```text
+GET /api/settings/email
+```
+
+## Troubleshooting
+
+### Emails not sending
+
+1. Verify your SMTP or Resend credentials in the dashboard
+2. For SMTP, check that the host and port are correct
+3. For Gmail, ensure you're using an app-specific password
+4. Check Docker logs: `docker compose logs app | grep -i mail`
+5. Use the **Send Test Email** button to diagnose issues
+
+### Connection timeout
+
+Some SMTP providers require SSL on port 465 instead of STARTTLS on port 587. Toggle the **Secure** option in the dashboard and change the port to 465.
+
+### Resend emails not delivered
+
+1. Verify your sender domain is verified in Resend's dashboard
+2. Check that the `from` email uses a verified domain
+3. Review Resend's delivery logs at resend.com/dashboard

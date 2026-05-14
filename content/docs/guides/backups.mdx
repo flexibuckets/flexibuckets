@@ -1,0 +1,98 @@
+---
+title: Backups
+description: Back up and restore your FlexiBuckets data.
+---
+
+FlexiBuckets stores connection configuration, user accounts, and metadata in PostgreSQL. This guide covers backing up and restoring this data.
+
+> **Note**: FlexiBuckets does not store your actual files — those remain in your S3 buckets. Backing up FlexiBuckets only saves the configuration and metadata.
+
+## What Gets Backed Up
+
+- User accounts and authentication data
+- Bucket connection configurations (encrypted)
+- Team memberships and permissions
+- File sharing history
+- Audit logs
+- Webhook configurations and signing secrets
+- Public upload link configurations and file counts
+- API key hashes
+- Email settings (SMTP/Resend configuration)
+- Application settings
+
+## What Is NOT Backed Up
+
+- Files in your S3 buckets (those are managed by your storage provider)
+- TLS certificates (managed by Traefik/Let's Encrypt)
+
+## Database Backup
+
+### Using pg_dump
+
+```bash
+docker compose exec db pg_dump -U postgres flexibuckets > backup.sql
+```
+
+### Automated Daily Backups
+
+Set up a cron job to create daily backups:
+
+```bash
+0 2 * * * docker compose -f /opt/flexibuckets/docker-compose.yml exec -T db pg_dump -U postgres flexibuckets | gzip > /backups/flexibuckets_$(date +\%Y\%m\%d).sql.gz
+```
+
+### Using the Built-in Backup Script
+
+```bash
+docker compose exec app bun run backup
+```
+
+This creates a timestamped backup in the `app_data` volume.
+
+## Restoring from Backup
+
+### From SQL Dump
+
+```bash
+# Stop the app to prevent conflicts
+docker compose stop app
+
+# Restore the database
+cat backup.sql | docker compose exec -T db psql -U postgres flexibuckets
+
+# Restart the app
+docker compose start app
+```
+
+### From Compressed Backup
+
+```bash
+gunzip -c flexibuckets_20260508.sql.gz | docker compose exec -T db psql -U postgres flexibuckets
+```
+
+## S3 Bucket Backups
+
+For backing up the actual files in your S3 buckets, use your provider's built-in tools:
+
+- **AWS S3** — Enable versioning and cross-region replication
+- **DigitalOcean Spaces** — Use snapshots or rclone
+- **MinIO** — Use `mc mirror` for replication
+- **Backblaze B2** — Built-in replication and lifecycle rules
+
+### Using rclone
+
+rclone can sync any S3-compatible bucket to another location:
+
+```bash
+rclone sync s3:my-bucket /backup/my-bucket
+rclone sync s3:my-bucket b2:my-backup-bucket
+```
+
+## Disaster Recovery
+
+For a complete disaster recovery scenario:
+
+1. Deploy a fresh FlexiBuckets instance
+2. Restore the database from your latest backup
+3. Update environment variables if the domain or IP changed
+4. Restart the application
