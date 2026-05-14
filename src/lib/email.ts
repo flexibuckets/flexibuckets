@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
 import { prisma } from '@/lib/prisma';
+import { decryptJsonField } from '@/lib/encryption';
 import { TeamInviteEmail } from '@/emails/TeamInviteEmail';
 import { TeamJoinRequestEmail } from '@/emails/TeamJoinRequestEmail';
 import { TeamJoinResponseEmail } from '@/emails/TeamJoinResponseEmail';
@@ -39,7 +40,7 @@ async function getEmailConfig(): Promise<EmailConfig | null> {
   };
 
   if (settings.emailProvider === 'SMTP' && settings.smtpConfig) {
-    const smtp = settings.smtpConfig as Record<string, unknown>;
+    const smtp = decryptJsonField(settings.smtpConfig as Record<string, unknown>, ['password']);
     config.smtp = {
       host: smtp.host as string,
       port: Number(smtp.port) || 587,
@@ -50,7 +51,7 @@ async function getEmailConfig(): Promise<EmailConfig | null> {
   }
 
   if (settings.emailProvider === 'RESEND' && settings.resendConfig) {
-    const resend = settings.resendConfig as Record<string, unknown>;
+    const resend = decryptJsonField(settings.resendConfig as Record<string, unknown>, ['apiKey']);
     config.resend = {
       apiKey: resend.apiKey as string,
     };
