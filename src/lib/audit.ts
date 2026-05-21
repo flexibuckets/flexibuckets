@@ -26,51 +26,51 @@ interface CreateAuditLogParams {
 }
 
 export async function createAuditLog(params: CreateAuditLogParams) {
-  try {
-    const headersList = await headers();
-    const ipAddress =
-      headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      headersList.get('x-real-ip') ||
-      null;
-    const userAgent = headersList.get('user-agent') || null;
+  const headersList = await headers();
+  const ipAddress =
+    headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    headersList.get('x-real-ip') ||
+    null;
+  const userAgent = headersList.get('user-agent') || null;
 
-    const auditLog = await prisma.auditLog.create({
-      data: {
-        userId: params.userId,
+  const detailsValue = params.details
+    ? JSON.parse(JSON.stringify(params.details))
+    : undefined;
+
+  const auditLog = await prisma.auditLog.create({
+    data: {
+      userId: params.userId,
+      action: params.action,
+      resourceType: params.resourceType ?? null,
+      resourceId: params.resourceId ?? null,
+      resourceName: params.resourceName ?? null,
+      details: detailsValue as any,
+      ipAddress,
+      userAgent,
+      teamId: params.teamId ?? null,
+    },
+  });
+
+  const webhookEvent = AUDIT_TO_WEBHOOK_MAP[params.action];
+  if (webhookEvent) {
+    const { dispatchWebhooks } = await import('@/lib/webhook');
+    dispatchWebhooks({
+      userId: params.userId,
+      event: webhookEvent,
+      payload: {
         action: params.action,
         resourceType: params.resourceType ?? null,
         resourceId: params.resourceId ?? null,
         resourceName: params.resourceName ?? null,
-        details: params.details ? (params.details as any) : undefined,
-        ipAddress,
-        userAgent,
-        teamId: params.teamId ?? null,
+        details: params.details ?? null,
+        timestamp: auditLog.createdAt,
       },
+    }).catch((err) => {
+      console.error('Webhook dispatch error:', err);
     });
-
-    const webhookEvent = AUDIT_TO_WEBHOOK_MAP[params.action];
-    if (webhookEvent) {
-      const { dispatchWebhooks } = await import('@/lib/webhook');
-      dispatchWebhooks({
-        userId: params.userId,
-        event: webhookEvent,
-        payload: {
-          action: params.action,
-          resourceType: params.resourceType ?? null,
-          resourceId: params.resourceId ?? null,
-          resourceName: params.resourceName ?? null,
-          details: params.details ?? null,
-          timestamp: auditLog.createdAt,
-        },
-      }).catch((err) => {
-        console.error('Webhook dispatch error:', err);
-      });
-    }
-
-    return auditLog;
-  } catch (error) {
-    console.error('Failed to create audit log:', error);
   }
+
+  return auditLog;
 }
 
 export async function getAuditLogs({
@@ -100,10 +100,9 @@ export async function getAuditLogs({
     ...(resourceType && { resourceType }),
     ...(resourceId && { resourceId }),
     ...(teamId && { teamId }),
-    ...(startDate && { createdAt: { gte: startDate } }),
-    ...(endDate && { createdAt: { lte: endDate } }),
-    ...(startDate &&
-      endDate && { createdAt: { gte: startDate, lte: endDate } }),
+    ...(startDate && endDate && { createdAt: { gte: startDate, lte: endDate } }),
+    ...(startDate && !endDate && { createdAt: { gte: startDate } }),
+    ...(!startDate && endDate && { createdAt: { lte: endDate } }),
   };
 
   const [logs, total] = await Promise.all([

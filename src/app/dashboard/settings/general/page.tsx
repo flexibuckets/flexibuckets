@@ -3,6 +3,7 @@ import AccessDenied from "@/components/dashboard/AccessDenied";
 import { SignupToggle } from "@/components/settings/SignUpToggle";
 import { DomainSettings } from "@/components/settings/DomainSettings";
 import { VersionUpgrade } from "@/components/settings/VersionUpgrade";
+import { BackupRestore } from "@/components/settings/BackupRestore";
 import React from "react";
 
 const Page = async () => {
@@ -18,6 +19,7 @@ const Page = async () => {
       <SignupToggle />
       <DomainSettings session={session} />
       <VersionUpgrade />
+      <BackupRestore />
     </div>
   );
 };

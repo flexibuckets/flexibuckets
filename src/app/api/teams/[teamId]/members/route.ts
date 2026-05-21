@@ -41,7 +41,8 @@ export async function POST(
       role,
     });
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'TEAM_MEMBER_ADD',
       resourceType: 'team',
@@ -49,6 +50,9 @@ export async function POST(
       details: { addedUserId: user.id, addedUserEmail: email, role },
       teamId,
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return Response.json(member);
   } catch (error) {

@@ -28,13 +28,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'TEAM_CREATE',
       resourceType: 'team',
       resourceId: team.id,
       resourceName: name,
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return Response.json(team);
   } catch (error: any) {

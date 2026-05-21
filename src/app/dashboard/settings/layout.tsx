@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { UserIcon, Mail, Settings2, KeyRound } from 'lucide-react';
 
@@ -11,24 +12,31 @@ export default function SettingsLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.isAdmin ?? false;
 
-  const navItems = [
+  const allNavItems = [
     {
       title: 'Account',
       href: '/dashboard/settings',
       icon: UserIcon,
+      adminOnly: false,
     },
     {
       title: 'Email',
       href: '/dashboard/settings/email',
       icon: Mail,
+      adminOnly: true,
     },
     {
       title: 'General',
       href: '/dashboard/settings/general',
       icon: Settings2,
+      adminOnly: true,
     },
   ];
+
+  const navItems = allNavItems.filter(item => !item.adminOnly || isAdmin);
 
   return (
     <div className="flex-1 overflow-auto">

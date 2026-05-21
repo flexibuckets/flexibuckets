@@ -38,13 +38,17 @@ export async function POST(request: Request) {
       return updatedFile;
     });
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'FILE_UNSHARE',
       resourceType: 'file',
       resourceId: fileId,
       resourceName: result.name,
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return NextResponse.json({
       message: "Shared file deleted successfully",

@@ -22,13 +22,17 @@ export async function POST(request: Request) {
       s3CredentialId,
     });
 
-    await createAuditLog({
-      userId: session.user.id,
-      action: 'FILE_DELETE',
-      resourceType: 'file',
-      resourceId: fileId,
-      details: { s3CredentialId },
-    });
+    try {
+      await createAuditLog({
+        userId: session.user.id,
+        action: 'FILE_DELETE',
+        resourceType: 'file',
+        resourceId: fileId,
+        details: { s3CredentialId },
+      });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return NextResponse.json({ message: "File deleted successfully" }, { status: 200 });
   } catch (error) {

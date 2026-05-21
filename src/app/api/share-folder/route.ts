@@ -26,13 +26,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'FOLDER_SHARE',
       resourceType: 'folder',
       resourceId: folderId,
       details: { downloadUrl, expiresAt },
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return NextResponse.json(sharedFolder);
   } catch (error) {

@@ -116,14 +116,18 @@ export const POST: (request: NextRequest) => Promise<NextResponse> = async (requ
         const fileRecords = await Promise.all(uploadPromises);
 
         for (const record of fileRecords) {
-          await createAuditLog({
-            userId: userId as unknown as string,
-            action: 'FILE_UPLOAD',
-            resourceType: 'file',
-            resourceId: record.id,
-            resourceName: record.name,
-            details: { size: record.size, type: record.type, s3CredentialId: s3CredentialId as unknown as string },
-          });
+          try {
+            await createAuditLog({
+              userId: userId as unknown as string,
+              action: 'FILE_UPLOAD',
+              resourceType: 'file',
+              resourceId: record.id,
+              resourceName: record.name,
+              details: { size: record.size, type: record.type, s3CredentialId: s3CredentialId as unknown as string },
+            });
+          } catch (auditError) {
+            console.error('Failed to create audit log:', auditError);
+          }
         }
 
         // Update the user's total upload size

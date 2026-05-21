@@ -52,7 +52,8 @@ export async function PUT(
       },
     });
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'TEAM_MEMBER_ROLE_UPDATE',
       resourceType: 'team',
@@ -60,6 +61,9 @@ export async function PUT(
       details: { targetUserId: userId, newRole: role },
       teamId,
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return Response.json(updatedMember);
   } catch (error) {
@@ -92,7 +96,8 @@ export async function DELETE(
   try {
     await removeTeamMember(teamId, userId);
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'TEAM_MEMBER_REMOVE',
       resourceType: 'team',
@@ -100,6 +105,9 @@ export async function DELETE(
       details: { removedUserId: userId },
       teamId,
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return Response.json({ success: true });
   } catch (error) {

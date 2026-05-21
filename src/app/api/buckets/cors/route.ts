@@ -13,13 +13,17 @@ export async function POST(req: Request) {
 
     await setS3CompatibleCors(s3CredentialId, origins);
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'BUCKET_CORS_UPDATE',
       resourceType: 'bucket',
       resourceId: s3CredentialId,
       details: { origins },
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return Response.json({ success: true });
   } catch (error) {
