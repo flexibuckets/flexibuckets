@@ -1,32 +1,69 @@
-**FlexiBuckets License**
+FlexiBuckets License (FBL-1.0)
+Copyright (c) 2025 FlexiBuckets. All rights reserved.
+Grant of Rights
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to use, run, copy, modify, merge, and distribute the Software — including hosting it publicly or running it locally — subject to the conditions below.
 
-Copyright (c) 2025 Flexibuckets
+Conditions
+1. Permitted Uses
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, and distribute copies of the Software, subject to the following conditions:
+You may:
+Run the Software locally or on your own servers, including making it accessible to others online (self-hosting).
+Modify the Software for personal use, internal business use, or to contribute back to this project.
+Distribute modified or unmodified copies for non-commercial purposes, provided this license is included in full.
+Study and learn from the Software's source code.
 
-1. **Non-Commercial Use**:  
-   The Software or any derivative works shall not be used to provide commercial services, products, or offerings, including but not limited to Software-as-a-Service (SaaS), without prior written permission from [Your Name/Company].
+2. White-Labeling and Resale Prohibited
 
-2. **Attribution**:  
-   Any redistribution of the Software, with or without modification, must include this copyright notice, the following disclaimer, and a clear attribution to [Your Name/Company].
+You may not, without prior written permission from FlexiBuckets:
+Rebrand or white-label the Software and offer it as your own product or service.
+Sell, sublicense, or commercially distribute the Software or any substantially similar derivative as a standalone product or managed service.
+Offer the Software (or a derivative) as a paid Software-as-a-Service (SaaS) to third parties.
 
-3. **Derivative Works**:  
-   Users are permitted to create derivative works based on the Software, provided that any such derivative works comply with the terms of this License and are not used for commercial purposes.
+This restriction exists to protect FlexiBuckets' right to offer its own commercial and SaaS offerings in the future. It does not prevent you from using the Software to run your own internal operations, even commercially.
 
-4. **Prohibited Uses**:  
-   The Software may not be used for purposes that are harmful, unethical, or in violation of any applicable law. This includes, but is not limited to, use in applications promoting hate, discrimination, or exploitation.
+3. Commercial Licensing
 
-5. **Disclaimer of Warranty**:  
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+If you wish to use the Software in a manner not permitted above — including white-labeling, reselling, or building a competing SaaS — you must obtain a separate commercial license from FlexiBuckets.
+To inquire about commercial licensing, contact: [flexibuckets@thebrainfry.com]
 
-6. **Termination**:  
-   This license is effective until terminated. Any breach of this license, including the use of the Software for commercial purposes without prior permission, will result in immediate termination of this license.
+4. Attribution
 
-7. **Amendments**:  
-  We reserves the right to amend the terms of this license at any time. Any modifications will apply only to future versions of the Software and will not retroactively affect existing versions under this License.
+Any redistribution of the Software, with or without modification, must:
+Retain this license file in full.
+Include a visible attribution to FlexiBuckets in any user-facing documentation, about pages, or README files.
+Clearly indicate if modifications were made, without implying endorsement by FlexiBuckets.
 
-8. **Jurisdiction**:  
-   This License shall be governed by and construed in accordance with the laws of [Your Jurisdiction]. Any disputes arising under or in connection with this License shall be subject to the exclusive jurisdiction of the courts in [Your Jurisdiction].
+5. Derivative Works
 
-By using the Software, you agree to abide by the terms of this License.
+You may create and share derivative works, provided that:
+The derivative work is distributed under this same license (FBL-1.0).
+The derivative work does not violate any condition in this license, particularly clauses 2 and 4.
+The name "FlexiBuckets" is not used to promote or brand the derivative without written permission.
 
+6. Prohibited Uses
+
+The Software may not be used for any purpose that:
+Violates applicable local, national, or international law.
+Promotes or facilitates illegal discrimination, exploitation, or targeted harassment.
+
+7. Disclaimer of Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL FLEXIBUCKETS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY — WHETHER IN CONTRACT, TORT, OR OTHERWISE — ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR ITS USE.
+
+8. Termination
+
+This license terminates automatically if you materially breach any of its terms. Upon termination:
+You must cease all use and distribution of the Software.
+You must destroy all copies in your possession.
+Termination does not affect the rights of others who have received the Software in compliance with this license.
+
+9. Future Versions
+
+FlexiBuckets may publish updated versions of this license. Updated terms apply only to new versions of the Software released after that point. Versions of the Software you already have remain under the license they were released under.
+
+10. Governing Law
+
+This License is governed by and construed in accordance with the laws of India. Any disputes arising under or in connection with this License shall be subject to the exclusive jurisdiction of the courts of India.
+
+By using, copying, modifying, or distributing the Software, you agree to the terms of this License.
+FlexiBuckets — https://flexibuckets.thebrainfry.com
