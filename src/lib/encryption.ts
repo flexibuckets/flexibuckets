@@ -37,21 +37,48 @@ function generateAndPersistKey(): Buffer {
   ];
 
   for (const envPath of envPaths) {
-    if (existsSync(envPath)) {
-      const content = readFileSync(envPath, 'utf-8');
-      if (content.includes(ENV_KEY_NAME)) {
-        continue;
+    try {
+      if (existsSync(envPath)) {
+        const content = readFileSync(envPath, 'utf-8');
+        if (content.includes(ENV_KEY_NAME)) {
+          continue;
+        }
+        const updated = content.trimEnd() + `\n${ENV_KEY_NAME}=${base64Key}\n`;
+        writeFileSync(envPath, updated, 'utf-8');
+        console.log(`[encryption] Generated ENCRYPTION_KEY and saved to ${envPath}`);
+        return key;
       }
-      const updated = content.trimEnd() + `\n${ENV_KEY_NAME}=${base64Key}\n`;
-      writeFileSync(envPath, updated, 'utf-8');
-      console.log(`[encryption] Generated ENCRYPTION_KEY and saved to ${envPath}`);
-      return key;
+    } catch (err: unknown) {
+      const fsErr = err as NodeJS.ErrnoException;
+      if (fsErr.code === 'EROFS' || fsErr.code === 'EACCES') {
+        console.warn(
+          `[encryption] Cannot write to ${envPath} (read-only filesystem). ` +
+          `Using in-memory key. Set the ENCRYPTION_KEY environment variable ` +
+          `in your deployment platform to persist it. Generated key: ${base64Key}`
+        );
+        return key;
+      }
+      throw err;
     }
   }
 
-  const targetPath = join(process.cwd(), '.env');
-  writeFileSync(targetPath, `${ENV_KEY_NAME}=${base64Key}\n`, 'utf-8');
-  console.log(`[encryption] Generated ENCRYPTION_KEY and saved to ${targetPath}`);
+  try {
+    const targetPath = join(process.cwd(), '.env');
+    writeFileSync(targetPath, `${ENV_KEY_NAME}=${base64Key}\n`, 'utf-8');
+    console.log(`[encryption] Generated ENCRYPTION_KEY and saved to ${targetPath}`);
+  } catch (err: unknown) {
+    const fsErr = err as NodeJS.ErrnoException;
+    if (fsErr.code === 'EROFS' || fsErr.code === 'EACCES') {
+      console.warn(
+        `[encryption] Cannot create .env file (read-only filesystem). ` +
+        `Using in-memory key. Set the ENCRYPTION_KEY environment variable ` +
+        `in your deployment platform to persist it. Generated key: ${base64Key}`
+      );
+    } else {
+      throw err;
+    }
+  }
+
   return key;
 }
 
