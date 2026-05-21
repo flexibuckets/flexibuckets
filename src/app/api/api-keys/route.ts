@@ -47,13 +47,17 @@ export async function POST(req: Request) {
       },
     })
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'API_KEY_CREATE',
       resourceType: 'apiKey',
       resourceId: createdKey.id,
       resourceName: name,
-    })
+    });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return NextResponse.json({
       status: "success",

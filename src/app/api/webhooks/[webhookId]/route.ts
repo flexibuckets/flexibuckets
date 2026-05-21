@@ -18,13 +18,17 @@ export async function DELETE(
       userId: session.user.id,
     });
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'WEBHOOK_DELETED',
       resourceType: 'webhook',
       resourceId: params.webhookId,
       details: { url: webhook.url },
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

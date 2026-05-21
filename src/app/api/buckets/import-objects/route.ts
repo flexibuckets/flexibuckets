@@ -76,13 +76,17 @@ export async function POST(request: NextRequest) {
       s3CredentialId,
     });
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'BUCKET_IMPORT_OBJECTS',
       resourceType: 'bucket',
       resourceId: s3CredentialId,
       details: { importedFiles: result.importedFiles, importedFolders: result.importedFolders, skipped: result.skipped },
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return NextResponse.json(result);
   } catch (error) {

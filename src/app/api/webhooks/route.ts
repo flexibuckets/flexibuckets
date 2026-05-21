@@ -54,13 +54,17 @@ export async function POST(req: Request) {
       description,
     });
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'WEBHOOK_CREATED',
       resourceType: 'webhook',
       resourceId: webhook.id,
       details: { url, events },
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return NextResponse.json({ ...webhook, secret }, { status: 201 });
   } catch (error) {

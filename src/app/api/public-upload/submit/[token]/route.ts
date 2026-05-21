@@ -141,13 +141,17 @@ export async function POST(
       data: { currentFileCount: { increment: files.length } },
     });
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: uploadLink.userId,
       action: 'PUBLIC_UPLOAD_RECEIVED',
       resourceType: 'publicUploadLink',
       resourceId: uploadLink.id,
       details: { fileCount: files.length, totalSize, fileNames: uploadedFiles, folder: folderPrefix },
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return NextResponse.json({ success: true, uploaded: uploadedFiles.length }, { status: 200 });
   } catch (error) {

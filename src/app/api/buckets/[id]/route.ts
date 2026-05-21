@@ -55,7 +55,8 @@ export async function DELETE(
       where: { id: bucketId },
     });
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'BUCKET_DELETE',
       resourceType: 'bucket',
@@ -63,6 +64,9 @@ export async function DELETE(
       resourceName: bucket.bucket,
       details: { endpointUrl: bucket.endpointUrl, region: bucket.region },
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return NextResponse.json({ message: "Bucket deleted successfully" });
   } catch (error) {

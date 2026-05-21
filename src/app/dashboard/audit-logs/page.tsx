@@ -113,6 +113,7 @@ export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const [actionFilter, setActionFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -121,6 +122,7 @@ export default function AuditLogsPage() {
   const fetchLogs = useCallback(async () => {
     if (!session?.user?.id) return
     setLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams({
         limit: pageSize.toString(),
@@ -134,9 +136,11 @@ export default function AuditLogsPage() {
         const data = await res.json()
         setLogs(data.logs)
         setTotal(data.total)
+      } else {
+        setError('Failed to load audit logs. Please try refreshing.')
       }
-    } catch (error) {
-      console.error('Error fetching audit logs:', error)
+    } catch (err) {
+      setError('Network error. Please check your connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -191,6 +195,12 @@ export default function AuditLogsPage() {
       </div>
 
       <Separator />
+
+      {error && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">

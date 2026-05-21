@@ -40,7 +40,8 @@ export async function POST(
       permissions,
     });
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'TEAM_BUCKET_ADD',
       resourceType: 'team',
@@ -48,6 +49,9 @@ export async function POST(
       details: { s3CredentialId, name, permissions },
       teamId,
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return Response.json(bucket);
   } catch (error) {
@@ -82,7 +86,8 @@ export async function DELETE(
       where: { id: bucketId },
     });
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'TEAM_BUCKET_REMOVE',
       resourceType: 'team',
@@ -90,6 +95,9 @@ export async function DELETE(
       details: { bucketId },
       teamId,
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return Response.json({ success: true });
   } catch (error) {

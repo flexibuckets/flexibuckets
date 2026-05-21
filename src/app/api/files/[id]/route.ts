@@ -49,7 +49,8 @@ export async function GET(
 
     const url = await getPresignedUrl(file.s3CredentialId, file.s3Key);
 
-    await createAuditLog({
+    try {
+      await createAuditLog({
       userId: session.user.id,
       action: 'FILE_DOWNLOAD',
       resourceType: 'file',
@@ -57,6 +58,9 @@ export async function GET(
       resourceName: file.name,
       details: { size: file.size, type: file.type },
     });
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError);
+    }
 
     return NextResponse.json({
       id: file.id,
