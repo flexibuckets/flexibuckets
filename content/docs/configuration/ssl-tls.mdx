@@ -5,6 +5,8 @@ description: Configure automatic HTTPS with Let's Encrypt via Traefik.
 
 FlexiBuckets uses Traefik as a reverse proxy with built-in Let's Encrypt support for automatic TLS certificate provisioning.
 
+> **Note:** In local / homeserver mode (`DEPLOYMENT_MODE=local`), Traefik is not included. There is no automatic SSL — the app runs on HTTP. If you need HTTPS on a local instance, see [Reverse Proxy](./reverse-proxy) for setting up Nginx or Caddy in front.
+
 ## Automatic TLS (Recommended)
 
 If you set the `DOMAIN` environment variable, FlexiBuckets automatically:

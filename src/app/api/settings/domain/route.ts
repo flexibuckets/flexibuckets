@@ -46,61 +46,64 @@ export async function POST(req: Request) {
       create: { id: 'current', domain }
     });
 
-    // Update Traefik configuration
-    const config = {
-      http: {
-        middlewares: {
-          authheader: {
-            headers: {
-              customRequestHeaders: {
-                'X-Forwarded-Proto': 'https'
-              },
-              customResponseHeaders: {
-                'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-                'X-Frame-Options': 'DENY',
-                'X-Content-Type-Options': 'nosniff'
+    // In local/self-host mode, skip Traefik configuration (no reverse proxy)
+    if (process.env.DEPLOYMENT_MODE !== 'local') {
+      // Update Traefik configuration
+      const config = {
+        http: {
+          middlewares: {
+            authheader: {
+              headers: {
+                customRequestHeaders: {
+                  'X-Forwarded-Proto': 'https'
+                },
+                customResponseHeaders: {
+                  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+                  'X-Frame-Options': 'DENY',
+                  'X-Content-Type-Options': 'nosniff'
+                }
+              }
+            },
+            secureHeaders: {
+              headers: {
+                sslRedirect: true,
+                forceSTSHeader: true,
+                stsSeconds: 31536000,
+                stsIncludeSubdomains: true
               }
             }
           },
-          secureHeaders: {
-            headers: {
-              sslRedirect: true,
-              forceSTSHeader: true,
-              stsSeconds: 31536000,
-              stsIncludeSubdomains: true
+          routers: {
+            app: {
+              rule: `Host(\`${domain}\`)`,
+              service: 'app',
+              tls: {
+                certResolver: 'letsencrypt'
+              },
+              entryPoints: ['websecure'],
+              middlewares: ['authheader', 'secureHeaders']
             }
-          }
-        },
-        routers: {
-          app: {
-            rule: `Host(\`${domain}\`)`,
-            service: 'app',
-            tls: {
-              certResolver: 'letsencrypt'
-            },
-            entryPoints: ['websecure'],
-            middlewares: ['authheader', 'secureHeaders']
-          }
-        },
-        services: {
-          app: {
-            loadBalancer: {
-              servers: [{ url: 'http://app:3000' }],
-              passHostHeader: true
+          },
+          services: {
+            app: {
+              loadBalancer: {
+                servers: [{ url: 'http://app:3000' }],
+                passHostHeader: true
+              }
             }
           }
         }
-      }
-    };
+      };
 
-    try {
-      await fs.writeFile(TRAEFIK_CONFIG_PATH, yaml.stringify(config));
-      // Restart Traefik via Docker API (no CLI binary needed)
-      const dockerClient = DockerClient.getInstance();
-      await dockerClient.docker.getContainer('flexibuckets_traefik').restart();
-    } catch (error) {
-      console.error('Error updating Traefik configuration:', error);
-      // Continue even if Traefik update fails
+      try {
+        await fs.writeFile(TRAEFIK_CONFIG_PATH, yaml.stringify(config));
+        // Restart Traefik via Docker API (no CLI binary needed)
+        const dockerClient = DockerClient.getInstance();
+        await dockerClient.docker.getContainer('flexibuckets_traefik').restart();
+      } catch (error) {
+        console.error('Error updating Traefik configuration:', error);
+        // Continue even if Traefik update fails
+      }
     }
 
     return NextResponse.json({

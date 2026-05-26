@@ -9,7 +9,7 @@ import path from 'path';
 import { prisma } from '@/lib/prisma';
 import yaml from 'js-yaml';
 
-const dockerClient = DockerClient.getInstance();
+const isLocalMode = process.env.DEPLOYMENT_MODE === 'local';
 
 const TRAEFIK_CONFIG_DIR = process.env.TRAEFIK_CONFIG_DIR || '/etc/traefik';
 
@@ -55,6 +55,12 @@ export async function configureDomain(input: DomainConfigInput) {
       }
     });
 
+    // In local/self-host mode, skip Traefik configuration (no reverse proxy)
+    if (isLocalMode) {
+      revalidatePath('/dashboard/settings');
+      return { success: true, domain: validated.domain };
+    }
+
     const configPath = path.join(TRAEFIK_CONFIG_DIR, 'dynamic', 'website.yml');
     await ensureDirectoryExists(path.dirname(configPath));
 
@@ -91,6 +97,7 @@ export async function configureDomain(input: DomainConfigInput) {
     await fs.writeFile(configPath, yamlStr);
 
     try {
+      const dockerClient = DockerClient.getInstance();
       await dockerClient.docker.getContainer('flexibuckets_traefik').restart();
     } catch (error) {
       console.error('Failed to restart Traefik:', error);

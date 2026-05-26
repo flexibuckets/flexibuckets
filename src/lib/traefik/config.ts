@@ -12,7 +12,11 @@ export class TraefikManager {
     this.configPath = process.env.TRAEFIK_CONFIG_PATH || '/etc/traefik/config';
   }
 
-  public static getInstance(): TraefikManager {
+  public static getInstance(): TraefikManager | null {
+    // No Traefik in local/self-host deployment mode
+    if (process.env.DEPLOYMENT_MODE === 'local') {
+      return null;
+    }
     if (!TraefikManager.instance) {
       TraefikManager.instance = new TraefikManager();
     }

@@ -1,0 +1,84 @@
+# =================================================================
+# FlexiBuckets — Self-Hosted (Local) Docker Compose
+# =================================================================
+# This compose file runs FlexiBuckets without Traefik reverse proxy.
+# Ideal for local machines, homeservers, and development.
+#
+# Usage:
+#   Bundled PostgreSQL:  docker compose -f docker-compose.local.yml --profile fullstack up -d
+#   External Database:   docker compose -f docker-compose.local.yml up -d
+#
+# Or set these in your .env and just run `docker compose up -d`:
+#   COMPOSE_FILE=docker-compose.local.yml
+#   COMPOSE_PROFILES=fullstack   (only if using bundled PostgreSQL)
+# =================================================================
+
+services:
+  # -----------------------------------------------------------------
+  # PostgreSQL — only started with the "fullstack" profile
+  # -----------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: flexibuckets_postgres
+    restart: unless-stopped
+    profiles: ["fullstack"]
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-flexibuckets}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-flexibuckets}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - flexibuckets_network
+
+  # -----------------------------------------------------------------
+  # FlexiBuckets Application
+  # -----------------------------------------------------------------
+  app:
+    image: flexibuckets/flexibuckets:${APP_SHA_SHORT:-latest}
+    container_name: flexibuckets_app
+    restart: unless-stopped
+    environment:
+      - DEPLOYMENT_MODE=local
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_URL=http://localhost:${APP_PORT:-3000}
+      - NEXTAUTH_URL_INTERNAL=http://localhost:3000
+      - NEXT_PUBLIC_APP_URL=http://localhost:${APP_PORT:-3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - AUTH_TRUST_HOST=true
+      - NODE_ENV=production
+      - APP_VERSION=${APP_VERSION:-latest}
+      - APP_SHA_SHORT=${APP_SHA_SHORT:-latest}
+      - NEXT_TELEMETRY_DISABLED=1
+    env_file: .env
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      # Docker socket — required for auto-update feature
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - app_data:/app/data:rw
+      - next_cache:/app/.next/cache:rw
+    networks:
+      - flexibuckets_network
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+
+networks:
+  flexibuckets_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: flexibuckets_local_postgres_data
+  app_data:
+  next_cache:
+    driver: local

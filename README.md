@@ -49,6 +49,104 @@ The installation script will:
 
 Visit `http://your-server-ip:3000` to access your FlexiBuckets instance.
 
+## 🏠 Local or Homeserver
+
+Run FlexiBuckets on your own machine — laptop, desktop, or homeserver. No Traefik, no SSL, just the app and a database.
+
+### Quick Start — Linux / Mac
+
+```bash
+git clone https://github.com/flexibuckets/flexibuckets.git
+cd flexibuckets
+bash self-host-install.sh
+```
+
+### Quick Start — Windows (PowerShell)
+
+> **Prerequisite:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) must be installed and running.
+
+```powershell
+git clone https://github.com/flexibuckets/flexibuckets.git
+cd flexibuckets
+powershell -ExecutionPolicy Bypass -File self-host-install.ps1
+```
+
+The install scripts will:
+1. Check for Docker & Docker Compose
+2. Find an available port (scans 3000–3010, picks the first free one)
+3. Ask you to choose **bundled PostgreSQL** or **external/cloud PostgreSQL**
+4. Generate all secrets automatically (encryption key saved to `encryption_key.txt`)
+5. Start FlexiBuckets and run database migrations
+
+> **⚠️ Encryption key backup:** The install scripts save your encryption key to `encryption_key.txt`. **Back this file up to a safe location** — if you lose it, your stored S3 credentials cannot be recovered.
+
+Visit `http://localhost:<port>` (the port shown in the script output) to access your instance.
+
+### What's Different in Local Mode
+
+When `DEPLOYMENT_MODE=local`, FlexiBuckets operates differently from the VPS/server mode:
+
+- **No Traefik reverse proxy** — The app binds directly to the host port. Domain/SSL configuration via the dashboard is skipped.
+- **`TraefikManager.getInstance()` returns `null`** — All Traefik config writes and container restarts are guarded and skipped (`actions.ts`, `config.ts`, `route.ts`).
+- **Auto-updates still work** — The Docker socket is mounted read-only into the app container. The `COMPOSE_FILE` env variable tells Docker Compose which file to use, so the dashboard auto-update feature works in both modes.
+- **HTTP only** — No automatic HTTPS/Let's Encrypt. If you need SSL, put a reverse proxy (nginx, Caddy, etc.) in front.
+
+### Using a Cloud / External PostgreSQL
+
+If you already have a managed PostgreSQL database (Supabase, Neon, RDS, etc.):
+
+1. Choose **"External PostgreSQL"** when the install script asks
+2. Provide your connection string: `postgresql://user:password@host:5432/dbname`
+3. The script will run migrations on your cloud database automatically
+
+### Manual Setup
+
+If you prefer manual configuration:
+
+```bash
+git clone https://github.com/flexibuckets/flexibuckets.git
+cd flexibuckets
+cp .env.local.example .env
+# Edit .env with your settings
+```
+
+> **Tip:** Setting `COMPOSE_FILE=docker-compose.local.yml` in your `.env` lets you use plain `docker compose up -d` instead of passing `-f` every time.
+
+**With bundled PostgreSQL:**
+```bash
+# Add COMPOSE_PROFILES=fullstack to .env, then:
+docker compose up -d
+# Or explicitly:
+docker compose -f docker-compose.local.yml --profile fullstack up -d
+# Run migrations:
+docker compose exec -T app sh -c 'cd /app && TMPDIR=/tmp ./node_modules/.bin/prisma migrate deploy'
+```
+
+**With external PostgreSQL:**
+```bash
+# Set DATABASE_URL in .env to your cloud DB connection string, then:
+docker compose up -d
+# Or explicitly:
+docker compose -f docker-compose.local.yml up -d
+docker compose exec -T app sh -c 'cd /app && TMPDIR=/tmp ./node_modules/.bin/prisma migrate deploy'
+```
+
+### Useful Commands (Self-Host)
+
+If you set `COMPOSE_FILE=docker-compose.local.yml` in your `.env`, you can omit the `-f` flag:
+
+| Command | Description |
+|---------|-------------|
+| `docker compose logs -f` | View logs |
+| `docker compose down` | Stop services |
+| `docker compose up -d` | Start services |
+| `docker compose pull` | Pull latest images |
+| `docker compose exec -T app sh -c 'cd /app && TMPDIR=/tmp ./node_modules/.bin/prisma migrate deploy'` | Run migrations |
+
+Without `COMPOSE_FILE` in `.env`, prefix all commands with `-f docker-compose.local.yml`.
+
+> **Auto-updates:** In self-host mode, domain/SSL configuration via the dashboard is skipped (no Traefik), but auto-updates remain available. The Docker socket is mounted read-only (`/var/run/docker.sock:ro`) and the `COMPOSE_FILE` env variable ensures the dashboard's update command uses the correct compose file.
+
 ## 🛠 Manual Installation
 
 If you prefer to set up manually:
@@ -77,6 +175,11 @@ docker compose up -d
 | `DATABASE_URL` | PostgreSQL connection URL | `postgresql://postgres:postgres@db:5432/flexibuckets` |
 | `NEXTAUTH_URL` | Your site URL | `http://localhost:3000` |
 | `NEXTAUTH_SECRET` | Random string for auth | Generated during install |
+| `DEPLOYMENT_MODE` | `local` (self-host) or `server` (VPS with Traefik) | `server` |
+| `ENCRYPTION_KEY` | Key for encrypting sensitive data (S3 credentials) | Generated during install |
+| `COMPOSE_FILE` | Docker Compose file to use (self-host: `docker-compose.local.yml`) | — |
+| `COMPOSE_PROFILES` | `fullstack` enables bundled PostgreSQL container | — |
+| `APP_PORT` | Host port the app binds to (self-host) | `3000` |
 
 ## 📦 Building from Source
 
@@ -123,8 +226,5 @@ You can also support us by Sponsoring us on [GitHub Sponsors](https://github.com
 Your support helps sustain and grow the open-source ecosystem while recognizing and rewarding the community's hard work. Thank you for driving collaboration and progress!
 
 
-⚠️ Security Note: The auto-update feature requires mounting the Docker socket and 
-granting certain privileges to the container. This is necessary for the application 
-to manage its own updates, but it does mean the container has elevated permissions 
-on your system. If this is a concern, you can disable auto-updates and manage 
-updates manually. Currently, the auto-update feature is WIP.
+⚠️ **Security Note:** The auto-update feature requires mounting the Docker socket (`/var/run/docker.sock:ro`) into the app container. This is necessary for the application to manage its own updates (in both `local` and `server` modes), but it grants the container elevated permissions on your system. If this is a concern, you can disable auto-updates and manage updates manually. Currently, the auto-update feature is WIP.
+

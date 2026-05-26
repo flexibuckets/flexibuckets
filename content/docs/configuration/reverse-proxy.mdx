@@ -5,6 +5,8 @@ description: Running FlexiBuckets behind a reverse proxy like Nginx or Caddy.
 
 FlexiBuckets includes Traefik in its default Docker Compose setup, but you can use any reverse proxy.
 
+> **Local / homeserver instances:** In local mode (`DEPLOYMENT_MODE=local`), Traefik is already excluded. The app binds directly to the host port via `docker-compose.local.yml`. If you need SSL on a local instance, put Nginx or Caddy in front — see the configurations below.
+
 ## Using the Built-in Traefik
 
 The default configuration already includes Traefik. No additional setup is needed — it handles:
